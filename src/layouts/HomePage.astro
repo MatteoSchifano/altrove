@@ -1,0 +1,256 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HomePage.astro — l'Atelier, riusato per ogni locale.
+
+   Le pagine pages/index.astro e pages/en/index.astro sono
+   wrapper di una riga su questo layout, passando solo la locale.
+   Tutta la logica vive qui per evitare divergenze tra le versioni.
+   ───────────────────────────────────────────────────────────── */
+
+import Base from './Base.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import LanguageToggle from '../components/LanguageToggle.astro';
+import ChapterCard from '../components/ChapterCard.astro';
+import { getCollection } from 'astro:content';
+import { t, localizedPath, getOtherLocales, type Locale } from '../lib/i18n';
+import { resolveReadingTime } from '../lib/readingTime';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+
+const alternateLocale = getOtherLocales(locale)[0]!;
+const alternateHref = localizedPath('/', alternateLocale);
+const homeHref = localizedPath('/', locale);
+
+/** Spoglia il prefisso locale dall'id della collection per ottenere
+    lo slug puro (usato per URL e view-transition-name). */
+function slugOf(id: string, lang: Locale): string {
+  return id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
+}
+
+const chapters = (await getCollection('chapters', ({ data }) => data.lang === locale && !data.draft))
+  .sort((a, b) => Number(a.data.number) - Number(b.data.number));
+---
+
+<Base locale={locale}>
+  <div class="page">
+    <header class="site-header">
+      <div class="container site-header__row">
+        <a class="wordmark" href={homeHref} aria-label={t('header.homeLabel', locale)}>
+          <span class="wordmark__dot" aria-hidden="true"></span>
+          <span class="wordmark__name">Altrove</span>
+        </a>
+        <nav class="site-nav">
+          <LanguageToggle
+            currentLocale={locale}
+            alternateLocale={alternateLocale}
+            alternateHref={alternateHref}
+          />
+          <ThemeToggle />
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <p class="eyebrow hero__eyebrow">{t('home.eyebrow', locale)}</p>
+          <h1 class="display hero__title">{t('home.title', locale)}</h1>
+          <p class="hero__lede">{t('home.lede', locale)}</p>
+          <p class="hero__manifesto">
+            {t('home.manifestoBefore', locale)}<em>{t('home.manifestoEm', locale)}</em>{t('home.manifestoAfter', locale)}
+          </p>
+        </div>
+      </section>
+
+      <section class="chapters">
+        <div class="container">
+          <header class="chapters__head">
+            <h2 class="chapters__title">{t('home.chaptersTitle', locale)}</h2>
+            <p class="chapters__hint">
+              <span class="chapters__count tabular">{chapters.length}</span>
+              <span>{chapters.length === 1 ? t('home.chaptersHintOne', locale) : t('home.chaptersHintMany', locale)}</span>
+            </p>
+          </header>
+
+          <ul role="list" class="chapters__grid">
+            {chapters.map((c) => {
+              const slug = slugOf(c.id, locale);
+              const readMinutes = resolveReadingTime(c.body, c.data.readMinutes);
+              return (
+                <li>
+                  <ChapterCard
+                    locale={locale}
+                    number={c.data.number}
+                    title={c.data.title}
+                    excerpt={c.data.excerpt}
+                    href={localizedPath(`/chapters/${slug}`, locale)}
+                    date={c.data.date}
+                    readMinutes={readMinutes}
+                    slug={slug}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__row">
+        <p class="site-footer__sig">{t('footer.signature', locale)}</p>
+        <p class="site-footer__year tabular">{t('footer.year', locale)}</p>
+      </div>
+    </footer>
+  </div>
+</Base>
+
+<style>
+  /* ─── Header ─── */
+  .site-header {
+    padding-block: var(--space-md);
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-overlay);
+    background-color: var(--surface-overlay);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .site-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .site-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    text-decoration: none;
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-md);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .wordmark__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+    transition: box-shadow var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .wordmark:hover .wordmark__dot {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    padding-block: var(--rhythm-loose) var(--rhythm);
+  }
+
+  .hero__eyebrow {
+    margin-block-end: var(--space-md);
+  }
+
+  .hero__title {
+    margin-block-end: var(--space-md);
+  }
+
+  .hero__lede {
+    font-size: var(--text-lg);
+    color: var(--ink);
+    max-inline-size: var(--measure);
+    line-height: var(--leading-snug);
+    margin-block-end: var(--space-md);
+  }
+
+  .hero__manifesto {
+    color: var(--ink-muted);
+    max-inline-size: var(--measure);
+    line-height: var(--leading-relaxed);
+  }
+
+  .hero__manifesto em {
+    color: var(--accent-ink);
+    font-style: normal;
+    font-weight: var(--weight-medium);
+  }
+
+  /* ─── Capitoli ─── */
+  .chapters {
+    padding-block: var(--rhythm) var(--rhythm-loose);
+  }
+
+  .chapters__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-block-end: var(--space-xl);
+    padding-block-end: var(--space-md);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .chapters__title {
+    font-size: var(--text-md);
+    color: var(--ink-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  .chapters__hint {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .chapters__count {
+    color: var(--ink);
+    font-weight: var(--weight-medium);
+  }
+
+  .chapters__grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+  }
+
+  /* ─── Footer ─── */
+  .site-footer {
+    margin-block-start: auto;
+    padding-block: var(--space-xl);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .site-footer__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+
+  .site-footer__sig {
+    font-style: italic;
+  }
+
+  .site-footer__year {
+    letter-spacing: var(--tracking-wider);
+  }
+</style>

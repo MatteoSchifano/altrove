@@ -1,0 +1,173 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   MorphLoadingButton — il bottone diventa la sua azione.
+
+   Pattern: invece di mostrare uno spinner DENTRO il bottone, il
+   bottone STESSO si trasforma — restringe in un cerchio, gira,
+   e infine diventa un check. È molto più appagante dello spinner
+   inline perché non vedi lo "stato di attesa" come un oggetto
+   estraneo: vedi il bottone CHE FA la cosa.
+
+   Implementazione
+   - 3 stati: idle → loading → done → idle (auto reset dopo 2s)
+   - Width animata (sfrutta clip-path o min-width per evitare jank)
+   - Spring "snappy" per la trasformazione, easing soft per il colore
+   ───────────────────────────────────────────────────────────── */
+---
+
+<button class="morph" type="button" data-state="idle">
+  <span class="morph__face morph__face--idle">Salva</span>
+  <span class="morph__face morph__face--loading" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="morph__spinner">
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  </span>
+  <span class="morph__face morph__face--done" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="morph__check" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12.5 9.5 18l11-12" />
+    </svg>
+  </span>
+  <span class="sr-only morph__announce" aria-live="polite"></span>
+</button>
+
+<style>
+  .morph {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    block-size: 2.75rem;
+    inline-size: 9rem;
+    padding-inline: 1.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition:
+      inline-size var(--dur-normal) var(--ease-out-snappy),
+      background-color var(--dur-normal) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+    overflow: hidden;
+  }
+
+  .morph:hover { box-shadow: var(--shadow-lg); }
+  .morph:focus-visible { outline: none; box-shadow: var(--shadow-md), var(--halo-focus); }
+
+  /* Stato loading: il bottone si restringe in un cerchio */
+  .morph[data-state='loading'] {
+    inline-size: 2.75rem;
+    padding-inline: 0;
+    pointer-events: none;
+  }
+
+  /* Stato done: torna largo ma diventa accent verde-soft */
+  .morph[data-state='done'] {
+    inline-size: 2.75rem;
+    padding-inline: 0;
+    background-color: oklch(0.62 0.16 145); /* verde calmo */
+  }
+
+  .morph__face {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    transform: scale(0.7);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .morph[data-state='idle']    .morph__face--idle,
+  .morph[data-state='loading'] .morph__face--loading,
+  .morph[data-state='done']    .morph__face--done {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Spinner: cerchio che ruota con dasharray "respirante" */
+  .morph__spinner {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    animation: morph-spin 800ms linear infinite;
+  }
+
+  .morph__spinner circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 18 56.5;
+    transform-origin: center;
+  }
+
+  @keyframes morph-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .morph__check {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    /* L'animazione del path "draw" parte dallo state done */
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: morph-draw var(--dur-slow) var(--ease-out-soft) forwards;
+  }
+
+  .morph[data-state='done'] .morph__check {
+    animation-play-state: running;
+  }
+
+  @keyframes morph-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .morph,
+    .morph__face,
+    .morph__spinner,
+    .morph__check {
+      transition-duration: 1ms !important;
+      animation-duration: 1ms !important;
+    }
+  }
+</style>
+
+<script>
+  type State = 'idle' | 'loading' | 'done';
+
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.morph').forEach((btn) => {
+      if (btn.dataset.morphBound === 'true') return;
+      btn.dataset.morphBound = 'true';
+
+      const announce = btn.querySelector<HTMLElement>('.morph__announce');
+
+      const setState = (s: State) => {
+        btn.dataset.state = s;
+        if (announce) {
+          announce.textContent = {
+            idle: '',
+            loading: 'Salvataggio in corso',
+            done: 'Salvato',
+          }[s];
+        }
+      };
+
+      btn.addEventListener('click', async () => {
+        if (btn.dataset.state !== 'idle') return;
+        setState('loading');
+        // Simuliamo un'azione asincrona — in un caso reale qui ci sarebbe fetch()
+        await new Promise((r) => setTimeout(r, 1100));
+        setState('done');
+        await new Promise((r) => setTimeout(r, 1300));
+        setState('idle');
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

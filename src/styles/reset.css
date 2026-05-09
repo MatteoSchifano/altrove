@@ -1,0 +1,94 @@
+/* ─────────────────────────────────────────────────────────────
+   Altrove · reset.css — un reset moderno, minimale.
+   Ispirato a Josh Comeau / Andy Bell, ridotto all'osso.
+   ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    hanging-punctuation: first last;
+  }
+
+  html:focus-within {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-block-size: 100svh;
+    line-height: var(--leading-normal, 1.5);
+  }
+
+  /* Media: block per default + max-width: 100% */
+  img, picture, video, canvas, svg {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* Form: eredita la tipografia dell'host */
+  input, button, textarea, select {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Disabilita button styles default per controllarli noi */
+  button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  /* Bilancia rotture di parola sui titoli */
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* Pretty paragraphs */
+  p, li, dd {
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+  }
+
+  /* Liste senza stile dove serve, ma manteniamo il default semantico */
+  :where(ul[role='list'], ol[role='list']) {
+    list-style: none;
+    padding: 0;
+  }
+
+  /* Link senza colore default — lo controlliamo noi */
+  a {
+    color: inherit;
+    text-decoration-color: var(--ink-subtle);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  /* Per chi naviga con tastiera: focus visibile e bello,
+     ma solo quando serve (focus-visible, non focus) */
+  :focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--halo-focus);
+    border-radius: var(--radius-xs);
+  }
+
+  /* Selezione testo — usa l'accent in modo gentile */
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+}

@@ -1,0 +1,143 @@
+/* ─────────────────────────────────────────────────────────────
+   Altrove · typography.css — la voce del progetto.
+
+   Geist Variable per tutto. Le differenze le fa il peso, il
+   tracking e la dimensione, non famiglie diverse.
+   ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    /* Geist supporta queste opentype features:
+       cv11 = miglior 'a' singolo livello
+       ss03 = '0' con slash (utile per tabelle/cifre miste)
+       ss04 = ligature stilistiche tenui
+       Lo lasciamo discreto — le features attivano la "voce". */
+    font-feature-settings:
+      'cv11' 1,
+      'ss03' 1,
+      'ss04' 1;
+    /* Numeri tabulari per UI con cifre allineate */
+    font-variant-numeric: oldstyle-nums proportional-nums;
+  }
+
+  body {
+    color: var(--ink);
+    background-color: var(--bg);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    letter-spacing: var(--tracking-normal);
+    font-weight: var(--weight-regular);
+  }
+
+  /* ─── Titoli ─── */
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    letter-spacing: var(--tracking-tighter);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  h3 {
+    font-size: var(--text-xl);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  h4 {
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  h5 {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  h6 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ink-muted);
+  }
+
+  /* ─── Display class — usata per il "wordmark" o titoli copertina ─── */
+  .display {
+    font-family: var(--font-display);
+    font-size: var(--text-display);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tighter);
+    color: var(--ink-strong);
+  }
+
+  /* ─── Paragrafo ─── */
+  p {
+    line-height: var(--leading-relaxed);
+    max-inline-size: var(--measure);
+  }
+
+  /* ─── Inline ─── */
+  strong, b { font-weight: var(--weight-semibold); }
+  em, i     { font-style: italic; }
+
+  small {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+
+  code, kbd, samp, pre {
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss03' 1; /* zero con slash, leggibile */
+  }
+
+  code {
+    font-size: 0.92em;
+    padding: 0.1em 0.36em;
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--ink-strong);
+  }
+
+  pre code {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* ─── Quote ─── */
+  blockquote {
+    border-inline-start: 2px solid var(--accent);
+    padding-inline-start: var(--space-md);
+    color: var(--ink);
+    font-style: italic;
+    max-inline-size: var(--measure);
+  }
+
+  /* ─── Etichette piccole — meta, tag, eyebrow ─── */
+  .eyebrow {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ink-muted);
+  }
+
+  /* ─── Numeri tabulari su misura ─── */
+  .tabular { font-variant-numeric: tabular-nums; }
+}

@@ -1,0 +1,155 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FavoriteButton — il feedback aptico simulato visivamente.
+
+   Il telefono vibra quando lo tocchi; il browser no. Ma il
+   cervello accetta una vibrazione visiva come surrogato — se è
+   abbastanza breve. Qui: al toggle, l'icona fa una micro-bounce
+   (scale 1 → 1.4 → 1) e il colore si "imbeve" del rosso.
+
+   Implementazione
+   - aria-pressed per lo stato (toggle, non azione one-shot)
+   - keyframes brevi (320 ms) sull'icona quando lo stato cambia
+   - "splash" radiale che si espande e svanisce dietro l'icona
+     come un'onda d'impatto
+   - tactile: micro-bounce + halo rosso-soft
+   ───────────────────────────────────────────────────────────── */
+---
+
+<button type="button" class="favorite" aria-pressed="false" aria-label="Aggiungi ai preferiti">
+  <span class="favorite__splash" aria-hidden="true"></span>
+  <svg viewBox="0 0 24 24" class="favorite__icon" aria-hidden="true">
+    <path
+      d="M12 21s-7-4.35-7-10a4.5 4.5 0 0 1 8-2.8 4.5 4.5 0 0 1 8 2.8c0 5.65-7 10-7 10z"
+      fill="currentColor"
+      stroke="currentColor"
+      stroke-width="1.4"
+      stroke-linejoin="round"
+    />
+  </svg>
+</button>
+
+<style>
+  .favorite {
+    --resting: var(--ink-muted);
+    --active:  oklch(0.62 0.2 22);
+
+    position: relative;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-pill);
+    color: var(--resting);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .favorite:hover { border-color: var(--border-strong); }
+
+  .favorite:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-xs), var(--halo-focus);
+  }
+
+  .favorite[aria-pressed='true'] {
+    color: var(--active);
+    border-color: color-mix(in oklab, var(--active) 30%, var(--border-strong));
+  }
+
+  .favorite__icon {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    /* L'icona è "non riempita" di base — usiamo il fill currentColor
+       ma riduciamo l'opacità del fill per sembrare outline. Il trucco:
+       fill-opacity 0.08 in idle, 1 quando attivato. */
+    fill-opacity: 0;
+    stroke-opacity: 1;
+    transition:
+      fill-opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .favorite[aria-pressed='true'] .favorite__icon {
+    fill-opacity: 1;
+    animation: favorite-bounce 360ms var(--ease-out-snappy);
+  }
+
+  @keyframes favorite-bounce {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.45); }
+    62%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+
+  /* Splash: anello che si espande dietro l'icona al toggle */
+  .favorite__splash {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background-color: color-mix(in oklab, oklch(0.62 0.2 22) 30%, transparent);
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: none;
+  }
+
+  .favorite[aria-pressed='true'] .favorite__splash {
+    animation: favorite-splash 480ms var(--ease-out-soft);
+  }
+
+  @keyframes favorite-splash {
+    0%   { opacity: 0.7; transform: scale(0.4); }
+    100% { opacity: 0;   transform: scale(2.4); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .favorite__icon,
+    .favorite__splash {
+      animation: none !important;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.favorite').forEach((btn) => {
+      if (btn.dataset.favoriteBound === 'true') return;
+      btn.dataset.favoriteBound = 'true';
+
+      btn.addEventListener('click', () => {
+        const next = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', String(next));
+        btn.setAttribute(
+          'aria-label',
+          next ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'
+        );
+
+        // L'animazione è guidata dalla classe; per ri-triggerare al
+        // riattivare, dobbiamo costringere un reflow togliendo+rimettendo.
+        if (next) {
+          const icon = btn.querySelector<SVGElement>('.favorite__icon');
+          const splash = btn.querySelector<HTMLElement>('.favorite__splash');
+          [icon, splash].forEach((el) => {
+            if (!el) return;
+            el.style.animation = 'none';
+            void el.offsetWidth; // reflow
+            el.style.animation = '';
+          });
+
+          // Vibrazione hardware quando disponibile (mobile)
+          if ('vibrate' in navigator) navigator.vibrate?.(8);
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

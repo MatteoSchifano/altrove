@@ -1,0 +1,64 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   /en/chapters/[slug] — dynamic render of the English chapter.
+   ───────────────────────────────────────────────────────────── */
+
+import { getCollection, render } from 'astro:content';
+import Chapter from '../../../layouts/Chapter.astro';
+import { localizedPath, getOtherLocales, type Locale } from '../../../lib/i18n';
+import { resolveReadingTime } from '../../../lib/readingTime';
+import type { GetStaticPaths } from 'astro';
+
+const LOCALE: Locale = 'en';
+const ALT_LOCALE: Locale = getOtherLocales(LOCALE)[0]!;
+
+function slugOf(id: string, lang: Locale): string {
+  return id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
+}
+
+/* getStaticPaths runs in isolated scope: everything it uses
+   must live INSIDE the function (no closure on file consts). */
+export const getStaticPaths = (async () => {
+  const PAGE_LOCALE = 'en';
+  const stripPrefix = (id: string, lang: string) =>
+    id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
+
+  const all = await getCollection('chapters', ({ data }) => !data.draft);
+  const here = all.filter((e) => e.data.lang === PAGE_LOCALE);
+  return here.map((entry) => {
+    const slug = stripPrefix(entry.id, PAGE_LOCALE);
+    const alt = all.find(
+      (e) =>
+        e.data.translationKey === entry.data.translationKey &&
+        e.data.lang !== entry.data.lang,
+    );
+    return {
+      params: { slug },
+      props: { entry, slug, alt },
+    };
+  });
+}) satisfies GetStaticPaths;
+
+const { entry, slug, alt } = Astro.props;
+const { Content } = await render(entry);
+
+const alternateHref = alt
+  ? localizedPath(`/chapters/${slugOf(alt.id, alt.data.lang)}`, alt.data.lang)
+  : localizedPath('/', ALT_LOCALE);
+
+const readMinutes = resolveReadingTime(entry.body, entry.data.readMinutes);
+---
+
+<Chapter
+  locale={LOCALE}
+  alternateLocale={ALT_LOCALE}
+  alternateHref={alternateHref}
+  number={entry.data.number}
+  title={entry.data.title}
+  excerpt={entry.data.excerpt}
+  date={entry.data.date}
+  readMinutes={readMinutes}
+  slug={slug}
+>
+  <Content />
+</Chapter>

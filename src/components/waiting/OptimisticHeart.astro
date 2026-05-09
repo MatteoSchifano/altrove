@@ -1,0 +1,200 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   OptimisticHeart — l'interfaccia che si fida della rete.
+
+   Pattern optimistic UI: il toggle si attiva *prima* che il
+   server risponda. La maggior parte delle volte la rete dice sì
+   — possiamo darlo per scontato e ricompensare l'utente con un
+   feedback istantaneo. Solo se la chiamata fallisce, rollback
+   silenzioso e indicatore discreto.
+
+   Mostriamo due cuori affiancati per rendere il pattern leggibile:
+   - "Rete buona" → success path (~600 ms)
+   - "Rete debole" → fail path (~700 ms): rollback + flash discreto
+
+   Il cuore ha un piccolo "burst" su attivazione — non per
+   celebrare, ma per confermare il gesto fisicamente.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="opti">
+  <div class="opti__pair">
+    <button class="heart" type="button" data-mode="ok" data-state="off" aria-pressed="false">
+      <svg viewBox="0 0 24 24" class="heart__icon" fill="currentColor" aria-hidden="true">
+        <path d="M12 21s-7.5-4.6-9.5-10A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5C19.5 16.4 12 21 12 21z" />
+      </svg>
+      <span class="heart__burst" aria-hidden="true"></span>
+      <span class="sr-only">Preferito · rete buona</span>
+    </button>
+
+    <button class="heart" type="button" data-mode="fail" data-state="off" aria-pressed="false">
+      <svg viewBox="0 0 24 24" class="heart__icon" fill="currentColor" aria-hidden="true">
+        <path d="M12 21s-7.5-4.6-9.5-10A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5C19.5 16.4 12 21 12 21z" />
+      </svg>
+      <span class="heart__burst" aria-hidden="true"></span>
+      <span class="sr-only">Preferito · rete debole</span>
+    </button>
+  </div>
+
+  <div class="opti__labels">
+    <span class="opti__label tabular">rete buona</span>
+    <span class="opti__label opti__label--weak tabular">rete debole</span>
+  </div>
+
+  <p class="opti__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .opti {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .opti__pair {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+  }
+
+  .opti__labels {
+    display: flex;
+    gap: var(--space-2xl);
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+  .opti__label--weak { /* uguale, ma esiste come hook futuro */ }
+
+  /* Heart button */
+  .heart {
+    --size: 2.5rem;
+    position: relative;
+    inline-size: var(--size);
+    block-size: var(--size);
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    color: var(--ink-subtle);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  .heart:hover { transform: scale(1.04); }
+  .heart:active { transform: scale(0.92); }
+  .heart:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .heart__icon {
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    transform: scale(0.94);
+    transition:
+      transform var(--dur-normal) var(--ease-out-snappy),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .heart[data-state='on'] {
+    color: oklch(0.62 0.2 22);
+    border-color: color-mix(in oklab, oklch(0.62 0.2 22) 35%, var(--border));
+  }
+  .heart[data-state='on'] .heart__icon {
+    transform: scale(1.1);
+  }
+
+  /* Stato di rollback — un brevissimo flash rosso desaturato */
+  .heart[data-state='rollback'] {
+    color: oklch(0.55 0.16 22);
+    border-color: color-mix(in oklab, oklch(0.55 0.16 22) 30%, var(--border));
+    animation: heart-shake var(--dur-slow) var(--ease-out-soft);
+  }
+
+  @keyframes heart-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+  }
+
+  /* Burst — anello che si espande all'attivazione */
+  .heart__burst {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid oklch(0.62 0.2 22);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .heart[data-burst='true'] .heart__burst {
+    animation: heart-burst var(--dur-slow) var(--ease-out-soft) forwards;
+  }
+  @keyframes heart-burst {
+    from { transform: scale(1); opacity: 0.7; }
+    to   { transform: scale(1.7); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .heart,
+    .heart__icon,
+    .heart__burst {
+      transition-duration: 1ms;
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.heart').forEach((btn) => {
+      if (btn.dataset.bound === 'true') return;
+      btn.dataset.bound = 'true';
+
+      const live = btn.closest('.opti')?.querySelector<HTMLElement>('.opti__live');
+      const mode = btn.dataset.mode;
+
+      const fakeNetwork = (success: boolean, ms: number) =>
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(success), ms));
+
+      btn.addEventListener('click', async () => {
+        if (btn.dataset.state === 'pending') return;
+        const wasOn = btn.dataset.state === 'on';
+        const target = !wasOn;
+
+        // Optimistic update: cambia stato SUBITO
+        btn.dataset.state = target ? 'on' : 'off';
+        btn.setAttribute('aria-pressed', String(target));
+        if (target) {
+          btn.dataset.burst = 'true';
+          setTimeout(() => { btn.dataset.burst = 'false'; }, 480);
+        }
+
+        // Chiamata simulata
+        const willSucceed = mode === 'ok';
+        const ok = await fakeNetwork(willSucceed, mode === 'ok' ? 600 : 700);
+
+        if (!ok) {
+          // Rollback dignitoso
+          btn.dataset.state = 'rollback';
+          btn.setAttribute('aria-pressed', String(wasOn));
+          if (live) live.textContent = 'Non riuscito · ripristino';
+          setTimeout(() => {
+            btn.dataset.state = wasOn ? 'on' : 'off';
+          }, 480);
+        } else {
+          if (live) live.textContent = target ? 'Aggiunto ai preferiti' : 'Rimosso dai preferiti';
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

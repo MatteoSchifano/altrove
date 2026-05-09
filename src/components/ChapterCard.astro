@@ -1,0 +1,177 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ChapterCard — la signature interaction della home.
+
+   Pattern: card "magnetic" — l'intera card si sposta lievemente
+   verso il cursore (gentle spring), e si solleva con ombra più
+   profonda. Il titolo ha un view-transition-name dedicato per
+   poter "fluire" verso la pagina del capitolo.
+
+   Note di UX
+   - Nessun motion sopra ai 4–6 px: deve essere percepibile,
+     non distraente.
+   - La card è interamente cliccabile (anchor che avvolge tutto)
+     ma la struttura semantica resta corretta perché usiamo
+     <article> + <a> con aria-labelledby.
+   ───────────────────────────────────────────────────────────── */
+
+import { t, type Locale } from '../lib/i18n';
+
+interface Props {
+  locale: Locale;
+  number: string;          // "01", "02", …
+  title: string;
+  excerpt: string;
+  href: string;
+  date?: string;           // formato leggibile, es. "maggio 2026"
+  readMinutes?: number;
+  /** slug usato per il view-transition-name del titolo */
+  slug: string;
+}
+
+const { locale, number, title, excerpt, href, date, readMinutes, slug } = Astro.props;
+const titleId = `chapter-title-${slug}`;
+---
+
+<article
+  class="chapter-card"
+  data-motion="magnetic"
+  data-strength="0.18"
+  data-preset="gentle"
+>
+  <a class="chapter-card__link" href={href} aria-labelledby={titleId}>
+    <header class="chapter-card__head">
+      <span class="eyebrow">{t('card.chapter', locale)} {number}</span>
+      {readMinutes && (
+        <span class="chapter-card__meta tabular">{readMinutes} {t('card.minutes', locale)}</span>
+      )}
+    </header>
+
+    <h2
+      id={titleId}
+      class="chapter-card__title"
+      style={`view-transition-name: chapter-title-${slug}`}
+    >
+      {title}
+    </h2>
+
+    <p class="chapter-card__excerpt">{excerpt}</p>
+
+    <footer class="chapter-card__foot">
+      {date && <time class="chapter-card__date">{date}</time>}
+      <span class="chapter-card__cue" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 8h10M9 4l4 4-4 4" />
+        </svg>
+      </span>
+    </footer>
+  </a>
+</article>
+
+<style>
+  .chapter-card {
+    /* Wrapper esterno — riceve la trasformazione magnetic da motion.ts */
+    position: relative;
+    border-radius: var(--radius-xl);
+    will-change: transform;
+  }
+
+  .chapter-card__link {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    min-block-size: 16rem;
+    border-radius: inherit;
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+    transition:
+      background-color var(--dur-normal) var(--ease-out-soft),
+      border-color var(--dur-normal) var(--ease-out-soft),
+      box-shadow var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .chapter-card__link:hover,
+  .chapter-card__link:focus-visible {
+    background-color: var(--surface-raised);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Focus visibile sul link interno, non sul wrapper magnetic */
+  .chapter-card__link:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-lg), var(--halo-focus);
+  }
+
+  .chapter-card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .chapter-card__meta {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .chapter-card__title {
+    font-size: var(--text-xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+    /* Il view-transition-name viene applicato inline da Astro.props,
+       per essere unico per ogni card. */
+  }
+
+  .chapter-card__excerpt {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    max-inline-size: none;
+  }
+
+  .chapter-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+
+  .chapter-card__date {
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+  }
+
+  .chapter-card__cue {
+    display: grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    transition:
+      background-color var(--dur-normal) var(--ease-out-soft),
+      color var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .chapter-card__cue svg {
+    inline-size: 0.85rem;
+    block-size: 0.85rem;
+  }
+
+  .chapter-card__link:hover .chapter-card__cue,
+  .chapter-card__link:focus-visible .chapter-card__cue {
+    background-color: var(--accent);
+    color: var(--accent-on);
+    transform: translateX(3px);
+  }
+</style>

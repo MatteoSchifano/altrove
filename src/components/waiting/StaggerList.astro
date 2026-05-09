@@ -1,0 +1,190 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   StaggerList — la lista che cresce.
+
+   Pattern: paginazione "load more" dove i nuovi item entrano
+   con stagger leggero, ma quelli già presenti NON si re-animano.
+   La regola d'oro: un elemento si anima una volta sola, alla
+   sua prima apparizione. Re-animare il già-visto è un atto di
+   nervosismo che non rispetta la memoria visiva dell'utente.
+
+   Tecnica
+   - I nuovi item ricevono `data-enter="true"` con uno
+     `--stagger-i` indicizzato.
+   - L'animazione `slide-up` è triggerata da quell'attributo.
+   - Dopo `animationend`, l'attributo viene rimosso → l'item è
+     "stabile" e non rifarà mai più l'ingresso.
+   ───────────────────────────────────────────────────────────── */
+
+const initial = [
+  { title: 'Note del 12 marzo',  meta: 'aggiornata oggi' },
+  { title: 'Domande residue',    meta: '4 voci'           },
+  { title: 'Letture in attesa',  meta: '12 voci'          },
+];
+---
+
+<div class="stag">
+  <ol class="stag__list" role="list">
+    {initial.map((item) => (
+      <li class="stag__item">
+        <h5 class="stag__title">{item.title}</h5>
+        <p class="stag__meta tabular">{item.meta}</p>
+      </li>
+    ))}
+  </ol>
+
+  <button class="stag__add" type="button">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M8 3v10M3 8h10" />
+    </svg>
+    <span>Aggiungi 3</span>
+  </button>
+</div>
+
+<style>
+  .stag {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .stag__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .stag__item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .stag__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .stag__meta {
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  /* Solo i nuovi si animano — guidato da data-enter */
+  .stag__item[data-enter='true'] {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: stag-in var(--dur-slow) var(--ease-out-snug) forwards;
+    animation-delay: calc(var(--stagger-i, 0) * 90ms);
+  }
+
+  @keyframes stag-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stag__add {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .stag__add:hover {
+    color: var(--ink-strong);
+    background-color: var(--surface-raised);
+    border-color: var(--border-strong);
+  }
+  .stag__add:active { transform: scale(0.97); }
+  .stag__add:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .stag__add svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stag__item[data-enter='true'] {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const POOL_TITLES = [
+    'Idee per il prossimo capitolo',
+    'Bookmarks da leggere',
+    'Variabili di motion da rivedere',
+    'Frasi per il colofone',
+    'Tipografia da provare',
+    'Domande per Anna',
+    'Note di colore',
+    'Riferimenti di Linear',
+    'Spunti dal blog di Vercel',
+  ];
+  const POOL_METAS = ['nuova', '2 voci', '5 voci', '8 voci', '11 voci'];
+
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.stag').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const list = el.querySelector<HTMLElement>('.stag__list')!;
+      const addBtn = el.querySelector<HTMLButtonElement>('.stag__add')!;
+
+      addBtn.addEventListener('click', () => {
+        for (let i = 0; i < 3; i++) {
+          const li = document.createElement('li');
+          li.className = 'stag__item';
+          li.setAttribute('data-enter', 'true');
+          li.style.setProperty('--stagger-i', String(i));
+          li.innerHTML = `
+            <h5 class="stag__title">${pick(POOL_TITLES)}</h5>
+            <p class="stag__meta tabular">${pick(POOL_METAS)}</p>
+          `;
+
+          /* Stabilizza l'item: rimuoviamo l'enter sia su animationend
+             (caso normale) sia con un timeout di sicurezza (alcune
+             situazioni — page-hidden, motion ridotto — non sparano
+             l'evento). Il primo che arriva vince. */
+          let settled = false;
+          const settle = () => {
+            if (settled) return;
+            settled = true;
+            li.removeAttribute('data-enter');
+            li.style.removeProperty('--stagger-i');
+          };
+          li.addEventListener('animationend', settle, { once: true });
+          setTimeout(settle, 800);
+
+          list.appendChild(li);
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

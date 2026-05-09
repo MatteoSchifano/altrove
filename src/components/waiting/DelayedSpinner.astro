@@ -1,0 +1,205 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   DelayedSpinner — il pattern "spinner shame".
+
+   Se la rete risponde sotto 400 ms, mostrare uno spinner è una
+   cattiveria gratuita: un flash di loading che l'utente non
+   aveva chiesto. La regola: lo spinner appare *solo* se la
+   risposta tarda — non subito. Sotto soglia, l'azione si
+   completa silenziosamente, come dovrebbe.
+
+   Demo: tre bottoni con latenza diversa. Solo quello "lento"
+   mostrerà lo spinner; il "veloce" finirà prima che lo spinner
+   abbia il tempo di apparire.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="delsp">
+  <div class="delsp__row">
+    <button class="delsp__btn" type="button" data-latency="200">
+      <span class="delsp__face">
+        <span class="delsp__label">Veloce</span>
+        <span class="delsp__lat">200 ms</span>
+      </span>
+      <span class="delsp__spinner" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></span>
+      <span class="delsp__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18l11-12"/></svg></span>
+    </button>
+
+    <button class="delsp__btn" type="button" data-latency="600">
+      <span class="delsp__face">
+        <span class="delsp__label">Borderline</span>
+        <span class="delsp__lat">600 ms</span>
+      </span>
+      <span class="delsp__spinner" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></span>
+      <span class="delsp__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18l11-12"/></svg></span>
+    </button>
+
+    <button class="delsp__btn" type="button" data-latency="1500">
+      <span class="delsp__face">
+        <span class="delsp__label">Lenta</span>
+        <span class="delsp__lat">1500 ms</span>
+      </span>
+      <span class="delsp__spinner" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></span>
+      <span class="delsp__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18l11-12"/></svg></span>
+    </button>
+  </div>
+
+  <p class="delsp__caption tabular">
+    Soglia di apparizione spinner: <strong>400 ms</strong>
+  </p>
+</div>
+
+<style>
+  .delsp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .delsp__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+  }
+
+  .delsp__btn {
+    --size: 7.25rem;
+    position: relative;
+    inline-size: var(--size);
+    block-size: 3.5rem;
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+    overflow: hidden;
+  }
+  .delsp__btn:hover { background-color: var(--surface-raised); border-color: var(--border-strong); transform: translateY(-1px); }
+  .delsp__btn:active { transform: translateY(0); }
+  .delsp__btn:focus-visible { outline: none; box-shadow: var(--shadow-xs), var(--halo-focus); }
+  .delsp__btn[data-state='pending'] { pointer-events: none; }
+
+  .delsp__face,
+  .delsp__spinner,
+  .delsp__check {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .delsp__face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    line-height: 1;
+    padding-inline: var(--space-sm);
+    text-align: center;
+  }
+  .delsp__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .delsp__lat {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .delsp__spinner,
+  .delsp__check { opacity: 0; }
+
+  .delsp__btn[data-state='spinning'] .delsp__face   { opacity: 0; }
+  .delsp__btn[data-state='spinning'] .delsp__spinner{ opacity: 1; }
+  .delsp__btn[data-state='done']     .delsp__face   { opacity: 0; }
+  .delsp__btn[data-state='done']     .delsp__check  { opacity: 1; }
+
+  .delsp__spinner svg,
+  .delsp__check svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+  .delsp__spinner svg {
+    animation: delsp-spin 800ms linear infinite;
+  }
+  .delsp__spinner circle {
+    fill: none;
+    stroke: var(--ink-muted);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 18 56.5;
+    transform-origin: center;
+  }
+  .delsp__check { color: oklch(0.62 0.16 145); }
+
+  @keyframes delsp-spin { to { transform: rotate(360deg); } }
+
+  .delsp__caption {
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+  .delsp__caption strong {
+    color: var(--ink);
+    font-weight: var(--weight-medium);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .delsp__spinner svg { animation: none; }
+    .delsp__face,
+    .delsp__spinner,
+    .delsp__check { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  const SPINNER_THRESHOLD_MS = 400;
+
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.delsp__btn').forEach((btn) => {
+      if (btn.dataset.bound === 'true') return;
+      btn.dataset.bound = 'true';
+
+      const latency = parseInt(btn.dataset.latency ?? '500', 10);
+
+      btn.addEventListener('click', async () => {
+        if (btn.dataset.state === 'pending' || btn.dataset.state === 'spinning') return;
+
+        btn.dataset.state = 'pending';
+        let spinnerShown = false;
+
+        const spinnerTimer = setTimeout(() => {
+          if (btn.dataset.state === 'pending') {
+            btn.dataset.state = 'spinning';
+            spinnerShown = true;
+          }
+        }, SPINNER_THRESHOLD_MS);
+
+        await new Promise((r) => setTimeout(r, latency));
+        clearTimeout(spinnerTimer);
+
+        btn.dataset.state = 'done';
+        await new Promise((r) => setTimeout(r, 1200));
+
+        // Reset
+        btn.dataset.state = 'idle';
+        // (variabile usata per evitare warning di TS — implicit any)
+        void spinnerShown;
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

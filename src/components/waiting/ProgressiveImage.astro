@@ -1,0 +1,171 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ProgressiveImage — l'immagine ha forma prima di esistere.
+
+   Pattern LQIP (low-quality image placeholder) blur-up:
+   1. Aspect-ratio fissato → niente layout shift quando arriva il finale
+   2. Versione minuscola, sfocata e a basso peso → caricata subito
+   3. Versione "alta" → fade-in con `filter: blur()` che cala a 0
+
+   Per la demo evitiamo binari: usiamo due gradient SVG inline,
+   uno minuscolo (LQIP simulato) e uno più ricco (l'immagine
+   "vera"). La transizione è la stessa che useremmo con immagini
+   reali — basta sostituire i src.
+   ───────────────────────────────────────────────────────────── */
+
+const lqip = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'>
+  <defs>
+    <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
+      <stop offset='0' stop-color='#e8c3a8'/>
+      <stop offset='0.6' stop-color='#a37b6a'/>
+      <stop offset='1' stop-color='#3b2a3a'/>
+    </linearGradient>
+  </defs>
+  <rect width='16' height='10' fill='url(#g)'/>
+</svg>`)}`;
+
+const full = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200'>
+  <defs>
+    <linearGradient id='sky' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#f5d6b6'/>
+      <stop offset='0.55' stop-color='#d49a82'/>
+      <stop offset='1' stop-color='#5a3a55'/>
+    </linearGradient>
+    <linearGradient id='hill' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#3b2a3a'/>
+      <stop offset='1' stop-color='#1d1424'/>
+    </linearGradient>
+  </defs>
+  <rect width='320' height='200' fill='url(#sky)'/>
+  <circle cx='240' cy='70' r='28' fill='#f8e6c9' opacity='0.9'/>
+  <path d='M0 150 Q 60 130 110 145 T 220 138 T 320 150 L 320 200 L 0 200 Z' fill='url(#hill)'/>
+  <path d='M0 175 Q 80 158 160 170 T 320 168 L 320 200 L 0 200 Z' fill='#0e0916' opacity='0.85'/>
+</svg>`)}`;
+---
+
+<figure class="proimg">
+  <div class="proimg__frame" data-state="loading">
+    <img class="proimg__lqip" src={lqip} alt="" aria-hidden="true" />
+    <img class="proimg__full" data-src={full} alt="Tramonto sopra colline stilizzate" loading="lazy" decoding="async" />
+  </div>
+  <figcaption class="proimg__caption tabular">aspect-ratio fissato · LQIP <span class="proimg__sep">→</span> full</figcaption>
+  <button class="proimg__reload" type="button">Ricarica</button>
+</figure>
+
+<style>
+  .proimg {
+    margin: 0;
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+  }
+
+  .proimg__frame {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    inline-size: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: var(--surface-sunken);
+    box-shadow: var(--shadow-md);
+  }
+
+  .proimg__lqip,
+  .proimg__full {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .proimg__lqip {
+    /* Il LQIP è "alto" come blur — la sfocatura viene dal CSS,
+       non dal file (che è già piccolo). */
+    filter: blur(18px) saturate(1.1);
+    transform: scale(1.06); /* evita bordi sfocati ai margini */
+  }
+
+  .proimg__full {
+    opacity: 0;
+    filter: blur(8px);
+    transition:
+      opacity var(--dur-slow) var(--ease-out-soft),
+      filter var(--dur-slow) var(--ease-out-soft);
+  }
+
+  .proimg__frame[data-state='ready'] .proimg__full {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  .proimg__caption {
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    margin-block-start: var(--space-2xs);
+  }
+  .proimg__sep { color: var(--ink-muted); }
+
+  .proimg__reload {
+    align-self: flex-start;
+    padding: 0.4rem 0.875rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .proimg__reload:hover { color: var(--ink-strong); background-color: var(--surface-raised); }
+  .proimg__reload:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .proimg__full {
+      transition-duration: 1ms;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.proimg').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const frame = el.querySelector<HTMLElement>('.proimg__frame')!;
+      const fullImg = el.querySelector<HTMLImageElement>('.proimg__full')!;
+      const reload = el.querySelector<HTMLButtonElement>('.proimg__reload')!;
+      const fullSrc = fullImg.dataset.src!;
+
+      const cycle = () => {
+        frame.dataset.state = 'loading';
+        // Reset src per forzare la transizione anche al re-trigger
+        fullImg.removeAttribute('src');
+
+        const delay = 1100 + Math.random() * 600;
+        setTimeout(() => {
+          fullImg.addEventListener(
+            'load',
+            () => { frame.dataset.state = 'ready'; },
+            { once: true },
+          );
+          fullImg.src = fullSrc;
+        }, delay);
+      };
+
+      reload.addEventListener('click', cycle);
+      cycle();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

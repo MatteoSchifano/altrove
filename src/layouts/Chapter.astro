@@ -1,0 +1,292 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   Chapter.astro — layout editoriale per un capitolo.
+
+   La pagina ha un ritmo lento, voluto. Il titolo riprende il
+   view-transition-name della card della home — quando arrivi qui
+   da un'altra pagina, lo vedi "fluire" dalla griglia.
+   ───────────────────────────────────────────────────────────── */
+
+import Base from './Base.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import LanguageToggle from '../components/LanguageToggle.astro';
+import { t, localizedPath, type Locale } from '../lib/i18n';
+
+interface Props {
+  locale: Locale;
+  alternateLocale: Locale;
+  alternateHref: string;
+  number: string;
+  title: string;
+  excerpt: string;
+  date?: string;
+  readMinutes?: number;
+  slug: string;
+}
+
+const {
+  locale,
+  alternateLocale,
+  alternateHref,
+  number,
+  title,
+  excerpt,
+  date,
+  readMinutes,
+  slug,
+} = Astro.props;
+
+const homeHref = localizedPath('/', locale);
+---
+
+<Base locale={locale} title={`${title} · Altrove`} description={excerpt}>
+  <div class="page">
+    <header class="site-header">
+      <div class="container site-header__row">
+        <a class="wordmark" href={homeHref} aria-label={t('header.homeLabel', locale)}>
+          <span class="wordmark__dot" aria-hidden="true"></span>
+          <span class="wordmark__name">Altrove</span>
+        </a>
+        <nav class="site-nav">
+          <a class="back-link" href={homeHref}>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 8H3M7 4 3 8l4 4" />
+            </svg>
+            <span>{t('header.indexLink', locale)}</span>
+          </a>
+          <LanguageToggle
+            currentLocale={locale}
+            alternateLocale={alternateLocale}
+            alternateHref={alternateHref}
+          />
+          <ThemeToggle />
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <article class="chapter">
+        <header class="chapter__head container container--prose">
+          <p class="eyebrow chapter__eyebrow">{t('chapter.chapter', locale)} {number}</p>
+          <h1
+            class="chapter__title"
+            style={`view-transition-name: chapter-title-${slug}`}
+          >
+            {title}
+          </h1>
+          <p class="chapter__lede">{excerpt}</p>
+          <div class="chapter__meta">
+            {date && <time>{date}</time>}
+            {readMinutes && (
+              <>
+                {date && <span aria-hidden="true">{t('chapter.readingTimeJoiner', locale)}</span>}
+                <span class="tabular">{readMinutes} {t('chapter.readingTime', locale)}</span>
+              </>
+            )}
+          </div>
+        </header>
+
+        <div class="chapter__body container container--prose">
+          <slot />
+        </div>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__row">
+        <a href={homeHref} class="back-home">{t('footer.backHome', locale)}</a>
+        <p class="site-footer__year tabular">{t('footer.year', locale)}</p>
+      </div>
+    </footer>
+  </div>
+</Base>
+
+<style>
+  /* Header — riutilizza gli stessi pattern della home */
+  .site-header {
+    padding-block: var(--space-md);
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-overlay);
+    background-color: var(--surface-overlay);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .site-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .site-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    text-decoration: none;
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-md);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .wordmark__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .back-link:hover {
+    color: var(--ink-strong);
+    background-color: var(--surface-raised);
+    border-color: var(--border-strong);
+  }
+
+  .back-link svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .back-link:hover svg {
+    transform: translateX(-2px);
+  }
+
+  /* ─── Capitolo ─── */
+
+  .chapter {
+    padding-block: var(--rhythm-loose) var(--rhythm-loose);
+  }
+
+  .chapter__head {
+    margin-block-end: var(--rhythm);
+    padding-block-end: var(--rhythm-tight);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .chapter__eyebrow {
+    margin-block-end: var(--space-md);
+  }
+
+  .chapter__title {
+    font-size: var(--text-3xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tighter);
+    line-height: var(--leading-tight);
+    margin-block-end: var(--space-md);
+  }
+
+  .chapter__lede {
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    color: var(--ink-muted);
+    max-inline-size: none;
+    margin-block-end: var(--space-md);
+  }
+
+  .chapter__meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    color: var(--ink-subtle);
+    font-size: var(--text-sm);
+  }
+
+  /* Stili per il contenuto MDX del capitolo */
+  .chapter__body :global(h2) {
+    font-size: var(--text-xl);
+    margin-block-start: var(--rhythm);
+    margin-block-end: var(--space-md);
+  }
+
+  .chapter__body :global(h3) {
+    font-size: var(--text-lg);
+    margin-block-start: var(--space-xl);
+    margin-block-end: var(--space-sm);
+  }
+
+  .chapter__body :global(p) {
+    margin-block-end: var(--space-md);
+    line-height: var(--leading-relaxed);
+  }
+
+  .chapter__body :global(ul),
+  .chapter__body :global(ol) {
+    margin-block-end: var(--space-md);
+    padding-inline-start: var(--space-md);
+  }
+
+  .chapter__body :global(li) {
+    margin-block-end: var(--space-2xs);
+    line-height: var(--leading-relaxed);
+  }
+
+  .chapter__body :global(blockquote) {
+    margin-block: var(--space-lg);
+  }
+
+  .chapter__body :global(hr) {
+    margin-block: var(--rhythm);
+    border: 0;
+    block-size: 1px;
+    background-color: var(--border);
+  }
+
+  /* ─── Footer ─── */
+  .site-footer {
+    margin-block-start: auto;
+    padding-block: var(--space-xl);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .site-footer__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+
+  .back-home {
+    color: var(--ink-muted);
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .back-home:hover {
+    color: var(--ink-strong);
+  }
+
+  .site-footer__year {
+    letter-spacing: var(--tracking-wider);
+  }
+</style>

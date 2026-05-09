@@ -1,0 +1,109 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   MagneticButton — il cursore lo attira nelle vicinanze.
+
+   Riutilizza il sistema data-motion="magnetic" già presente in
+   motion.ts. La differenza con la card della home è il *dosaggio*:
+   strength più alta (0.4 vs 0.18) perché il bottone è piccolo e
+   l'effetto va percepito subito; preset "snappy" per dare al
+   ritorno un'inerzia più decisa, da pulsante.
+
+   UX rationale
+   - Chiama l'attenzione senza farsi notare. Quando il cursore è
+     a 5 cm dal bottone, lui "ti vede". È il modo più educato di
+     un'interfaccia di dirti: "sì, sono qui".
+   - Funziona BENE solo su elementi isolati. In una griglia di
+     bottoni magnetic, l'effetto diventa rumore.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  label?: string;
+}
+const { label = 'Iscriviti' } = Astro.props;
+---
+
+<button
+  type="button"
+  class="magnetic-btn"
+  data-motion="magnetic"
+  data-strength="0.4"
+  data-preset="snappy"
+>
+  <span class="magnetic-btn__halo" aria-hidden="true"></span>
+  <span class="magnetic-btn__face">
+    <span>{label}</span>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 8h10M9 4l4 4-4 4" />
+    </svg>
+  </span>
+</button>
+
+<style>
+  .magnetic-btn {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    padding: 0.875rem 1.5rem 0.875rem 1.625rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-sm);
+    will-change: transform;
+    transition:
+      box-shadow var(--dur-normal) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .magnetic-btn:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Halo che pulsa appena: segnala "vivente" anche da fermo */
+  .magnetic-btn__halo {
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+    background: radial-gradient(
+      ellipse at center,
+      color-mix(in oklab, var(--accent) 22%, transparent),
+      transparent 65%
+    );
+    opacity: 0;
+    transform: scale(0.85);
+    transition:
+      opacity var(--dur-slow) var(--ease-out-soft),
+      transform var(--dur-slow) var(--ease-out-soft);
+    pointer-events: none;
+  }
+
+  .magnetic-btn:hover .magnetic-btn__halo {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .magnetic-btn__face {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    position: relative;
+    z-index: 1;
+  }
+
+  .magnetic-btn__face svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    color: var(--ink-muted);
+    transition:
+      transform var(--dur-normal) var(--ease-out-snug),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .magnetic-btn:hover .magnetic-btn__face svg {
+    transform: translateX(2px);
+    color: var(--accent);
+  }
+</style>

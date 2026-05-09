@@ -1,0 +1,104 @@
+/* ─────────────────────────────────────────────────────────────
+   Altrove · global.css — punto d'ingresso.
+   Importa l'ordine dei layer e gli altri foglio di stile.
+   ───────────────────────────────────────────────────────────── */
+
+@layer base, components, utilities;
+
+@import './tokens.css';
+@import './reset.css';
+@import './typography.css';
+
+@layer base {
+  /* Transizione globale del tema. Le proprietà che cambiano con
+     light/dark si interpolano dolcemente, senza flash. */
+  html {
+    transition:
+      background-color var(--dur-slow) var(--ease-out-soft),
+      color var(--dur-slow) var(--ease-out-soft);
+  }
+
+  /* Container principale delle pagine — ritmo verticale fluido */
+  .page {
+    min-block-size: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Contenitore standard per il contenuto */
+  .container {
+    inline-size: 100%;
+    max-inline-size: var(--max-content);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .container--prose {
+    max-inline-size: var(--max-prose);
+  }
+
+  /* Nasconde visivamente ma mantiene per screen reader */
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@layer utilities {
+  /* Stack — gestisce gli spazi verticali in modo automatico */
+  .stack > * + * { margin-block-start: var(--stack-space, var(--space-md)); }
+  .stack-tight > * + * { margin-block-start: var(--space-sm); }
+  .stack-loose > * + * { margin-block-start: var(--space-lg); }
+  .stack-rhythm > * + * { margin-block-start: var(--rhythm); }
+
+  /* Cluster — gestisce gli spazi orizzontali */
+  .cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cluster-gap, var(--space-sm));
+  }
+
+  /* Center horizontally con measure */
+  .center {
+    box-sizing: content-box;
+    margin-inline: auto;
+    max-inline-size: var(--center-width, var(--measure));
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   View Transitions — la coreografia di pagina
+
+   Usiamo nomi espliciti per le parti che vogliamo continuare tra
+   pagine (es. il titolo del capitolo che fluisce dalla card alla
+   pagina del capitolo). Evitiamo nomi auto-generati per non
+   trovarci con cross-fade casuali su tutto il DOM.
+   ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  /* Default: cross-fade morbido del root */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--dur-slow);
+    animation-timing-function: var(--ease-out-soft);
+  }
+
+  /* Riduzione movimento — taglia tutte le animation di view transition */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation-duration: 1ms !important;
+      animation: none !important;
+    }
+  }
+}

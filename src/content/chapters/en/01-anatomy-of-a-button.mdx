@@ -1,0 +1,103 @@
+---
+lang: "en"
+translationKey: "chapter-01"
+number: "01"
+title: "Anatomy of a button"
+excerpt: "A button isn't a clickable rectangle. It's a promise of action, a small physical contract between finger and screen. We take it apart here, piece by piece."
+date: "May 2026"
+tags: ["interaction", "motion", "foundations"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SoftPressButton from '../../../components/buttons/SoftPressButton.astro';
+import MorphLoadingButton from '../../../components/buttons/MorphLoadingButton.astro';
+import MagneticButton from '../../../components/buttons/MagneticButton.astro';
+import ConfirmInPlaceButton from '../../../components/buttons/ConfirmInPlaceButton.astro';
+import IconTooltipButton from '../../../components/buttons/IconTooltipButton.astro';
+import FavoriteButton from '../../../components/buttons/FavoriteButton.astro';
+
+There's a scene in *Ratatouille* where the critic tastes the dish and for a moment becomes a child again. A well-made button does something similar: you don't notice it, yet when you press it you remember that real things have weight.
+
+In this first chapter we open the button the way you open a watch: what makes it feel *pressable*, when motion helps and when it gets in the way, why a spinning circle is almost always the wrong answer.
+
+## What makes a button "tactile"
+
+Three things, in order of importance:
+
+1. **A believable surface.** A shadow that suggests lift from the page. Never flat, never floating mid-air.
+2. **A reaction to touch.** Pressing it must produce a change — not *another* color, but *less space*. It compresses, like a real soft surface would.
+3. **An honest return.** When you let go, it springs back with light inertia. Not instant (looks fake), not slow (looks broken).
+
+<Demo title="Primary button · soft press" tag="01.a">
+  <SoftPressButton label="Save the note" />
+  <div slot="note">
+    <p>Three visible states: at rest (medium shadow, scale 1), on hover (slight lift + deeper shadow), on press (inset shadow + scale 0.97). The transition on <code>transform</code> and <code>box-shadow</code> uses the *out-snappy* curve for 180 ms — fast enough to feel responsive, slow enough to be perceived.</p>
+    <p>The secret is the press: scale drops to 0.97, not 0.95. A thousandth of a difference, but the first feels "pressed", the second "broken".</p>
+  </div>
+</Demo>
+
+## When the button becomes the action
+
+The most tired pattern on the web is a button with a spinner inside it. It works, but it communicates the wrong thing: *wait, I'm doing*. More honest and more satisfying is to let the button itself *become* the action: it shrinks, works, and returns with an outcome.
+
+<Demo title="Async button · morph & resolve" tag="01.b">
+  <MorphLoadingButton />
+  <div slot="note">
+    <p>Three states: <code>idle → loading → done</code>. On the way to <code>loading</code> the button doesn't show a spinner: it <em>becomes</em> a spinner — collapses into a circle, spins, then morphs into a check. The <code>inline-size</code> is animated with the *out-snappy* curve (280 ms): faster looks glitchy, slower looks clumsy.</p>
+    <p>The check path has an animated <code>stroke-dasharray</code> — the mark is <em>traced</em> in front of your eyes, not simply popped in. A free detail that changes the whole tone.</p>
+  </div>
+</Demo>
+
+## The art of asking for attention without demanding it
+
+A page always has more things than it needs. The "real" button — the one asking for a decision — must emerge, but not shout. The *magnetic* pattern does exactly this: it sits there normally, but when the cursor approaches, it *comes alive*.
+
+<Demo title="Magnetic button · gentle attention" tag="01.c">
+  <MagneticButton label="Subscribe to the newsletter" />
+  <div slot="note">
+    <p>The pull is dosed: <code>strength: 0.4</code> — the button shifts by 40 % of the distance between its center and the cursor. More than that feels "sticky", less and the effect is invisible. The *snappy* preset gives the return a small mechanical inertia.</p>
+    <p>The real trick isn't the movement: it's the <em>halo</em>. It activates on hover and suggests a magnetic field even before the cursor arrives. At rest, it's just a button — it's the relationship with the cursor that lights it up.</p>
+  </div>
+</Demo>
+
+## Confirmations that don't break the flow
+
+Opening a modal for "are you sure?" is an act of violence. It dims everything, blocks scrolling, hijacks focus. For a simple destructive action — deleting a note — it's too much. The confirmation can live *inside* the same button.
+
+<Demo title="In-place confirmation · no modal" tag="01.d">
+  <ConfirmInPlaceButton />
+  <div slot="note">
+    <p>Click the idle button → the pill transforms revealing *Are you sure?* + two inline actions. Red survives only on the verb *Yes, delete*: attention follows the critical action, not the whole container.</p>
+    <p>Auto-cancel after 4 seconds: if the user changes their mind, time itself does the work. No "sticky states", no forced decisions. The confirmation is a <em>window</em> of intent, not a modal menu.</p>
+  </div>
+</Demo>
+
+## Tooltips that grow from the button, not stick next to it
+
+Tooltips that "pop up" from a magic point near the cursor are a tired pattern. More satisfying is to let them *grow* from the button itself — `transform-origin` anchored to the edge, scale from 0.6 to 1, opacity 0 → 1. Visually, the tooltip seems to have come *out* of the button, not appeared next to it.
+
+<Demo title="Icon button · growing tooltip" tag="01.e">
+  <IconTooltipButton label="Add to favorites" tooltip="Add to favorites" />
+  <div slot="note">
+    <p>Trigger: hover with 280 ms delay (users who graze the button don't want a tooltip) + immediate on focus (keyboard users need the label *now*). No close delay: it must disappear before the next hover.</p>
+    <p>The tooltip is purely decorative. The <em>real</em> label lives in <code>aria-label</code>: screen readers must always read the action, not wait for a hover that will never come.</p>
+  </div>
+</Demo>
+
+## Simulated haptics
+
+The phone vibrates when you tap it; the browser doesn't. But the brain accepts a *visual* vibration as a substitute — if it's brief enough. A micro-bounce on the icon (320 ms, from 1 to 1.45 to 1) plus a radial impact wave is enough to make the click feel like a *physical event*, not a color change.
+
+<Demo title="Favorite toggle · visual haptic feedback" tag="01.f">
+  <FavoriteButton />
+  <div slot="note">
+    <p>Three things happen in the same instant: the icon's fill soaks with red, the icon bounces with scale 1 → 1.45 → 0.9 → 1, and a radial trail expands behind it. Three redundant signals, but the brain integrates them into <em>one</em> sensation of touch.</p>
+    <p>Bonus: <code>navigator.vibrate(8)</code> calls hardware vibration on mobile when the browser exposes it. An eighth of a millisecond: perceptible but not annoying. The micro-bounce keeps working on desktop too, where vibration isn't available.</p>
+  </div>
+</Demo>
+
+---
+
+> A button isn't a clickable rectangle.
+> It's a small physical contract between finger and screen.
+> Honoring it is the start of everything else.

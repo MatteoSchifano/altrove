@@ -1,0 +1,103 @@
+---
+lang: "it"
+translationKey: "chapter-01"
+number: "01"
+title: "Anatomia di un bottone"
+excerpt: "Un bottone non è un rettangolo cliccabile. È una promessa di azione, un piccolo contratto fisico tra dito e schermo. Lo smontiamo qui, pezzo per pezzo."
+date: "maggio 2026"
+tags: ["interazione", "motion", "fondamenta"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SoftPressButton from '../../../components/buttons/SoftPressButton.astro';
+import MorphLoadingButton from '../../../components/buttons/MorphLoadingButton.astro';
+import MagneticButton from '../../../components/buttons/MagneticButton.astro';
+import ConfirmInPlaceButton from '../../../components/buttons/ConfirmInPlaceButton.astro';
+import IconTooltipButton from '../../../components/buttons/IconTooltipButton.astro';
+import FavoriteButton from '../../../components/buttons/FavoriteButton.astro';
+
+C'è una scena in *Ratatouille* dove il critico assaggia il piatto e per un attimo torna bambino. Un bottone fatto bene fa qualcosa di simile: non lo noti, eppure quando lo premi ti torna in mente che le cose, quelle vere, hanno un peso.
+
+In questo primo capitolo apriamo il bottone come si apre un orologio: cosa lo fa sembrare *premibile*, quando il movimento aiuta e quando si mette in mezzo, perché un cerchio che ruota è quasi sempre la risposta sbagliata.
+
+## Cosa rende un bottone "tattile"
+
+Tre cose, in ordine di importanza:
+
+1. **Una superficie credibile.** Un'ombra che suggerisce sollevamento dal piano. Mai piatto, mai sospeso a mezz'aria.
+2. **Una reazione al tocco.** Premerlo deve produrre un cambiamento — non *un altro* colore, ma *meno spazio*. Si schiaccia, come una vera superficie morbida.
+3. **Un ritorno onesto.** Quando lo lasci, torna su con un'inerzia leggera. Non istantaneo (sembra finto), non lento (sembra rotto).
+
+<Demo title="Bottone primario · soft press" tag="01.a">
+  <SoftPressButton label="Salva la nota" />
+  <div slot="note">
+    <p>Tre stati visibili: a riposo (ombra media, scala 1), al hover (lieve sollevamento + ombra più profonda), alla pressione (ombra interna + scala 0.97). La transizione su <code>transform</code> e <code>box-shadow</code> usa la curva *out-snappy* per 180 ms — abbastanza veloce da sembrare reattivo, abbastanza lento da essere percepito.</p>
+    <p>Il segreto è la pressione: la scala scende a 0.97, non a 0.95. Pochi millesimi di differenza, ma il primo sembra "premuto", il secondo "rotto".</p>
+  </div>
+</Demo>
+
+## Quando il bottone diventa l'azione
+
+Il pattern più stanco del web è il bottone con uno spinner dentro. Funziona, ma comunica una cosa sbagliata: *aspetta, sto facendo*. Più onesto e più appagante è far diventare il bottone *stesso* l'azione: si restringe, lavora, e torna con un esito.
+
+<Demo title="Bottone async · morph & resolve" tag="01.b">
+  <MorphLoadingButton />
+  <div slot="note">
+    <p>Tre stati: <code>idle → loading → done</code>. Nel passaggio a <code>loading</code> il bottone non mostra uno spinner: <em>diventa</em> uno spinner — collassa in cerchio, gira, e poi si trasforma in check. La <code>inline-size</code> è animata con curva *out-snappy* (280 ms): più veloce e sembra glitch, più lento e sembra impacciato.</p>
+    <p>Il path del check ha <code>stroke-dasharray</code> animato — il segno viene <em>tracciato</em> davanti agli occhi, non semplicemente apparso. È un dettaglio gratuito che cambia tutto il tono.</p>
+  </div>
+</Demo>
+
+## L'arte di chiamare l'attenzione senza farla notare
+
+Una pagina ha sempre più cose di quante ne servano. Il bottone "vero", quello che chiede una decisione, deve emergere — ma non gridare. Il pattern *magnetic* fa esattamente questo: da fermo è normale, ma quando il cursore lo avvicina, lui *si fa vivo*.
+
+<Demo title="Bottone magnetic · attenzione gentile" tag="01.c">
+  <MagneticButton label="Iscriviti alla newsletter" />
+  <div slot="note">
+    <p>L'attrazione è dosata: <code>strength: 0.4</code> — il bottone si sposta del 40 % della distanza dal centro al cursore. Più di così sembra "appiccicoso", meno e l'effetto non si percepisce. Il preset *snappy* dà al ritorno un'inerzia da pulsante meccanico.</p>
+    <p>Il vero trucco non è il movimento: è il <em>halo</em>. Si attiva al hover, suggerisce campo magnetico anche prima che il cursore arrivi sopra. Da fermo, il bottone è solo un bottone — è il rapporto con il cursore che lo accende.</p>
+  </div>
+</Demo>
+
+## Conferme che non rompono il flusso
+
+Aprire un modal per "sei sicuro?" è un atto di violenza. Oscura tutto, blocca lo scroll, sposta il focus. Per un'azione distruttiva semplice — eliminare una nota — è troppo. La conferma può vivere *dentro* lo stesso bottone.
+
+<Demo title="Conferma in-place · senza modal" tag="01.d">
+  <ConfirmInPlaceButton />
+  <div slot="note">
+    <p>Click sul bottone idle → il pulsante si trasforma rivelando *Sicuro?* + due azioni inline. Il rosso resta presente solo nel verbo *Sì, elimina*: l'attenzione segue l'azione critica, non l'intero contenitore.</p>
+    <p>Auto-cancel dopo 4 secondi: se l'utente cambia idea, basta lasciar fare al tempo. Niente "stati appiccicosi", niente decisioni forzate. Lo stato di conferma è una <em>finestra</em> di intenzione, non un menu modale.</p>
+  </div>
+</Demo>
+
+## Tooltip che escono dal bottone, non gli si appiccicano accanto
+
+I tooltip che "spuntano" da un punto magico vicino al cursore sono un pattern stanco. Più appagante è farli *crescere* dal bottone stesso — `transform-origin` ancorato al bordo, scala da 0.6 a 1, opacità 0 → 1. Visivamente sembra che il tooltip sia uscito dal bottone, non sia comparso accanto.
+
+<Demo title="Icon button · tooltip che cresce" tag="01.e">
+  <IconTooltipButton label="Aggiungi ai preferiti" tooltip="Aggiungi ai preferiti" />
+  <div slot="note">
+    <p>Trigger: hover con 280 ms di delay (gli utenti che attraversano il bottone non vogliono il tooltip) + focus immediato (chi naviga con tastiera ha bisogno della label *adesso*). Chiusura senza delay: deve sparire prima del prossimo hover.</p>
+    <p>Il tooltip è puramente decorativo. Il <em>vero</em> label è in <code>aria-label</code>: gli screen reader devono leggere sempre l'azione, non aspettare un hover che non avverrà mai.</p>
+  </div>
+</Demo>
+
+## L'aptica simulata
+
+Il telefono vibra quando lo tocchi; il browser no. Ma il cervello accetta una vibrazione *visiva* come surrogato — se è abbastanza breve. Una micro-bounce sull'icona (320 ms, da 1 a 1.45 a 1) e un'onda d'impatto radiale sono sufficienti a far sembrare il click un *evento fisico*, non un cambio di colore.
+
+<Demo title="Toggle preferito · feedback aptico visivo" tag="01.f">
+  <FavoriteButton />
+  <div slot="note">
+    <p>Tre cose succedono insieme nello stesso istante: il fill dell'icona si imbeve di rosso, l'icona fa una bounce con scale 1 → 1.45 → 0.9 → 1, e una scia radiale si espande dietro. Sono tre segnali ridondanti, ma il cervello li integra in <em>una</em> sensazione di tatto.</p>
+    <p>Bonus: <code>navigator.vibrate(8)</code> chiama la vibrazione hardware su mobile quando il browser la espone. Ottava di millisecondo: percepibile ma non fastidiosa. La micro-bounce continua a lavorare anche su desktop, dove la vibrazione non c'è.</p>
+  </div>
+</Demo>
+
+---
+
+> Un bottone non è un rettangolo cliccabile.
+> È un piccolo contratto fisico tra dito e schermo.
+> Onorarlo è l'inizio di tutto il resto.

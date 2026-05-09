@@ -1,0 +1,130 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   IconTooltipButton — il tooltip non appare, cresce.
+
+   La maggior parte dei tooltip "spunta" da un punto magico vicino
+   al cursore. Più appagante: farli crescere DAL BOTTONE STESSO.
+   Lo si fa allineando transform-origin al bordo del bottone e
+   animando scale + opacity. Visivamente, sembra che il tooltip
+   sia "uscito" dal bottone, non sia comparso accanto.
+
+   UX rationale
+   - Trigger: hover (300 ms di delay) + focus (immediato).
+   - Mai aprire al primo pixel: gli utenti che attraversano il
+     bottone con il cursore non vogliono il tooltip.
+   - Il tooltip è puramente decorativo; il vero label è in
+     aria-label perché gli screen reader devono leggere SEMPRE
+     l'azione, non aspettare un hover che non avverrà mai.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  label: string;
+  tooltip: string;
+}
+const { label, tooltip } = Astro.props;
+---
+
+<span class="icon-tip">
+  <button type="button" class="icon-tip__btn" aria-label={label}>
+    {/* Esempio: cuore stilizzato */}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 21s-7-4.35-7-10a4.5 4.5 0 0 1 8-2.8 4.5 4.5 0 0 1 8 2.8c0 5.65-7 10-7 10z" />
+    </svg>
+  </button>
+  <span class="icon-tip__bubble" role="tooltip">{tooltip}</span>
+</span>
+
+<style>
+  .icon-tip {
+    position: relative;
+    display: inline-block;
+    /* L'origine viene "allineata" al lato del bottone perché il
+       tooltip cresca da lì. */
+    --origin: 50% 100%;
+  }
+
+  .icon-tip__btn {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-pill);
+    color: var(--ink-muted);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .icon-tip__btn svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .icon-tip__btn:hover,
+  .icon-tip__btn:focus-visible {
+    color: oklch(0.6 0.18 25);
+    background-color: var(--surface-raised);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .icon-tip__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-sm), var(--halo-focus);
+  }
+
+  /* La "bolla". transform-origin al centro-basso, sotto il bottone. */
+  .icon-tip__bubble {
+    position: absolute;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    transform-origin: 50% 0; /* cresce dall'alto */
+    transform: scale(0.6);
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius-md);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+    /* Delay all'apertura per non sparare il tooltip al passaggio
+       casuale del cursore. Niente delay alla chiusura. */
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft) 280ms,
+      transform var(--dur-normal) var(--ease-out-snappy) 280ms;
+  }
+
+  /* Il "becco" del tooltip: triangolo che lo collega al bottone */
+  .icon-tip__bubble::before {
+    content: '';
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    border: 5px solid transparent;
+    border-block-end-color: var(--ink-strong);
+  }
+
+  .icon-tip:hover .icon-tip__bubble,
+  .icon-tip:focus-within .icon-tip__bubble {
+    opacity: 1;
+    transform: scale(1);
+    transition-delay: 280ms, 280ms;
+  }
+
+  /* Su uscita: nessun delay, sparizione rapida */
+  .icon-tip__bubble {
+    transition-delay: 0ms;
+  }
+</style>

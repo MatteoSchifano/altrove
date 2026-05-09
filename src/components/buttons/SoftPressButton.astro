@@ -1,0 +1,82 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SoftPressButton — la fondamenta.
+
+   Il bottone non si limita a cambiare colore al hover: si solleva
+   un filo, e quando lo premi si "schiaccia" come una vera
+   superficie morbida. Tre stati visibili: rest, hover, pressed.
+   La sensazione viene da:
+     • Shadow che cambia (lift up, then inset on press)
+     • Scale 1 → 1.02 → 0.97
+     • Tutto su spring snappy, durata breve
+
+   Il risultato è imperceptibile da fermi, percepibile a usarlo:
+   esattamente l'idea di "Altrove".
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  label?: string;
+}
+const { label = 'Premi qui' } = Astro.props;
+---
+
+<button class="soft-press" type="button">
+  <span class="soft-press__face">{label}</span>
+</button>
+
+<style>
+  .soft-press {
+    --bg: var(--accent);
+    --fg: var(--accent-on);
+    --y-rest: 0;
+    --y-hover: -2px;
+    --y-press: 1px;
+    --scale-rest: 1;
+    --scale-hover: 1.02;
+    --scale-press: 0.97;
+
+    position: relative;
+    display: inline-grid;
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--bg);
+    color: var(--fg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    box-shadow: var(--shadow-md);
+    transform: translateY(var(--y-rest)) scale(var(--scale-rest));
+    transition:
+      transform var(--dur-fast) var(--ease-out-snappy),
+      box-shadow var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .soft-press:hover {
+    transform: translateY(var(--y-hover)) scale(var(--scale-hover));
+    box-shadow: var(--shadow-lg);
+    background-color: color-mix(in oklab, var(--accent) 92%, white);
+  }
+
+  .soft-press:active {
+    transform: translateY(var(--y-press)) scale(var(--scale-press));
+    box-shadow: var(--shadow-pressed);
+    transition-duration: 60ms;
+  }
+
+  .soft-press:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-md), var(--halo-focus);
+  }
+
+  .soft-press__face {
+    /* Il "face" è il contenuto. Esiste come span per poter aggiungere
+       in futuro icone o layer animati senza rompere il layout. */
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+</style>

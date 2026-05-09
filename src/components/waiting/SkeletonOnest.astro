@@ -1,0 +1,272 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SkeletonOnest — uno skeleton che ha la forma del contenuto.
+
+   Pattern: il placeholder NON è una serie di rettangoli grigi
+   identici. Ha la *stessa* anatomia della card finale — avatar
+   tondo, titolo a una riga, lede a tre righe, footer-meta corto.
+   Quando il contenuto arriva, il salto percettivo è minimo:
+   l'occhio non si riconfigura, sa già dove guardare.
+
+   Lo shimmer è un gradient lineare animato sulla position-x
+   (GPU friendly, niente reflow). Si attenua nel dark mode per
+   non risultare aggressivo.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="onest" data-state="loading" aria-busy="true">
+  <button class="onest__reload" type="button" aria-label="Ricarica">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 3.5v3h-3" />
+    </svg>
+  </button>
+
+  <article class="onest__card">
+    {/* SKELETON layer — visibile mentre data-state='loading' */}
+    <div class="onest__sk" aria-hidden="true">
+      <div class="onest__sk-row">
+        <div class="onest__sk-avatar"></div>
+        <div class="onest__sk-stack">
+          <div class="onest__sk-line onest__sk-line--name"></div>
+          <div class="onest__sk-line onest__sk-line--meta"></div>
+        </div>
+      </div>
+      <div class="onest__sk-line onest__sk-line--title"></div>
+      <div class="onest__sk-line onest__sk-line--lede"></div>
+      <div class="onest__sk-line onest__sk-line--lede"></div>
+      <div class="onest__sk-line onest__sk-line--lede onest__sk-line--short"></div>
+    </div>
+
+    {/* CONTENT layer — visibile mentre data-state='ready' */}
+    <div class="onest__co" aria-hidden="false">
+      <div class="onest__co-row">
+        <div class="onest__co-avatar">A</div>
+        <div class="onest__co-stack">
+          <p class="onest__co-name">Anna Conti</p>
+          <p class="onest__co-meta">3 minuti fa · in Lettura</p>
+        </div>
+      </div>
+      <h4 class="onest__co-title">Le pause sono parte della frase</h4>
+      <p class="onest__co-lede">
+        Un'interfaccia che si concede di tacere è un'interfaccia che si fida
+        dell'utente. Non riempie ogni millimetro di tempo; lascia respirare
+        l'attesa, e nel respiro si capisce.
+      </p>
+    </div>
+  </article>
+</div>
+
+<style>
+  .onest {
+    position: relative;
+    inline-size: min(28rem, 100%);
+  }
+
+  .onest__reload {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: calc(var(--space-md) * -1);
+    inset-inline-end: 0;
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink-muted);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .onest__reload:hover { color: var(--ink-strong); background-color: var(--surface-raised); }
+  .onest__reload:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .onest__reload:active { transform: scale(0.92); }
+  .onest__reload svg { inline-size: 0.9rem; block-size: 0.9rem; }
+
+  .onest__card {
+    position: relative;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    grid-template-areas: 'stack';
+  }
+
+  /* ─── Layer skeleton ─── */
+  /* I due layer condividono la stessa cella grid: l'altezza
+     della card è quella del layer più alto (il contenuto reale),
+     così lo skeleton non clippa mai la prosa. */
+  .onest__sk,
+  .onest__co {
+    grid-area: stack;
+    align-self: start;
+    transition: opacity var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .onest[data-state='loading'] .onest__co { opacity: 0; pointer-events: none; }
+  .onest[data-state='loading'] .onest__sk { opacity: 1; }
+  .onest[data-state='ready']   .onest__co { opacity: 1; }
+  .onest[data-state='ready']   .onest__sk { opacity: 0; pointer-events: none; }
+
+  /* Le linee skeleton imitano la forma del contenuto:
+     stesso gap del co-row, stessa larghezza/proporzione,
+     altezze relative al font-size della riga rappresentata. */
+  .onest__sk-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-md);
+  }
+  .onest__sk-avatar {
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .onest__sk-stack {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .onest__sk-line {
+    border-radius: 0.35em;
+  }
+  .onest__sk-line--name  {
+    font-size: var(--text-sm);
+    block-size: 0.95em;
+    inline-size: 8rem;
+  }
+  .onest__sk-line--meta  {
+    font-size: var(--text-xs);
+    block-size: 0.85em;
+    inline-size: 6rem;
+    opacity: 0.75;
+  }
+  .onest__sk-line--title {
+    font-size: var(--text-md);
+    block-size: 1.05em;
+    inline-size: 80%;
+    margin-block-end: var(--space-2xs);
+  }
+  .onest__sk-line--lede  {
+    font-size: var(--text-sm);
+    block-size: 0.75em;
+    inline-size: 100%;
+    margin-block-end: 0.65em;
+  }
+  .onest__sk-line--short { inline-size: 60%; }
+
+  /* Shimmer — gradient animato sulla position-x */
+  .onest__sk-avatar,
+  .onest__sk-line {
+    background:
+      linear-gradient(
+        90deg,
+        var(--surface-sunken) 0%,
+        color-mix(in oklab, var(--surface-sunken) 65%, var(--ink-subtle)) 50%,
+        var(--surface-sunken) 100%
+      );
+    background-size: 200% 100%;
+    animation: onest-shimmer 1.6s linear infinite;
+  }
+
+  @keyframes onest-shimmer {
+    from { background-position: 100% 0; }
+    to   { background-position: -100% 0; }
+  }
+
+  /* ─── Layer content ─── */
+  .onest__co-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-md);
+  }
+  .onest__co-avatar {
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    display: grid;
+    place-items: center;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    flex: 0 0 auto;
+  }
+  .onest__co-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .onest__co-name {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .onest__co-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+  .onest__co-title {
+    margin: 0 0 var(--space-2xs) 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    line-height: var(--leading-snug);
+  }
+  .onest__co-lede {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .onest__sk-avatar,
+    .onest__sk-line {
+      animation: none;
+      background: var(--surface-sunken);
+    }
+    .onest__sk,
+    .onest__co {
+      transition-duration: 1ms;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.onest').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const reload = el.querySelector<HTMLButtonElement>('.onest__reload');
+
+      const cycle = () => {
+        el.dataset.state = 'loading';
+        el.setAttribute('aria-busy', 'true');
+        const delay = 1500 + Math.random() * 800;
+        setTimeout(() => {
+          el.dataset.state = 'ready';
+          el.setAttribute('aria-busy', 'false');
+        }, delay);
+      };
+
+      reload?.addEventListener('click', cycle);
+      // Avvio iniziale
+      cycle();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

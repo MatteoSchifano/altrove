@@ -1,0 +1,90 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   Demo — un wrapper editoriale per le esplorazioni del capitolo.
+   Mostra una "stage" su cui si gioca (slot default), un titolo e
+   una nota UX (slot named="note") per articolare il perché.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  title: string;
+  /** Etichetta breve nell'angolo, es. "01.a" */
+  tag?: string;
+}
+const { title, tag } = Astro.props;
+---
+
+<figure class="demo">
+  <div class="demo__stage">
+    {tag && <span class="demo__tag tabular">{tag}</span>}
+    <slot />
+  </div>
+  <figcaption class="demo__caption">
+    <h3 class="demo__title">{title}</h3>
+    <div class="demo__note">
+      <slot name="note" />
+    </div>
+  </figcaption>
+</figure>
+
+<style>
+  .demo {
+    margin-block: var(--space-xl);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .demo__stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-block-size: 12rem;
+    padding: var(--space-xl) var(--space-lg);
+    background:
+      radial-gradient(
+        ellipse at center top,
+        color-mix(in oklab, var(--accent) 6%, transparent),
+        transparent 60%
+      ),
+      var(--surface-sunken);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .demo__tag {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-start: var(--space-md);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .demo__caption {
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+  }
+
+  .demo__title {
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    margin-block-end: var(--space-2xs);
+  }
+
+  .demo__note {
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .demo__note :global(p) {
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  .demo__note :global(p + p) {
+    margin-block-start: var(--space-2xs);
+  }
+</style>

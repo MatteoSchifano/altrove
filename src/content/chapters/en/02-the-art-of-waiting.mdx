@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-02"
+number: "02"
+title: "The art of waiting"
+excerpt: "The network is slow, the user is not. The best UX pretends it already knows — and is right almost every time. Skeletons, optimistic UI, errors that don't shout: the vocabulary of an interface that trusts its next click."
+date: "May 2026"
+tags: ["interaction", "motion", "feedback"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SkeletonOnest from '../../../components/waiting/SkeletonOnest.astro';
+import OptimisticHeart from '../../../components/waiting/OptimisticHeart.astro';
+import DelayedSpinner from '../../../components/waiting/DelayedSpinner.astro';
+import ProgressiveImage from '../../../components/waiting/ProgressiveImage.astro';
+import StaggerList from '../../../components/waiting/StaggerList.astro';
+import RetryToast from '../../../components/waiting/RetryToast.astro';
+
+There's a wrong idea about waiting: that it's a hole to fill. We drop in a spinner, a "loading…" label, a bouncing bar, and we feel satisfied — we *did something*. In fact, we plugged a silence with noise.
+
+The best interfaces treat waiting as a **shape**, not as emptiness. They have something to say while the network thinks, but they say it quietly. Sometimes they say nothing — because there's nothing to say.
+
+In this chapter we open six different waits, each with its own small ethic.
+
+## The skeleton has the shape of what's coming
+
+The skeleton screen pattern isn't "put grey rectangles where the content will be". It's: **draw the shape of what's coming, so the eye is already configured by the time it arrives**. An avatar will be round, so the placeholder is round. The title will be one line, so the line is roughly that wide. The perceptual jump, when content replaces skeleton, should be zero.
+
+<Demo title="Honest skeleton · shape of the content" tag="02.a">
+  <SkeletonOnest />
+  <div slot="note">
+    <p>The avatar is a circle, not a square. The three lede lines have different widths — the last one is 60% — because real prose never fills the final line. The shimmer is a linear gradient animated on <code>background-position</code>, not a pulsing opacity: it scrolls like light over a surface, hinting that *something* is underneath.</p>
+    <p>The honest detail is the duration. We resolve after 1500–2300 ms — not by accident: a realistic time, not instant. A skeleton shown for only 100 ms is worse than no skeleton (it's just a flash). Below 400 ms, better not to show one at all.</p>
+  </div>
+</Demo>
+
+## When the interface trusts the network
+
+Most of the time the network says yes. So why make the user wait to find out? **Optimistic UI** assumes the action already succeeded: the heart fills, the note appears in the list, the message is already in the conversation. The network call comes after, almost in secret. Only if it fails, a graceful rollback.
+
+<Demo title="Optimistic check · a heart that trusts" tag="02.b">
+  <OptimisticHeart />
+  <div slot="note">
+    <p>Two hearts, two networks. On the left, good network: the heart activates, a brief "burst" plays (an expanding ring), and 600 ms later the call confirms — the user has already moved on mentally. On the right, weak network: activation is just as instant, but 700 ms later the server says no. So the heart goes back to empty, with a small desaturated *shake* lasting half a second. No alert, no modal — just an unmistakable, gentle signal.</p>
+    <p>Rollback timing matters. Too fast (under 200 ms) and the user doesn't catch what happened; too slow (over a second) and it feels like a broken machine. Half a second is the right window for the eye to register *that something happened* without feeling slowed down.</p>
+  </div>
+</Demo>
+
+## The spinner you shouldn't have seen
+
+There's a pattern I call "spinner shame": showing a spinner for two hundred milliseconds. It's a gratuitous unkindness — a flash of loading the user didn't ask for. The rule: the spinner appears *only if* the response is genuinely late. Below threshold, the action completes silently.
+
+<Demo title="Spinner only after 400 ms · threshold of restraint" tag="02.c">
+  <DelayedSpinner />
+  <div slot="note">
+    <p>Three buttons, three latencies: 200 ms, 600 ms, 1500 ms. Threshold is 400 ms: below, no spinner — the confirmation check just appears. Above, the spinner fades in quietly. The "Borderline" 600 ms button is the most interesting: the spinner shows for only 200 ms before the check. Worst case? Yes, but honest: the network *did* take a moment.</p>
+    <p>The JS pattern is trivial: a 400 ms <code>setTimeout</code> that shows the spinner, and the call <code>Promise</code> that cancels it if it returns first. The hard part isn't writing it: it's remembering that showing it less often is almost always the right call.</p>
+  </div>
+</Demo>
+
+## The image has shape before it exists
+
+Images are the most "page-jumping" content type on the web: the space they will occupy is unknown until loaded, and when they finally arrive they push everything else around. The **LQIP blur-up** pattern solves two problems at once: space is reserved (fixed aspect-ratio), and while the high-quality image loads, a tiny blurred version sits in its place — already the right colour, already the same composition.
+
+<Demo title="Progressive image · LQIP blur-up" tag="02.d">
+  <ProgressiveImage />
+  <div slot="note">
+    <p>The frame's aspect-ratio is fixed at 16:10. The LQIP is a 16×10 pixel vector image rendered large with <code>filter: blur(18px)</code> — the blur lives in the CSS, not in the asset. When the high-res image loads, opacity fades in and blur drops to zero over 480 ms with a soft curve. The <code>transform: scale(1.06)</code> on the LQIP avoids blurry edges at the margins — a small detail that anyone who's tried it knows weighs heavily on the eye.</p>
+    <p>In production, the LQIP is generated at build time (e.g. by Astro itself, or tools like plaiceholder or sharp). Its size is roughly 300 bytes: it ships with the first HTML response, the real image is lazy-loaded. The result: zero CLS, and the eye always has somewhere to rest.</p>
+  </div>
+</Demo>
+
+## The list that doesn't re-animate
+
+There's a golden rule for list animations: **an element animates once, on first appearance only**. Re-animating what's already been seen, every time the list grows, is a nervous tick — not care. The user remembers the previous items — re-animating them is like saying "look at them again".
+
+<Demo title="Growing list · only the new ones enter" tag="02.e">
+  <StaggerList />
+  <div slot="note">
+    <p>The three initial items are in the DOM at render — no entry animation. Press "Add 3": new items get <code>data-enter="true"</code> and a <code>--stagger-i</code> variable indexed 0 to 2. The <code>slide-up</code> animation kicks in via CSS based on that selector, with <code>animation-delay</code> calculated from the index (90 ms apart).</p>
+    <p>After <code>animationend</code>, the attribute is removed: the item is now "stable". Add three more, and the previous ones stay still — only the three new ones animate. It's an invisible detail until someone gets it wrong, but once seen properly there's no going back.</p>
+  </div>
+</Demo>
+
+## The error that retries itself
+
+Most network failures are transient — a lost packet, a brief timeout, a wifi that turned its head. Making the user shout at the first error is impatient. More respectful: retry in silence, with a discreet countdown, and disturb the user *only* if all automatic attempts fail.
+
+<Demo title="Silent retry · the error that tries to fix itself" tag="02.f">
+  <RetryToast />
+  <div slot="note">
+    <p>The demo script is deterministic for clarity: two failures, then a success. Press "Load": after 700 ms, the first fail. No alert — an inline toast appears ("Connection unstable · retrying") with a pulsing amber dot and a 3…2…1 countdown. On retry, second fail, same pattern. On the third attempt, the dot turns green, the text becomes "Loaded — all good", and the toast disappears 1.4 s later.</p>
+    <p>If the sequence had been fail × 3, there would have been a fourth state: a manual action ("Try again") with gentle instructions. The rule: the machine handles the small stumbles; the user only decides when it's truly necessary. This is exactly Altrove's philosophy — the interface works in silence, and disturbs only when it matters.</p>
+  </div>
+</Demo>
+
+## What we take away
+
+Waiting isn't a hole to fill: it's a **shape** the interface draws while waiting for the real content. The six demos above explore the same idea from different angles:
+
+1. **The skeleton** draws the shape of the content, not emptiness.
+2. **Optimistic UI** trusts — the network almost always says yes.
+3. **The delayed spinner** admits that, below threshold, there was nothing to show.
+4. **LQIP** gives the image a shape before it exists.
+5. **Selective stagger** respects the viewer's visual memory.
+6. **Silent retry** knows most failures aren't stories worth telling.
+
+Six different ways to handle the same thing: the time the network takes, and the time the user doesn't want to give. The next chapter opens an adjacent territory — *the voice of emptiness* — because an interface, sooner or later, has to say something too. Even when there's nothing to say.

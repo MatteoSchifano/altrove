@@ -1,0 +1,212 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   RetryToast — l'errore che ritenta da solo.
+
+   Pattern: la maggior parte dei fallimenti di rete è transitoria.
+   Far gridare l'utente al primo errore è impaziente; meglio
+   ritentare in silenzio con un countdown discreto, e disturbare
+   solo se i tentativi automatici falliscono tutti.
+
+   Demo: bottone "Carica" che simula una sequenza fail × 2 → ok.
+   Vediamo:
+   - Primo errore → toast inline con countdown 3…2…1 → retry
+   - Secondo errore → idem
+   - Terzo tentativo → success (toast svanisce)
+   Se l'esito fosse stato fail × 3, mostreremmo un'azione manuale.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="retoast">
+  <button class="retoast__cta" type="button">Carica gli appunti</button>
+
+  <div class="retoast__panel" role="status" aria-live="polite" data-state="hidden">
+    <div class="retoast__row">
+      <span class="retoast__dot" aria-hidden="true"></span>
+      <span class="retoast__text">Connessione instabile</span>
+      <span class="retoast__count tabular" aria-hidden="true">3</span>
+    </div>
+    <div class="retoast__bar" aria-hidden="true"><span class="retoast__fill"></span></div>
+  </div>
+</div>
+
+<style>
+  .retoast {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+    inline-size: min(24rem, 100%);
+  }
+
+  .retoast__cta {
+    align-self: flex-start;
+    padding: 0.7rem 1.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition:
+      transform var(--dur-fast) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .retoast__cta:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .retoast__cta:active { transform: translateY(0); }
+  .retoast__cta:focus-visible { outline: none; box-shadow: var(--shadow-md), var(--halo-focus); }
+  .retoast__cta[data-state='busy'] { pointer-events: none; opacity: 0.85; }
+
+  .retoast__panel {
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    padding: var(--space-sm) var(--space-md);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .retoast__panel[data-state='shown'] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .retoast__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .retoast__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: oklch(0.75 0.16 75);
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(0.75 0.16 75) 18%, transparent);
+    animation: retoast-pulse 1200ms ease-in-out infinite;
+  }
+  @keyframes retoast-pulse {
+    50% { box-shadow: 0 0 0 6px color-mix(in oklab, oklch(0.75 0.16 75) 22%, transparent); }
+  }
+
+  .retoast__text {
+    flex: 1;
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+
+  .retoast__count {
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider);
+  }
+
+  .retoast__bar {
+    inline-size: 100%;
+    block-size: 2px;
+    background-color: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    margin-block-start: var(--space-2xs);
+    overflow: hidden;
+  }
+  .retoast__fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 0%;
+    background-color: var(--ink-muted);
+    border-radius: inherit;
+    transition: inline-size 1s linear;
+  }
+
+  /* Stato success — il toast cambia voce e si auto-nasconde */
+  .retoast__panel[data-tone='success'] .retoast__dot {
+    background-color: oklch(0.7 0.14 145);
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(0.7 0.14 145) 22%, transparent);
+    animation: none;
+  }
+  .retoast__panel[data-tone='success'] .retoast__fill {
+    background-color: oklch(0.7 0.14 145);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .retoast__dot { animation: none; }
+    .retoast__panel,
+    .retoast__fill { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  const SCRIPT: ('fail' | 'fail' | 'success')[] = ['fail', 'fail', 'success'];
+
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.retoast').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const cta = el.querySelector<HTMLButtonElement>('.retoast__cta')!;
+      const panel = el.querySelector<HTMLElement>('.retoast__panel')!;
+      const text = panel.querySelector<HTMLElement>('.retoast__text')!;
+      const count = panel.querySelector<HTMLElement>('.retoast__count')!;
+      const fill = panel.querySelector<HTMLElement>('.retoast__fill')!;
+
+      const showPanel = (tone: 'warn' | 'success' = 'warn') => {
+        panel.dataset.state = 'shown';
+        panel.dataset.tone = tone;
+      };
+      const hidePanel = () => {
+        panel.dataset.state = 'hidden';
+        panel.removeAttribute('data-tone');
+        fill.style.inlineSize = '0%';
+      };
+
+      const countdown = async (seconds: number) => {
+        for (let s = seconds; s > 0; s--) {
+          count.textContent = String(s);
+          fill.style.transition = 'none';
+          fill.style.inlineSize = `${((seconds - s) / seconds) * 100}%`;
+          // forziamo reflow
+          void fill.offsetHeight;
+          fill.style.transition = 'inline-size 1s linear';
+          fill.style.inlineSize = `${((seconds - s + 1) / seconds) * 100}%`;
+          await sleep(1000);
+        }
+        count.textContent = '';
+      };
+
+      cta.addEventListener('click', async () => {
+        cta.dataset.state = 'busy';
+        cta.textContent = 'Carico…';
+
+        for (let attempt = 0; attempt < SCRIPT.length; attempt++) {
+          await sleep(700);
+          const outcome = SCRIPT[attempt]!;
+
+          if (outcome === 'success') {
+            text.textContent = 'Caricato — tutto in regola';
+            showPanel('success');
+            await sleep(1400);
+            hidePanel();
+            break;
+          }
+
+          // fail → toast con retry countdown
+          text.textContent = `Connessione instabile · ritento`;
+          showPanel('warn');
+          await countdown(3);
+        }
+
+        cta.dataset.state = 'idle';
+        cta.textContent = 'Carica gli appunti';
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
