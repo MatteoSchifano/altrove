@@ -1,0 +1,199 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   LocaleNumbers — lo stesso numero, lingue diverse.
+
+   Pattern: una row di tab-locale (it · en · de · ja), e sotto
+   una tabella con tre valori formattati via `Intl.NumberFormat`
+   e `Intl.DateTimeFormat` nella locale selezionata.
+
+   Il punto non è "wow, ci sono molte lingue": è che il *separatore
+   decimale*, il *raggruppamento*, il *simbolo di valuta* sono
+   convenzioni — non scelte estetiche. Mostrarlo aiuta a non
+   inventarsi formattazioni "universali" (che universali non sono).
+   ───────────────────────────────────────────────────────────── */
+
+const locales = [
+  { code: 'it-IT', label: 'IT', currency: 'EUR' },
+  { code: 'en-US', label: 'EN', currency: 'USD' },
+  { code: 'de-DE', label: 'DE', currency: 'EUR' },
+  { code: 'ja-JP', label: 'JA', currency: 'JPY' },
+] as const;
+---
+
+<div class="ln">
+  <div class="ln__tabs" role="tablist" aria-label="Locale del numero">
+    {locales.map((l, i) => (
+      <button
+        type="button"
+        role="tab"
+        class="ln__tab"
+        data-locale={l.code}
+        data-currency={l.currency}
+        aria-selected={i === 0 ? 'true' : 'false'}
+        tabindex={i === 0 ? 0 : -1}
+      >
+        {l.label}
+      </button>
+    ))}
+  </div>
+
+  <dl class="ln__grid">
+    <div class="ln__row">
+      <dt class="ln__key">grande intero</dt>
+      <dd class="ln__val tabular" data-kind="int">—</dd>
+    </div>
+    <div class="ln__row">
+      <dt class="ln__key">valuta</dt>
+      <dd class="ln__val tabular" data-kind="cur">—</dd>
+    </div>
+    <div class="ln__row">
+      <dt class="ln__key">percentuale</dt>
+      <dd class="ln__val tabular" data-kind="pct">—</dd>
+    </div>
+    <div class="ln__row">
+      <dt class="ln__key">data</dt>
+      <dd class="ln__val tabular" data-kind="dt">—</dd>
+    </div>
+  </dl>
+</div>
+
+<style>
+  .ln {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .ln__tabs {
+    display: inline-flex;
+    gap: 0;
+    padding: 0.2rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+  }
+
+  .ln__tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-wider);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .ln__tab:hover { color: var(--ink-strong); }
+  .ln__tab[aria-selected='true'] {
+    color: var(--accent-on);
+    background-color: var(--accent);
+  }
+  .ln__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .ln__grid {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+  }
+  .ln__row {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-2xs);
+    border-block-end: 1px dashed var(--border);
+  }
+  .ln__row:last-child { border-block-end: 0; }
+  .ln__key {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    margin: 0;
+  }
+  .ln__val {
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    margin: 0;
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ln').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.ln__tab'));
+      const cells = {
+        int: root.querySelector<HTMLElement>('[data-kind="int"]')!,
+        cur: root.querySelector<HTMLElement>('[data-kind="cur"]')!,
+        pct: root.querySelector<HTMLElement>('[data-kind="pct"]')!,
+        dt:  root.querySelector<HTMLElement>('[data-kind="dt"]')!,
+      };
+
+      // Valori "fonte" — stessi ovunque, cambia solo la formattazione
+      const bigInt = 1234567;
+      const money = 19999.5;
+      const percent = 0.7341;
+      const date = new Date('2026-05-13T09:24:00Z');
+
+      const render = (locale: string, currency: string) => {
+        cells.int.textContent = new Intl.NumberFormat(locale).format(bigInt);
+        cells.cur.textContent = new Intl.NumberFormat(locale, {
+          style: 'currency', currency, maximumFractionDigits: 2,
+        }).format(money);
+        cells.pct.textContent = new Intl.NumberFormat(locale, {
+          style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1,
+        }).format(percent);
+        cells.dt.textContent = new Intl.DateTimeFormat(locale, {
+          dateStyle: 'long', timeStyle: 'short',
+        }).format(date);
+      };
+
+      const select = (idx: number) => {
+        tabs.forEach((t, i) => {
+          const on = i === idx;
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+          t.tabIndex = on ? 0 : -1;
+        });
+        const tab = tabs[idx]!;
+        render(tab.dataset.locale!, tab.dataset.currency!);
+      };
+
+      tabs.forEach((t, i) => {
+        t.addEventListener('click', () => { select(i); t.focus(); });
+        t.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const dir = e.key === 'ArrowRight' ? 1 : -1;
+            select((i + dir + tabs.length) % tabs.length);
+            tabs[(i + dir + tabs.length) % tabs.length]!.focus();
+          }
+        });
+      });
+
+      select(0);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

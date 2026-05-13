@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-06"
+number: "06"
+title: "Numbers that have weight"
+excerpt: "Numbers are never just numbers: they are digits with typographic weight, a sign that speaks first, a local convention. The interface that handles them with care doesn't display them — it lets them be read."
+date: "May 2026"
+tags: ["interlude", "typography", "intl"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import TabularDigits from '../../../components/numbers/TabularDigits.astro';
+import HonestCountUp from '../../../components/numbers/HonestCountUp.astro';
+import SignedDelta from '../../../components/numbers/SignedDelta.astro';
+import LocaleNumbers from '../../../components/numbers/LocaleNumbers.astro';
+import CompactNotation from '../../../components/numbers/CompactNotation.astro';
+import LiveTicker from '../../../components/numbers/LiveTicker.astro';
+
+There's a moment, in every interface, when a digit appears. A counter going up, a price, a percentage telling us how we're doing. We almost always treat it as ordinary text — same font, same weight, same distracted care. And that is exactly where the trouble begins: numbers are not text. Letters are read in order, one after another; digits are read *together*, and their alignment, their sign, their grouping speak before the mind has even translated them into value.
+
+This chapter is a technical interlude, but not a dry one: typography, formatting, perception. Six small demonstrations, each on a habit that makes the difference between an interface that shows a number and one that lets it be read. Digits that don't jitter, honest count-ups, signs that speak first, local conventions, compact notation, dashboards that live without anxiety. Each one is an invisible detail until it's missing.
+
+The next chapter goes back to components — *anatomy of an input* — because inputs are often the tool through which these numbers enter the interface in the first place. But it's right to pause here: if an interface doesn't know how to show a number, it won't know how to ask for one well, either.
+
+## Digits that don't jitter
+
+The first thing one notices, watching a counter in motion, is how its digits change width. The "1" is narrow, the "0" is wide, the "4" sits in between. If the font uses proportional figures — as most text typefaces do — every numeric step shakes the column to its right. It's not a bug, it's the nature of the typeface; but in a *living* number (one that changes, that is compared, that is read at a glance), that vibration becomes noise.
+
+<Demo title="Tabular nums · same digit, two columns" tag="06.a">
+  <TabularDigits />
+  <div slot="note">
+    <p>The same list of five numbers in two columns, right-aligned. On the left, <code>font-variant-numeric: proportional-nums</code>: each digit takes its natural width — "1" is narrow, "8" is wide — and the left edge of the column is visibly jagged. On the right, <code>tabular-nums</code>: every digit occupies a cell of equal width, and the left edge forms a perfect vertical. This is the "static" version of the problem: the same property, applied to a counter that changes in place, prevents the jitter at every tick.</p>
+    <p>The practical rule: <em>tabular wherever there's a number that changes or that gets compared in a column</em>. Price tables, live counters, dashboards, <code>tabular-nums</code> always. In running prose, proportional figures are fine — they integrate better with the flow of words. Geist, Inter, IBM Plex Sans, JetBrains Mono — all modern typefaces have the feature, you just have to call for it.</p>
+  </div>
+</Demo>
+
+## The count-up that enters the scene, once
+
+When a stat-card enters the viewport, the temptation is to animate its value: 0 → 12,483 in a second. Done well, it's a small piece of theatre — the digit "introduces itself", the user understands the number is important. Done poorly, it's a nuisance: it animates every time the page is glanced at, starts from zero even when the user just scrolled by. The rule is the same as reveal-on-scroll: only once. And with an *out* curve, not *in-out* — leave fast, arrive in calm.
+
+<Demo title="Count-up on first entry · ease-out, never twice" tag="06.b">
+  <HonestCountUp />
+  <div slot="note">
+    <p>An <code>IntersectionObserver</code> with a 35% threshold fires once; <code>unobserve</code> after the first trigger. Duration is 900 ms, easing is <em>ease-out-quart</em> — the digit decelerates into its final value rather than oscillating. The three cards are separated by an 80 ms stagger, enough to feel like a "sequence", too little to look like a group performance.</p>
+    <p>Underneath, the number is formatted via <code>Intl.NumberFormat('it-IT')</code> — groupings with the dot, decimal separator with the comma. On <code>prefers-reduced-motion: reduce</code> the card appears already at the final value, no count: the information is the same, the journey is not. Same pact as the rest of the playground: respect for the setting is binary, you don't "slow down" an animation, you take it away.</p>
+  </div>
+</Demo>
+
+## The sign that speaks first
+
+A percentage delta is a digit loaded with directional meaning: it's growing, it's shrinking, it's still. Communicating that with colour alone is a small sin of laziness (and an accessibility hole: anyone who can't tell red from green is left out). The sign, then the arrow, then the colour as confirmation: read in this order it lands at once. The digit uses tabular figures because a "+12.4%" and a "−12.4%" must align without leaping.
+
+<Demo title="Signed delta · sign, arrow, colour — in this order" tag="06.c">
+  <SignedDelta />
+  <div slot="note">
+    <p>Three pills: positive, negative, and zero. The glyph is a small SVG — triangle up, triangle down, small circle for "unchanged" — and arrives <em>before</em> the digit in natural reading. The sign is explicit everywhere: the positive carries its "+", because the asymmetry between "+12%" and "12%" is more confusing than it looks. Zero is "±0.0%" — not an anonymous "0%": it says it's been measured, and that it's stable.</p>
+    <p>The colours live in OKLCH — perceptually uniform green for positive, perceptually uniform red for negative, neutral for zero. The <code>color-mix(in oklab, …)</code> with the primary keeps the palette coherent with the rest of the playground in light and dark mode. <code>aria-label</code> on the pill is read by the screen reader — the spoken "Variation +12.4%" is the voice version of the same typographic phrase.</p>
+  </div>
+</Demo>
+
+## The same number, in different languages
+
+A digit has no canonical representation, it has a *local* one. The dot and the comma swap roles, the currency changes its symbol and position, Japanese has no decimals for yen. It's one of those things you "know" in the abstract and forget the moment you start writing `${price.toFixed(2)}`. The good news is that the platform already offers everything: `Intl.NumberFormat`, `Intl.DateTimeFormat`. Just don't invent "universal" formattings that aren't.
+
+<Demo title="Intl · same digit, different locales" tag="06.d">
+  <LocaleNumbers />
+  <div slot="note">
+    <p>Four tabs — IT, EN, DE, JA — selectable by keyboard with the arrow keys. Below, four "source" values (a large integer, a currency, a percentage, a date) re-formatted whenever the locale changes. The differences are typographic, not numeric: 1.234.567 in IT becomes 1,234,567 in EN and 1,234,567 in JA — the same number, a different grammar.</p>
+    <p>Currency is the most revealing: in IT the euro comes after, in EN the dollar comes before, in DE the euro comes after with a dot in place of the comma, in JA the yen carries no decimals — because the yen is already the smallest unit, fractions have no meaning. <code>Intl.NumberFormat</code> knows all of these conventions. Reusing what the browser already knows is almost always better than inventing it.</p>
+  </div>
+</Demo>
+
+## Big numbers of proximity
+
+At some point a number becomes too big to be read digit by digit. "2,483,917 readers" is precise information but mute — the mind doesn't process it, slides past. "2.5M" is an approximate version that *makes sense*: the quantity is that of a mid-sized city, not of a neighbourhood. Compact notation isn't a poor simplification, it's a *translation* — it loses precision and gains perception. When the exact value is not the question, the compact one wins.
+
+<Demo title="Compact notation · honest vs readable" tag="06.e">
+  <CompactNotation />
+  <div slot="note">
+    <p>Toggle between <em>precise</em> (default) and <em>compact</em>: the same value re-formatted with <code>Intl.NumberFormat('it-IT', &#123; notation: 'compact', maximumFractionDigits: 1 &#125;)</code>. A very brief cross-fade (140 ms · 2) softens the swap so it doesn't jolt; on <code>prefers-reduced-motion</code> the cross-fade vanishes and the digit changes instantly.</p>
+    <p>When to use the compact one? When the exact value isn't the question — a dashboard heading, a follower count, a social statistic. When <em>not</em>? When the digit must be compared with others or when a single unit matters — a bank balance, a code, an ID. Compact isn't free: it's a choice. The toggle here is just to show the comparison; in a real interface the decision belongs to the designer, not the user.</p>
+  </div>
+</Demo>
+
+## The number that lives without anxiety
+
+A small "live" dashboard updating every two seconds can be one of the most relaxing interactions on the web — or one of the most stressful. The difference is almost entirely in *how* the digits change. If the column leaps with every tick, the eye anchors to the vibration, not the value. If the digit "explodes" in colour when it changes, every update feels like an alarm. The gentle version is the opposite: tabular digits (the column stays put), a very brief flash of accent (a quarter of a second, then gone), a green dot pulsing slowly to say "I'm alive". And a "pause" button — because the user who wants to look at a value without it changing has the right to.
+
+<Demo title="Live ticker · tabular digits, discreet flash, explicit pause" tag="06.f">
+  <LiveTicker />
+  <div slot="note">
+    <p>Four metrics updated via <code>setInterval</code> every 2 s with a randomised but bounded delta (never negative, never excessive). The digit uses <code>tabular-nums</code> to stay in the same column; the flash is a 280 ms colour transition, then it returns to calm. No bounce, no scale-up: the dashboard doesn't celebrate, it reports.</p>
+    <p>The green dot at the top pulses slowly — 2 s, the same period as the update — to create a visual expectation of the next tick. The "pause" button is a fundamental concession: the user who is studying a value or documenting it must be able to stop time. On <code>prefers-reduced-motion: reduce</code> the dot doesn't pulse, the flash doesn't happen, the digit changes and that's it — same information, no decoration. The twin <code>aria-live="polite"</code> region announces "metrics updated" without interrupting, once per tick.</p>
+  </div>
+</Demo>
+
+## What we take with us
+
+Numbers are never just numbers: they are digits with a typographic weight, a sign that speaks first, a local convention. The six demonstrations above show six habits that, once internalised, make the difference between an interface that displays a number and one that lets it be read:
+
+1. **Tabular figures** wherever a number changes or is compared in a column — because a leaping column is noise.
+2. **Count-up only once**, on entry, with an *out* curve, never *in-out* — because re-animating on every glance is nervousness.
+3. **Sign, arrow, colour** — in this order, because the sign communicates without colour and the colour-blind user thanks you.
+4. **Local conventions** via `Intl.NumberFormat` — because "1.000" and "1,000" are not the same quantity, they are the same digit in two grammars.
+5. **Compact notation** when the exact value isn't the question — because "2.5M" lands and "2,483,917" slips away.
+6. **Discreet live, explicit pause** — because the update must not become an alarm, and the user who wants to look at a still value has the right to.
+
+Six habits, one rule: numbers are typography. Before calculating them well, present them well. The next chapter goes back to ingredients — *anatomy of an input* — because inputs are the tool through which these digits arrive in the interface. But if an interface doesn't know how to show a number, it won't know how to ask for one, either.

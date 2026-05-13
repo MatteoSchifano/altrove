@@ -1,0 +1,146 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HonestCountUp — il conteggio che entra in scena, una volta.
+
+   Pattern: tre stat-card che animano il loro numero da 0 al
+   valore finale quando la stage entra nel viewport. Una sola volta:
+   se l'utente esce e rientra, le card restano al valore finale.
+
+   Curva: easing "out" — veloce all'inizio, sospeso alla fine.
+   Niente "ease-in-out" che fa partire piano e arrivare piano:
+   sembra esitante. Durata: 900 ms — abbastanza per essere
+   percepito, troppo poco per stancare.
+
+   Reduced motion: stesso layout, stesso valore, ma nessun
+   conteggio. Apparizione immediata, intera.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="hc" data-once>
+  <article class="hc__card">
+    <span class="hc__label">visite uniche · 7d</span>
+    <span class="hc__num tabular" data-target="12483" data-format="int">0</span>
+    <span class="hc__sub">→ ultime 24h: +384</span>
+  </article>
+  <article class="hc__card">
+    <span class="hc__label">tempo medio · sessione</span>
+    <span class="hc__num tabular" data-target="247" data-format="time">0″</span>
+    <span class="hc__sub">→ +18″ vs settimana scorsa</span>
+  </article>
+  <article class="hc__card">
+    <span class="hc__label">tasso di lettura · capitoli</span>
+    <span class="hc__num tabular" data-target="73" data-format="pct">0%</span>
+    <span class="hc__sub">→ chi inizia, finisce</span>
+  </article>
+</div>
+
+<style>
+  .hc {
+    inline-size: min(36rem, 100%);
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .hc__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .hc__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .hc__num {
+    font-size: var(--text-2xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-tight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hc__sub {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+</style>
+
+<script>
+  type Fmt = 'int' | 'time' | 'pct';
+
+  const fmtIt = new Intl.NumberFormat('it-IT');
+  const formatValue = (v: number, kind: Fmt): string => {
+    if (kind === 'int') return fmtIt.format(Math.round(v));
+    if (kind === 'pct') return `${Math.round(v)}%`;
+    // time: secondi → "Mm Ss"
+    const total = Math.round(v);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return m > 0 ? `${m}′ ${String(s).padStart(2, '0')}″` : `${s}″`;
+  };
+
+  const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
+
+  function animate(el: HTMLElement) {
+    const target = Number(el.dataset.target ?? 0);
+    const kind = (el.dataset.format ?? 'int') as Fmt;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reduce) {
+      el.textContent = formatValue(target, kind);
+      return;
+    }
+
+    const dur = 900;
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      const v = target * easeOutQuart(p);
+      el.textContent = formatValue(v, kind);
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = formatValue(target, kind);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.hc').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const nums = root.querySelectorAll<HTMLElement>('.hc__num');
+
+      const trigger = () => {
+        nums.forEach((n, i) => {
+          // piccolo stagger fra le card: 80 ms · indice
+          setTimeout(() => animate(n), i * 80);
+        });
+      };
+
+      const io = new IntersectionObserver(
+        (entries, obs) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              trigger();
+              obs.unobserve(e.target);
+            }
+          }
+        },
+        { threshold: 0.35 },
+      );
+      io.observe(root);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,108 @@
+---
+lang: "it"
+translationKey: "chapter-06"
+number: "06"
+title: "Numeri che hanno peso"
+excerpt: "I numeri non sono mai solo numeri: sono cifre con un peso tipografico, un segno che dice subito, una convenzione locale. L'interfaccia che li tratta con cura non li mostra — li lascia leggere."
+date: "maggio 2026"
+tags: ["intermezzo", "tipografia", "intl"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import TabularDigits from '../../../components/numbers/TabularDigits.astro';
+import HonestCountUp from '../../../components/numbers/HonestCountUp.astro';
+import SignedDelta from '../../../components/numbers/SignedDelta.astro';
+import LocaleNumbers from '../../../components/numbers/LocaleNumbers.astro';
+import CompactNotation from '../../../components/numbers/CompactNotation.astro';
+import LiveTicker from '../../../components/numbers/LiveTicker.astro';
+
+C'è un momento, in ogni interfaccia, in cui appare una cifra. Un contatore che sale, un prezzo, una percentuale che dice come stiamo andando. Quasi sempre la trattiamo come testo qualunque — la stessa font, lo stesso peso, la stessa cura distratta. Ed è proprio lì che inizia il problema: i numeri non sono testo. Le lettere si leggono in ordine, una dopo l'altra; le cifre si leggono *insieme*, e il loro allineamento, il loro segno, il loro raggruppamento parlano prima ancora che la mente li traduca in valore.
+
+Questo capitolo è un intermezzo tecnico, ma non è arido: tipografia, formattazione, percezione. Sei dimostrazioni piccole, ognuna su un'abitudine che fa la differenza fra un'interfaccia che mostra un numero e una che lo lascia leggere. Cifre che non sussultano, conteggi onesti, segni che dicono subito, convenzioni locali, notazione sintetica, dashboard che vivono senza ansia. Ognuna è un dettaglio invisibile finché non manca.
+
+Il prossimo capitolo torna ai componenti — *anatomia di un input* — perché gli input sono spesso lo strumento con cui questi numeri entrano nell'interfaccia. Ma prima, è giusto fermarsi qui: se un'interfaccia non sa mostrare un numero, non saprà nemmeno chiederlo bene.
+
+## Cifre che non sussultano
+
+La prima cosa che si nota, quando si osserva un contatore in movimento, è il modo in cui le sue cifre cambiano larghezza. La "1" è stretta, lo "0" è largo, il "4" sta nel mezzo. Se la font usa cifre proporzionali — come fa la maggior parte dei caratteri da testo — ogni passaggio numerico fa tremare la colonna alla sua destra. Non è un bug, è la natura del carattere; ma in un numero "vivo" (che cambia, che viene confrontato, che si legge a colpo d'occhio) quella vibrazione diventa rumore.
+
+<Demo title="Tabular nums · stessa cifra, due colonne" tag="06.a">
+  <TabularDigits />
+  <div slot="note">
+    <p>Stessa lista di cinque numeri in due colonne, allineati a destra. A sinistra <code>font-variant-numeric: proportional-nums</code>: ogni cifra ha la sua larghezza naturale — "1" è stretto, "8" è largo — e il bordo sinistro della colonna è visibilmente frastagliato. A destra <code>tabular-nums</code>: ogni cifra occupa una cella di uguale larghezza, e il bordo sinistro forma una verticale perfetta. È la versione "statica" del problema: la stessa proprietà, in un counter che cambia in place, evita il sussulto a ogni tick.</p>
+    <p>La regola pratica: <em>tabular ovunque ci sia un numero che cambia o che si confronta in colonna</em>. Tabella di prezzi, contatori live, dashboard, <code>tabular-nums</code> sempre. Nel testo discorsivo invece va bene la versione proporzionale, che si integra meglio col flusso delle parole. Geist, Inter, IBM Plex Sans, JetBrains Mono — tutti i font moderni hanno la feature, basta richiamarla.</p>
+  </div>
+</Demo>
+
+## Il conteggio che entra in scena, una volta
+
+Quando una stat-card entra nel viewport, la tentazione è di animarne il valore: 0 → 12.483 in un secondo. Fatto bene, è un piccolo momento di teatro — la cifra si "presenta", l'utente capisce che quel numero è importante. Fatto male, è un fastidio: anima ogni volta che la pagina viene riscrutata, parte da zero anche quando l'utente è solo passato di sopra. La regola è la stessa del reveal-on-scroll: una sola volta. E con una curva *out*, non *in-out* — partire veloci, arrivare in calma.
+
+<Demo title="Count-up al primo ingresso · easing out, mai due volte" tag="06.b">
+  <HonestCountUp />
+  <div slot="note">
+    <p>Un <code>IntersectionObserver</code> con soglia al 35% scatta una volta sola; <code>unobserve</code> dopo il primo trigger. La durata è 900 ms, l'easing è <em>ease-out-quart</em> — la cifra arriva al valore finale rallentando, non oscillando. Le tre card sono separate da uno stagger di 80 ms, abbastanza per essere percepito come "sequenza", troppo poco per sembrare un'animazione di gruppo.</p>
+    <p>Sotto, il numero è formattato via <code>Intl.NumberFormat('it-IT')</code> — i raggruppamenti col punto, il separatore decimale con la virgola. Su <code>prefers-reduced-motion: reduce</code> la card appare già al valore finale, senza conteggio: l'informazione è la stessa, il tragitto no. È lo stesso patto delle altre demo del playground: il rispetto del setting è binario, non si "rallenta" un'animazione, la si toglie.</p>
+  </div>
+</Demo>
+
+## Il segno che dice subito
+
+Una variazione percentuale è una cifra carica di significato direzionale: sta crescendo, sta calando, è ferma. Comunicarlo con il solo colore è un peccato di pigrizia (e una falla di accessibilità: chi non distingue rosso e verde resta fuori). Il segno, la freccia, e poi il colore come conferma: in quest'ordine si legge subito. La cifra usa cifre tabulari perché un "+12,4%" e un "−12,4%" devono allinearsi senza saltare.
+
+<Demo title="Delta firmato · segno, freccia, colore — in quest'ordine" tag="06.c">
+  <SignedDelta />
+  <div slot="note">
+    <p>Tre pill: positiva, negativa, e zero. Il glifo è un piccolo SVG — triangolo su, triangolo giù, cerchio piccolo per "invariato" — e arriva <em>prima</em> della cifra in lettura naturale. Il segno è esplicito ovunque: anche il positivo ha il suo "+", perché un'asimmetria fra "+12%" e "12%" è confusa più di quanto sembri. Lo zero è "±0,0%" — non un "0%" anonimo: dice che è stata misurata, e che è stabile.</p>
+    <p>I colori sono in OKLCH — verde percettivamente uniforme per il positivo, rosso percettivamente uniforme per il negativo, neutro per lo zero. Il <code>color-mix(in oklab, …)</code> con il colore primario tiene la palette coerente con il resto del playground in light e dark mode. <code>aria-label</code> sulla pill leggibile dallo screen reader — quel "Variazione +12,4%" è la versione vocale della stessa frase tipografica.</p>
+  </div>
+</Demo>
+
+## Lo stesso numero, lingue diverse
+
+Una cifra non ha una rappresentazione canonica, ha una rappresentazione *locale*. Il punto e la virgola scambiano ruolo, la valuta cambia simbolo e posizione, il giapponese non ha decimali per gli yen. È una di quelle cose che si "sa" in astratto e si dimentica appena si comincia a scrivere `${price.toFixed(2)}`. La buona notizia è che la piattaforma offre già tutto: `Intl.NumberFormat`, `Intl.DateTimeFormat`. Basta non inventarsi formattazioni "universali" che universali non sono.
+
+<Demo title="Intl · stessa cifra, locale diverse" tag="06.d">
+  <LocaleNumbers />
+  <div slot="note">
+    <p>Quattro tab — IT, EN, DE, JA — selezionabili anche da tastiera con le frecce. Sotto, quattro valori "fonte" (un grande intero, una valuta, una percentuale, una data) ri-formattati ogni volta che la locale cambia. Le differenze sono tipografiche, non di valore: 1.234.567 in IT diventa 1,234,567 in EN e 1,234,567 in JA — con lo stesso numero, ma una grammatica diversa.</p>
+    <p>La valuta è la più rivelatrice: in IT l'euro arriva dopo, in EN il dollaro prima, in DE l'euro dopo con il punto al posto della virgola, in JA lo yen senza decimali — perché lo yen è già la sua unità minima, le frazioni non hanno significato. <code>Intl.NumberFormat</code> sa tutte queste convenzioni. Riusare ciò che il browser conosce è quasi sempre meglio che inventarlo da zero.</p>
+  </div>
+</Demo>
+
+## I grandi numeri di prossimità
+
+A un certo punto un numero diventa troppo grande per essere letto cifra per cifra. "2.483.917 lettori" è un'informazione precisa ma muta — la mente non la elabora, scivola. "2,5M" è una versione approssimata che però *si capisce*: la quantità è quella di una città media, non quella di un quartiere. La notazione compatta non è una semplificazione povera, è una *traduzione* — perde precisione e guadagna percezione. Quando il valore esatto non è la domanda, la sintetica vince.
+
+<Demo title="Notazione compatta · onesta vs leggibile" tag="06.e">
+  <CompactNotation />
+  <div slot="note">
+    <p>Toggle fra <em>preciso</em> (default) e <em>sintetico</em>: lo stesso valore ri-formattato con <code>Intl.NumberFormat('it-IT', &#123; notation: 'compact', maximumFractionDigits: 1 &#125;)</code>. Un cross-fade molto breve (140 ms · 2) ammorbidisce il cambio per non sussultare; su <code>prefers-reduced-motion</code> il cross-fade sparisce e la cifra si scambia istantaneamente.</p>
+    <p>Quando usare la sintetica? Quando il valore esatto non è la domanda — un'intestazione di dashboard, un counter di follower, una statistica social. Quando <em>non</em> usarla? Quando la cifra deve essere confrontata con altre o quando una sola unità conta — un saldo bancario, un codice, un ID. La compact non è gratis: si sceglie. Il toggle qui è solo per mostrare il confronto; in un'interfaccia vera la decisione la prende il designer, non l'utente.</p>
+  </div>
+</Demo>
+
+## Il numero che vive senza ansia
+
+Una piccola dashboard "live" che si aggiorna ogni due secondi può essere una delle interazioni più rilassanti del web — o una delle più stressanti. La differenza è quasi tutta nel come cambiano le cifre. Se la colonna salta a ogni tick, l'occhio si ancora alla vibrazione, non al valore. Se la cifra "esplode" in colore quando cambia, ogni aggiornamento sembra un allarme. La versione gentile è l'opposto: cifre tabulari (la colonna sta ferma), un flash brevissimo di accent (tre quarti di secondo, poi sparisce), un puntino verde che pulsa lento per dire "sono viva". E un bottone "pausa" — perché l'utente che vuole guardare un valore senza che cambi, ne ha diritto.
+
+<Demo title="Live ticker · cifre tabulari, flash discreto, pausa esplicita" tag="06.f">
+  <LiveTicker />
+  <div slot="note">
+    <p>Quattro metriche aggiornate via <code>setInterval</code> ogni 2 s con un delta randomico ma vincolato (mai negativo, mai esagerato). La cifra usa <code>tabular-nums</code> per restare nella stessa colonna; il flash è una transizione di colore di 280 ms, poi torna in calma. Niente bounce, niente scale-up: la dashboard non celebra, riferisce.</p>
+    <p>Il puntino verde in alto pulsa lentamente — 2 s, lo stesso periodo dell'aggiornamento — per creare un'aspettativa visiva del prossimo tick. Il bottone "pausa" è una concessione fondamentale: chi sta studiando un valore o documentandolo deve poter fermare il tempo. Su <code>prefers-reduced-motion: reduce</code> il puntino non pulsa, il flash non avviene, la cifra cambia e basta — l'informazione è la stessa, la decorazione no. La regione gemella <code>aria-live="polite"</code> annuncia "metriche aggiornate" senza interrompere, una sola volta per tick.</p>
+  </div>
+</Demo>
+
+## Cosa portiamo via
+
+I numeri non sono mai solo numeri: sono cifre con un peso tipografico, un segno che dice subito, una convenzione locale. Le sei dimostrazioni qui sopra mostrano sei abitudini che, una volta interiorizzate, fanno la differenza fra un'interfaccia che mostra un numero e una che lo lascia leggere:
+
+1. **Cifre tabulari** ovunque un numero cambi o si confronti in colonna — perché una colonna che salta è rumore.
+2. **Conteggio una volta sola**, all'ingresso, con curva *out*, mai *in-out* — perché ri-animare a ogni passaggio è nervosismo.
+3. **Segno, freccia, colore** — in quest'ordine, perché il segno comunica anche senza colore e l'utente daltonico ringrazia.
+4. **Convenzioni locali** via `Intl.NumberFormat` — perché "1.000" e "1,000" non sono la stessa quantità, sono la stessa cifra in due grammatiche.
+5. **Notazione compatta** quando il valore esatto non è la domanda — perché "2,5M" si capisce e "2.483.917" si scivola.
+6. **Live discreto, pausa esplicita** — perché l'aggiornamento non deve diventare allarme, e perché l'utente che vuole guardare un valore fermo ne ha diritto.
+
+Sei abitudini, una sola regola: i numeri sono tipografia. Prima ancora di calcolarli bene, vanno *presentati* bene. Il prossimo capitolo torna agli ingredienti — *anatomia di un input* — perché gli input sono lo strumento con cui queste cifre arrivano nell'interfaccia. Ma se un'interfaccia non sa mostrare un numero, non saprà nemmeno chiederlo bene.

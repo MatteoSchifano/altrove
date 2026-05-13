@@ -1,0 +1,181 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   CompactNotation — i grandi numeri di prossimità.
+
+   Pattern: tre numeri "grandi" (lettori, kilometri, byte) con
+   un toggle fra notazione *precisa* e *sintetica*. La sintetica
+   usa `Intl.NumberFormat` con `notation: 'compact'`.
+
+   La compact perde precisione e guadagna leggibilità. È giusta
+   quando il valore esatto non è la domanda — un'intestazione, un
+   counter di follower, una statistica social. È sbagliata quando
+   l'utente confronta cifre o quando una sola unità conta (saldo
+   bancario, codici, ID). Il toggle non è gratuito: si sceglie.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="cn">
+  <div class="cn__head">
+    <div class="cn__toggle" role="radiogroup" aria-label="Notazione">
+      <button type="button" role="radio" class="cn__opt" data-mode="standard" aria-checked="true">preciso</button>
+      <button type="button" role="radio" class="cn__opt" data-mode="compact" aria-checked="false">sintetico</button>
+    </div>
+  </div>
+
+  <ul role="list" class="cn__list">
+    <li class="cn__item">
+      <span class="cn__label">lettori del mese</span>
+      <span class="cn__num tabular" data-value="2483917" data-unit="">—</span>
+    </li>
+    <li class="cn__item">
+      <span class="cn__label">distanza · percorsa</span>
+      <span class="cn__num tabular" data-value="1842300" data-unit=" km">—</span>
+    </li>
+    <li class="cn__item">
+      <span class="cn__label">dati · sincronizzati</span>
+      <span class="cn__num tabular" data-value="7340032000" data-unit=" B">—</span>
+    </li>
+  </ul>
+
+  <p class="cn__hint">Stesso valore. Il "preciso" è onesto; il "sintetico" è leggibile. Sapere quando usare l'uno o l'altro è il mestiere.</p>
+</div>
+
+<style>
+  .cn {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .cn__head {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .cn__toggle {
+    display: inline-flex;
+    padding: 0.2rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  .cn__opt {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-wider);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .cn__opt[aria-checked='true'] {
+    color: var(--accent-on);
+    background-color: var(--accent);
+  }
+  .cn__opt:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .cn__list {
+    display: grid;
+    gap: var(--space-sm);
+    margin: 0; padding: 0;
+  }
+
+  .cn__item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-2xs);
+    border-block-end: 1px dashed var(--border);
+  }
+  .cn__item:last-child { border-block-end: 0; }
+
+  .cn__label {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .cn__num {
+    font-size: var(--text-xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-tight);
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .cn__num[data-fade='true'] { opacity: 0.35; }
+
+  .cn__hint {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cn__num { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.cn').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const opts = Array.from(root.querySelectorAll<HTMLButtonElement>('.cn__opt'));
+      const nums = Array.from(root.querySelectorAll<HTMLElement>('.cn__num'));
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+      const locale = document.documentElement.lang || 'it-IT';
+      const fmtStd = new Intl.NumberFormat(locale);
+      const fmtCmp = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
+
+      const render = (mode: 'standard' | 'compact') => {
+        nums.forEach((n) => {
+          const v = Number(n.dataset.value);
+          const unit = n.dataset.unit ?? '';
+          n.textContent = (mode === 'compact' ? fmtCmp.format(v) : fmtStd.format(v)) + unit;
+        });
+      };
+
+      const setMode = (mode: 'standard' | 'compact') => {
+        opts.forEach((o) => o.setAttribute('aria-checked', o.dataset.mode === mode ? 'true' : 'false'));
+        if (reduce.matches) {
+          render(mode);
+          return;
+        }
+        // Cross-fade molto breve: 140 ms · 2
+        nums.forEach((n) => (n.dataset.fade = 'true'));
+        setTimeout(() => {
+          render(mode);
+          nums.forEach((n) => delete n.dataset.fade);
+        }, 140);
+      };
+
+      opts.forEach((o) => o.addEventListener('click', () => setMode(o.dataset.mode as 'standard' | 'compact')));
+      render('standard');
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

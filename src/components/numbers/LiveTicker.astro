@@ -1,0 +1,203 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   LiveTicker — il numero che vive senza ansia.
+
+   Pattern: una piccola dashboard con quattro metriche che si
+   aggiornano ogni 2 s. Ogni aggiornamento è discreto: un breve
+   flash dell'accent sulla cifra che cambia, poi torna in calma.
+   Le cifre usano `tabular-nums` perché altrimenti l'intera colonna
+   sembra dondolare.
+
+   Reduced motion: niente flash, niente "salto". Il numero cambia
+   e basta — l'utente che ha chiesto meno motion riceve la stessa
+   informazione, senza la decorazione.
+
+   `aria-live="polite"` su una regione gemella, accessibile, che
+   annuncia "valore di X aggiornato" — senza interrompere.
+   ───────────────────────────────────────────────────────────── */
+
+interface Metric { key: string; label: string; start: number; range: [number, number]; unit?: string; }
+
+const metrics: Metric[] = [
+  { key: 'visitors',  label: 'visitatori attivi', start: 38,    range: [-3, 4],  unit: '' },
+  { key: 'requests',  label: 'richieste · al sec', start: 124,   range: [-12, 16], unit: '/s' },
+  { key: 'latency',   label: 'latenza p50',       start: 87,    range: [-6, 8],  unit: ' ms' },
+  { key: 'queue',     label: 'coda · in attesa',  start: 4,     range: [-1, 2],  unit: '' },
+];
+---
+
+<div class="lt">
+  <div class="lt__head">
+    <span class="lt__dot" aria-hidden="true"></span>
+    <span class="lt__title">live · ultimi 2s</span>
+    <button type="button" class="lt__pause" data-paused="false" aria-label="Metti in pausa l'aggiornamento">pausa</button>
+  </div>
+
+  <ul role="list" class="lt__grid">
+    {metrics.map((m) => (
+      <li class="lt__cell">
+        <span class="lt__label">{m.label}</span>
+        <span class="lt__num tabular" data-key={m.key} data-value={String(m.start)} data-unit={m.unit ?? ''}>{m.start}{m.unit ?? ''}</span>
+      </li>
+    ))}
+  </ul>
+
+  <p class="lt__live sr-only" aria-live="polite"></p>
+</div>
+
+<script define:vars={{ metrics }}>
+  window.__LT_METRICS__ = metrics;
+</script>
+
+<style>
+  .lt {
+    inline-size: min(34rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .lt__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .lt__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: oklch(70% 0.18 150);
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(70% 0.18 150) 22%, transparent);
+    animation: lt-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes lt-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px color-mix(in oklab, oklch(70% 0.18 150) 22%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in oklab, oklch(70% 0.18 150) 10%, transparent); }
+  }
+
+  .lt__title {
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .lt__pause {
+    margin-inline-start: auto;
+    appearance: none;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .lt__pause:hover { color: var(--ink-strong); border-color: var(--border-strong); }
+  .lt__pause[data-paused='true'] { color: var(--accent); border-color: var(--accent); }
+  .lt__pause:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .lt__grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    margin: 0; padding: 0;
+  }
+
+  .lt__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .lt__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .lt__num {
+    font-size: var(--text-xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-tight);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .lt__num[data-flash='true'] { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lt__dot { animation: none; }
+    .lt__num { transition: none; }
+    .lt__num[data-flash='true'] { color: var(--ink-strong); }
+  }
+</style>
+
+<script>
+  type Metric = { key: string; label: string; start: number; range: [number, number]; unit?: string; };
+
+  function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.lt').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const live = root.querySelector<HTMLElement>('.lt__live')!;
+      const pauseBtn = root.querySelector<HTMLButtonElement>('.lt__pause')!;
+      const metricsCfg = (window as any).__LT_METRICS__ as Metric[];
+
+      const state = new Map<string, number>();
+      metricsCfg.forEach((m) => state.set(m.key, m.start));
+
+      let paused = false;
+
+      const tick = () => {
+        if (paused) return;
+        for (const m of metricsCfg) {
+          const prev = state.get(m.key)!;
+          const delta = m.range[0] + Math.random() * (m.range[1] - m.range[0]);
+          const next = Math.max(0, Math.round(prev + delta));
+          state.set(m.key, next);
+          const el = root.querySelector<HTMLElement>(`[data-key="${m.key}"]`)!;
+          el.textContent = `${next}${el.dataset.unit ?? ''}`;
+          el.dataset.flash = 'true';
+          setTimeout(() => delete el.dataset.flash, 280);
+        }
+        // annuncio compatto — uno solo, per non sommergere lo screen reader
+        live.textContent = `Metriche aggiornate`;
+      };
+
+      const id = window.setInterval(tick, 2000);
+      pauseBtn.addEventListener('click', () => {
+        paused = !paused;
+        pauseBtn.dataset.paused = String(paused);
+        pauseBtn.textContent = paused ? 'riprendi' : 'pausa';
+      });
+
+      document.addEventListener('astro:before-swap', () => clearInterval(id), { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -14,6 +14,7 @@ import '@fontsource-variable/geist/index.css';
 import '@fontsource-variable/geist-mono/index.css';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
+import Analytics from '@vercel/analytics/astro';
 import { t, DEFAULT_LOCALE, type Locale } from '../lib/i18n';
 
 interface Props {
@@ -85,5 +86,7 @@ const secondaryRss = locale === 'en' ? rssIt : rssEn;
       document.addEventListener('astro:page-load', init);
       document.addEventListener('astro:before-swap', () => cleanup?.());
     </script>
+
+    <Analytics />
   </body>
 </html>

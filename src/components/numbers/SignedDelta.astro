@@ -1,0 +1,136 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SignedDelta — il segno che dice subito.
+
+   Pattern: tre pill di "delta" con valore, segno, freccia e
+   colore. Il segno (▲/▼/•) è la prima cosa che si legge — il
+   colore conferma, non sostituisce. Mai colore-only: l'utente
+   daltonico legge il segno e la freccia, non l'hex.
+
+   La cifra usa `tabular-nums` per non sussultare quando un valore
+   passa da una a due cifre. Il "+" del positivo non è opzionale:
+   l'asimmetria fra "+12%" e "12%" è confusa.
+   ───────────────────────────────────────────────────────────── */
+
+interface Delta {
+  label: string;
+  value: number;          // percentuale, può essere negativo
+  meta?: string;
+}
+
+const items: Delta[] = [
+  { label: 'lettori · oggi',         value:  12.4, meta: 'vs ieri'         },
+  { label: 'tempo medio · sessione', value:  -4.2, meta: 'vs settimana'    },
+  { label: 'errori 5xx · ultime 24h', value:   0,   meta: 'invariato'       },
+];
+
+function classify(v: number): 'pos' | 'neg' | 'zero' {
+  if (v > 0) return 'pos';
+  if (v < 0) return 'neg';
+  return 'zero';
+}
+
+function format(v: number): string {
+  // sempre con segno; tabular per coerenza fra positivi/negativi
+  const abs = Math.abs(v).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  if (v > 0) return `+${abs}%`;
+  if (v < 0) return `−${abs}%`;
+  return '±0,0%';
+}
+---
+
+<div class="sd">
+  {items.map((it) => {
+    const kind = classify(it.value);
+    return (
+      <div class={`sd__row sd__row--${kind}`}>
+        <span class="sd__label">{it.label}</span>
+        <div class="sd__pill" data-kind={kind} aria-label={`Variazione ${format(it.value)}`}>
+          <span class="sd__glyph" aria-hidden="true">
+            {kind === 'pos' && (
+              <svg viewBox="0 0 10 10" width="10" height="10"><path d="M5 2 L9 8 H1 Z" fill="currentColor"/></svg>
+            )}
+            {kind === 'neg' && (
+              <svg viewBox="0 0 10 10" width="10" height="10"><path d="M5 8 L9 2 H1 Z" fill="currentColor"/></svg>
+            )}
+            {kind === 'zero' && (
+              <svg viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="2" fill="currentColor"/></svg>
+            )}
+          </span>
+          <span class="sd__num tabular">{format(it.value)}</span>
+        </div>
+        {it.meta && <span class="sd__meta">{it.meta}</span>}
+      </div>
+    );
+  })}
+</div>
+
+<style>
+  .sd {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .sd__row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .sd__label {
+    font-size: var(--text-sm);
+    color: var(--ink);
+  }
+
+  .sd__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+    border: 1px solid transparent;
+  }
+
+  .sd__pill[data-kind='pos'] {
+    color: color-mix(in oklab, var(--accent-ink) 70%, oklch(70% 0.18 150));
+    background-color: color-mix(in oklab, oklch(70% 0.18 150) 12%, transparent);
+    border-color:    color-mix(in oklab, oklch(70% 0.18 150) 24%, transparent);
+  }
+  .sd__pill[data-kind='neg'] {
+    color: color-mix(in oklab, var(--accent-ink) 70%, oklch(65% 0.20 25));
+    background-color: color-mix(in oklab, oklch(65% 0.20 25) 12%, transparent);
+    border-color:    color-mix(in oklab, oklch(65% 0.20 25) 24%, transparent);
+  }
+  .sd__pill[data-kind='zero'] {
+    color: var(--ink-muted);
+    background-color: var(--surface-sunken);
+    border-color: var(--border);
+  }
+
+  .sd__glyph {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 0.65rem;
+    block-size: 0.65rem;
+  }
+
+  .sd__num { letter-spacing: var(--tracking-snug); }
+
+  .sd__meta {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+</style>

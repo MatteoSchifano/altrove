@@ -28,7 +28,6 @@ const ariaLabel = `${t('header.langAria', currentLocale)} — ${LOCALE_LABEL[alt
   href={alternateHref}
   aria-label={ariaLabel}
   hreflang={alternateLocale}
-  data-astro-reload={alternateLocale === 'it' ? undefined : true}
 >
   <span class="lang-toggle__current" aria-hidden="true">{LOCALE_SHORT[currentLocale]}</span>
   <span class="lang-toggle__sep" aria-hidden="true">/</span>

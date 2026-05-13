@@ -18,7 +18,9 @@
     "@astrojs/rss": "^4.0.18",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
+    "@vercel/analytics": "^2.0.1",
     "astro": "^6.3.1",
-    "motion": "^12.38.0"
+    "motion": "^12.38.0",
+    "vercel": "^54.0.0"
   }
 }

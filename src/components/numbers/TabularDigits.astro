@@ -1,0 +1,111 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   TabularDigits — cifre che non sussultano.
+
+   Pattern: due colonne con la stessa lista di numeri, allineate
+   a destra (come in una tabella di prezzi o una dashboard).
+
+   - A sinistra `font-variant-numeric: proportional-nums`: ogni
+     cifra ha la sua larghezza naturale → il bordo sinistro della
+     colonna è frastagliato.
+   - A destra `tabular-nums`: ogni cifra occupa una cella di
+     uguale larghezza → il bordo sinistro è una linea perfetta.
+
+   Niente motion, niente animazione: la differenza si vede a
+   colpo d'occhio. È la versione "tabella di un libro contabile"
+   del problema — la più diretta per chi non l'ha mai vista.
+   ───────────────────────────────────────────────────────────── */
+
+/* Valori scelti per esibire la massima differenza di larghezza in
+   proporzionale: cifre "magre" (1) vs "grasse" (8, 0). Stesso numero
+   di caratteri in ogni riga, così il confronto è pulito: ciò che
+   varia è solo la larghezza tipografica della cifra. */
+const values = ['1.111', '8.888', '1.818', '8.181', '1.001'];
+---
+
+<div class="td">
+  <div class="td__row">
+    <div class="td__cell">
+      <span class="td__label">non tabular</span>
+      <ol class="td__col td__col--prop" aria-hidden="true">
+        {values.map((v) => <li>{v}</li>)}
+      </ol>
+    </div>
+    <div class="td__cell">
+      <span class="td__label">tabular</span>
+      <ol class="td__col td__col--tab tabular" aria-hidden="true">
+        {values.map((v) => <li>{v}</li>)}
+      </ol>
+    </div>
+  </div>
+  <p class="td__hint">Tutti i numeri sono di 5 caratteri. A sinistra ogni riga ha una larghezza diversa perché "1" è stretto e "8" è largo. A destra hanno tutti la stessa larghezza — il bordo sinistro forma una verticale perfetta. È la stessa proprietà che, in un counter, evita il sussulto a ogni tick.</p>
+</div>
+
+<style>
+  .td {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .td__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    align-items: start;
+  }
+
+  .td__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+  }
+
+  .td__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .td__col {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    border: 1px dashed var(--border);
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;  /* allineamento a destra, come una tabella */
+    gap: 0.15rem;
+
+    font-size: var(--text-xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .td__col--prop {
+    font-variant-numeric: proportional-nums;
+  }
+  .td__col--tab {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .td__hint {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+  }
+</style>

@@ -229,6 +229,7 @@ const chapters = (await getCollection('chapters', ({ data }) => data.lang === lo
     display: grid;
     gap: var(--space-md);
     grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    grid-auto-rows: 1fr;
   }
 
   /* ─── Footer ─── */

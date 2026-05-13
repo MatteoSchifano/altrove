@@ -16,7 +16,7 @@
 | 03 | La voce del vuoto | ✅ pubblicato |
 | 04 | Il dialogo silenzioso | ✅ pubblicato |
 | 05 | Lo scroll che racconta | ✅ pubblicato |
-| 06 | Numeri che hanno peso | 📋 in roadmap (prossimo naturale) |
+| 06 | Numeri che hanno peso | ✅ pubblicato |
 | 07 | Anatomia di un input | 📋 in roadmap |
 | 08 | La micro-tipografia | 📋 in roadmap |
 | 09–26 | *(vedi sotto)* | 💭 ipotizzati |

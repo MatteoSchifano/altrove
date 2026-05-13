@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   Content collections — i "capitoli" del playground.
+   Content collections — i "capitoli" del playground (cap. 06+).
 
    Struttura:
      src/content/chapters/<lang>/<slug>.mdx
