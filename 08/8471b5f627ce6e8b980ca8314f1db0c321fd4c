@@ -1,0 +1,35 @@
+src/components/scrolling/ReadingProgress.astro
+  s_dabebd3f41d15d::t_ded824d3d24c36 1-177
+CAPITOLI.md
+  s_dabebd3f41d15d::t_fe64ce44aa9f4f 18-19
+src/content/chapters/it/05-lo-scroll-che-racconta.mdx
+  s_dabebd3f41d15d::t_f58e44b1b730a3 1-108
+src/components/scrolling/ScrollyStory.astro
+  s_dabebd3f41d15d::t_01e6b9a45fe85b 1-308
+src/components/scrolling/FloatingToc.astro
+  s_dabebd3f41d15d::t_b677a09da8f711 1-253
+src/components/scrolling/StickyHeading.astro
+  s_dabebd3f41d15d::t_9129f72a86e1e5 1-220
+src/components/scrolling/HonestParallax.astro
+  s_dabebd3f41d15d::t_4dd5d9fbf35b8e 1-236
+src/components/scrolling/RevealOnEnter.astro
+  s_dabebd3f41d15d::t_1f662051fdcd91 1-231
+src/content/chapters/en/05-the-scroll-that-tells.mdx
+  s_dabebd3f41d15d::t_727e97f0d421ce 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "088471b5f627ce6e8b980ca8314f1db0c321fd4c",
+  "prompts": {},
+  "sessions": {
+    "s_dabebd3f41d15d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "768a895f-52bc-4954-b62a-e3d3a3c2ec4f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
