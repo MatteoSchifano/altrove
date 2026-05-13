@@ -1,0 +1,253 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FloatingToc — l'indice che segue, mai si mette davanti.
+
+   Mini ToC laterale: una colonnina di voci, una sola "attiva"
+   alla volta. La scelta del titolo attivo non è "quello in
+   alto"; è "quello che il lettore sta davvero leggendo" — la
+   sezione con la maggior parte di sé visibile.
+
+   Pattern: IntersectionObserver con un rootMargin che alza
+   la "linea della lettura" a circa il 30% dal top del
+   contenitore. Il marker laterale scivola da una voce
+   all'altra con un piccolo movimento — accent moves with you,
+   non smania.
+   ───────────────────────────────────────────────────────────── */
+
+const sections = [
+  { id: 'intro',   label: 'Premessa' },
+  { id: 'metodo',  label: 'Il metodo' },
+  { id: 'voci',    label: 'Le voci' },
+  { id: 'limiti',  label: 'I limiti' },
+  { id: 'congedo', label: 'Il congedo' },
+];
+---
+
+<div class="ft">
+  <div class="ft__scroller" data-scroller tabindex="0" aria-label="Saggio con indice flottante">
+    <div class="ft__grid">
+      <nav class="ft__toc" aria-label="Indice del capitolo">
+        <ol class="ft__list">
+          {sections.map((s, i) => (
+            <li class="ft__item" data-active={i === 0 ? 'true' : undefined}>
+              <a class="ft__link" href={`#${s.id}`} data-target={s.id}>
+                <span class="ft__dot" aria-hidden="true"></span>
+                <span class="ft__label">{s.label}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <article class="ft__article">
+        <section id="intro" class="ft__section" data-section="intro">
+          <h3>Premessa</h3>
+          <p>Un indice è onesto solo se sa stare al suo posto. Troppo grande, distrae; troppo piccolo, non serve. La giusta misura è una colonna sottile, sempre visibile, mai prepotente.</p>
+          <p>La voce attiva qui non è "quella più in alto". È quella che stai davvero leggendo — la sezione con la maggior parte di sé sopra la riga della lettura.</p>
+        </section>
+
+        <section id="metodo" class="ft__section" data-section="metodo">
+          <h3>Il metodo</h3>
+          <p>Un IntersectionObserver guarda ogni sezione e segnala quando la sua intersezione col viewport supera una soglia. Il rootMargin alza la linea di "lettura" al 30% dal bordo superiore — così l'evidenziazione cambia quando l'occhio è davvero sulla nuova sezione, non un attimo prima.</p>
+          <p>Niente listener di scroll, niente getBoundingClientRect ad ogni frame. L'osservatore lavora sul compositor, e il main thread resta libero per quello che conta.</p>
+        </section>
+
+        <section id="voci" class="ft__section" data-section="voci">
+          <h3>Le voci</h3>
+          <p>Il marker laterale si sposta con una transizione corta — 220 ms — perché l'occhio non perda il filo del cambio. Più lungo sarebbe nostalgico, più corto sarebbe brusco.</p>
+          <p>Tab funziona come da specifica: ogni voce è un link onesto, con focus visibile. Il marker tiene conto anche del focus da tastiera: se "punto" l'ultima voce con Tab, lui mi segue. È un indice che si lascia usare in due modi.</p>
+        </section>
+
+        <section id="limiti" class="ft__section" data-section="limiti">
+          <h3>I limiti</h3>
+          <p>Su viewport stretti l'indice scompare. Niente "hamburger toc": è un dettaglio editoriale, non navigazione critica. Su schermo piccolo lo spazio va al contenuto.</p>
+          <p>Su un articolo molto lungo, oltre 12 voci, l'indice diventa rumore. La regola: se non sta in una colonna senza scroll, è il segno che l'articolo va diviso in capitoli — non l'indice da ingrandire.</p>
+        </section>
+
+        <section id="congedo" class="ft__section" data-section="congedo">
+          <h3>Il congedo</h3>
+          <p>L'indice che hai usato per orientarti svanisce quando l'articolo finisce. Niente sticky che resta a fluttuare nel vuoto. Il dettaglio si toglie quando non serve più.</p>
+          <p>Questo è il modo migliore per misurare se un componente è onesto: se ci pensi solo quando lo cerchi.</p>
+        </section>
+      </article>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ft {
+    inline-size: min(38rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .ft__scroller {
+    block-size: 26rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+  .ft__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .ft__grid {
+    display: grid;
+    grid-template-columns: minmax(7rem, 9rem) 1fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-md) var(--space-xl);
+  }
+  @media (max-width: 30rem) {
+    .ft__grid {
+      grid-template-columns: 1fr;
+    }
+    .ft__toc { display: none; }
+  }
+
+  /* Indice sticky a sinistra */
+  .ft__toc {
+    position: sticky;
+    inset-block-start: 0;
+    align-self: start;
+    padding-block-start: var(--space-2xs);
+  }
+
+  .ft__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-inline-start: 1px solid var(--border);
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .ft__item {
+    position: relative;
+  }
+
+  .ft__link {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.35rem 0 0.35rem var(--space-sm);
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    text-decoration: none;
+    line-height: var(--leading-snug);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+    margin-inline-start: -1px; /* sovrapposto al border-inline-start */
+    border-inline-start: 1px solid transparent;
+  }
+  .ft__link:hover { color: var(--ink); }
+  .ft__link:focus-visible {
+    outline: none;
+    color: var(--ink-strong);
+    border-inline-start-color: var(--accent);
+  }
+
+  .ft__dot {
+    inline-size: 0.35rem;
+    block-size: 0.35rem;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.4;
+    transition: opacity var(--dur-fast) var(--ease-out-soft),
+                transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  .ft__item[data-active] .ft__link {
+    color: var(--ink-strong);
+    border-inline-start-color: var(--accent);
+  }
+  .ft__item[data-active] .ft__dot {
+    opacity: 1;
+    color: var(--accent);
+    transform: scale(1.2);
+  }
+
+  .ft__article {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .ft__section {
+    margin-block-end: var(--space-xl);
+    scroll-margin-block-start: var(--space-sm);
+  }
+  .ft__section h3 {
+    margin: 0 0 var(--space-2xs);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .ft__section p {
+    margin: 0 0 var(--space-sm);
+    max-inline-size: 38ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ft__scroller { scroll-behavior: auto; }
+    .ft__dot, .ft__link { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ft').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const sections = Array.from(el.querySelectorAll<HTMLElement>('.ft__section'));
+      const items = Array.from(el.querySelectorAll<HTMLElement>('.ft__item'));
+      const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.ft__link'));
+
+      const setActive = (id: string) => {
+        items.forEach((it) => {
+          const link = it.querySelector<HTMLAnchorElement>('.ft__link');
+          if (link?.dataset.target === id) it.dataset.active = 'true';
+          else delete it.dataset.active;
+        });
+      };
+
+      // Scroll-spy via IntersectionObserver
+      const ratios = new Map<string, number>();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            const id = (e.target as HTMLElement).dataset.section;
+            if (id) ratios.set(id, e.isIntersecting ? e.intersectionRatio : 0);
+          });
+          let bestId: string | null = null;
+          let bestRatio = 0;
+          ratios.forEach((r, id) => {
+            if (r > bestRatio) { bestRatio = r; bestId = id; }
+          });
+          if (bestId) setActive(bestId);
+        },
+        {
+          root: scroller,
+          threshold: [0.05, 0.25, 0.5, 0.75],
+          rootMargin: '-30% 0px -50% 0px',
+        }
+      );
+      sections.forEach((s) => observer.observe(s));
+
+      // Click sui link → scroll smooth dentro il scroller (no jump)
+      links.forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = a.dataset.target;
+          if (!id) return;
+          const target = el.querySelector<HTMLElement>(`#${id}`);
+          if (!target) return;
+          const top = target.offsetTop - 8;
+          scroller.scrollTo({ top, behavior: 'smooth' });
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

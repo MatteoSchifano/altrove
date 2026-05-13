@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-05"
+number: "05"
+title: "The scroll that tells a story"
+excerpt: "Scrolling is the most transparent gesture we have. It asks no permission, it interrupts nothing, it needs no teaching: we already know how to do it. A page that goes along with it — instead of chasing it — is a page that lets itself be read to the end."
+date: "May 2026"
+tags: ["editorial", "scroll", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import ReadingProgress from '../../../components/scrolling/ReadingProgress.astro';
+import RevealOnEnter from '../../../components/scrolling/RevealOnEnter.astro';
+import StickyHeading from '../../../components/scrolling/StickyHeading.astro';
+import HonestParallax from '../../../components/scrolling/HonestParallax.astro';
+import ScrollyStory from '../../../components/scrolling/ScrollyStory.astro';
+import FloatingToc from '../../../components/scrolling/FloatingToc.astro';
+
+There's a gesture, in the way we use the web, that we never had to learn: scrolling. There is no tutorial for the scroll, no voice that says "you can keep reading if you go down". And yet it's the most common gesture we make in a day in front of a screen — the thumb going up, the wheel turning, the spacebar pressed in the middle of a paragraph. A page worth its salt is a page that recognises this gesture as the user's main action, and that decides what to do with it.
+
+Scrolling is a narrative variable: it can be the time of a story, the axis of an argument, the cadence of a reveal. But it can also be the noise of an interface that chases the thumb — revealing, hiding, animating, twitching. The difference isn't how much the page "moves", it's *what* moves and *when*. The pages that tell something with the scroll do it with a light hand: a progress map, a detail entering, a title that stays. Never an orchestra.
+
+In this chapter we open six different ways to "scroll well". From the most discreet — a bar that only says where you are — to the most structured — an illustration that changes as the story moves forward. Six ways, one philosophy: scrolling is the *user's gesture*, and the interface that respects it is the one that lets itself be scrolled without running after you.
+
+## The bar that knows where you are
+
+In any reasonably long read there's a moment when the eye looks for a handhold: *how much is left?* The best answer isn't a huge percentage, and it isn't "scroll to the end to find out". It's a thin little bar, at the top, that fills as you scroll — nothing more. A position map, not an animation.
+
+<Demo title="Reading bar · scroll-driven, no theatre" tag="05.a">
+  <ReadingProgress />
+  <div slot="note">
+    <p>The bar is driven by the scroller's scroll via <code>animation-timeline: scroll(self)</code> — CSS reads the position straight from the compositor, without going through the main thread. No <code>scroll</code> event, no <code>requestAnimationFrame</code>: zero JS for rendering. On browsers without support, a passive-listener fallback gives the same result — more traditional, more expensive, but honest.</p>
+    <p>The percentage value on the right uses <code>font-variant-numeric: tabular-nums</code>: fixed-width digits, so when it goes from 9 to 10 it doesn't twitch. It's an invisible detail until you remove it — exactly the kind of care that separates "a bar that works" from "a bar that's pleasant to watch". Reduced motion changes nothing, because there is no motion here: there's only a mapping. An important distinction that returns in the other demos.</p>
+  </div>
+</Demo>
+
+## Elements that reveal themselves once
+
+The "fade-up on scroll" pattern is one of the most overused on the web. When it works, the page seems to wake up as you go down; when it's applied without judgement, it seems to chase the thumb. The rule is simple: only once. If you scroll back up and down, the elements stay put. Pages that re-animate on every pass feel restless; pages that animate once feel lived in.
+
+<Demo title="Reveal on first entry · no chasing" tag="05.b">
+  <RevealOnEnter />
+  <div slot="note">
+    <p>An <code>IntersectionObserver</code> with an 18% threshold and <code>unobserve</code> after the first trigger. Each card gets a permanent <code>data-revealed="true"</code> attribute; CSS transitions run from there. The stagger between cards is 40 ms — short, no peacock tail. Longer would be celebration, shorter would be one thing entering all at once.</p>
+    <p>The card's space is already reserved in layout: opacity starts at 0 but geometry doesn't. It's the difference between "reveal" and "layout shift". On <code>prefers-reduced-motion: reduce</code> all cards appear immediately in their final place and the observer isn't even set up — whoever asked for less motion doesn't get "less motion", they get <em>the information</em>. An important point: reducing motion doesn't mean slowing down, it means delivering the same final state without the journey.</p>
+  </div>
+</Demo>
+
+## The title that stays, and changes in silence
+
+When an article is divided into sections, each with its own title, there's a subtle moment: the reader gets halfway through a section and forgets where they are. The best pages help without being asked — a small sticky element up top, with the current section's title, that changes with a gentle cross-fade when a new one enters. Not a menu, not a breadcrumb: just a typographic label.
+
+<Demo title="Sticky heading · cross-fade between sections" tag="05.c">
+  <StickyHeading />
+  <div slot="note">
+    <p>One sticky element, not one per section. When a new section crosses the "reading line" (IntersectionObserver rootMargin <code>-15% 0px -55% 0px</code>), the text inside the slot cross-fades — old rises and fades out, new rises and enters. Duration 260 ms. Longer would turn into a celebration animation; shorter would feel like a jump.</p>
+    <p>The pattern avoids a classic stumble: the "double sticky" that overlaps itself. Having one title per section that becomes sticky in turn creates moments where two titles are visible at the same time, one leaving and one entering. Keeping <em>one</em> typographic slot, and rotating its content, is simpler and more honest. It also works better with screen readers: the element is marked <code>aria-hidden="true"</code> because it's a visual duplicate of the real titles below.</p>
+  </div>
+</Demo>
+
+## Depth that doesn't make you sick
+
+Parallax is an old trick — Disney cartoons used it long before browsers did. On the web it's lived through a decade of abuse: layers chasing each other, backgrounds galloping, scenes "revealing" themselves like at a fairground. The honest version is almost invisible: layers move by a handful of pixels, proportions are coherent (the moon slower than the ridges, the ridges slower than the pebbles), and on <code>prefers-reduced-motion</code> everything stops. Atmosphere, not spectacle.
+
+<Demo title="Honest parallax · under 20px across the whole scroll" tag="05.d">
+  <HonestParallax />
+  <div slot="note">
+    <p>Three sticky layers at the top of the scroller, animated with <code>animation-timeline: scroll()</code> on the single Y axis. Amplitudes: −18px on the "far" layer (moon and stars), −8px on mid (ridges), −3px on near (pebbles). Nothing more. A parallax you can see at a glance is one parallax too many: the eye appreciates it, the stomach doesn't.</p>
+    <p>Respecting physics — the farther a layer is, the slower it moves — isn't fetishism: it's why depth feels real instead of "effect-like". On <code>prefers-reduced-motion: reduce</code> we don't offer a "soft" version with reduced amplitudes: we turn everything off. Respecting the setting is binary; whoever asked for less motion doesn't want a watered-down trick, they want no trick at all.</p>
+  </div>
+</Demo>
+
+## Two threads, no scrub
+
+Scrollytelling — text on the left scrolling, image on the right changing — is one of the web's most beautiful narrative forms, and one of its most fragile. The "millimetric" version (every scroll pixel moves an illustration pixel) feels magical for ten seconds and then becomes nervous: on low bandwidth, with keyboard, with a screen reader, it stops meaning anything. The *stepped* version is more honest: three discrete states, three clear thresholds, a short transition between them.
+
+<Demo title="Stepped scrollytelling · seed, tree, forest" tag="05.e">
+  <ScrollyStory />
+  <div slot="note">
+    <p>Text scrolls normally; the side panel is in <code>position: sticky</code> and changes state when a new text section crosses the viewport's central zone (IntersectionObserver with rootMargin <code>-20% 0px -20% 0px</code>). The three illustrations — seed, tree, forest — live in the same SVG, overlapped; the active one becomes opaque with a small scale-up, the others fade. Cross-fade, not morph.</p>
+    <p>Why stepped and not continuous scrub? Because on keyboard, screen reader, and 200% zoom, continuous scrub is essentially invisible: there's no semantic "halfway" between "seed" and "tree". Stepped, each state is a unit of meaning, reachable and announceable. On mobile (below 32rem) the side panel becomes a card on top — same markup, different geometry, semantics intact.</p>
+  </div>
+</Demo>
+
+## The index that follows, never stands in front
+
+A long article divided into sections wants an index — not a menu, not a breadcrumb: a small column that says "you're reading this". The active entry moves on its own as you scroll, and clicking it takes you there with a soft scroll. The rule of discretion: the index exists as long as it serves. On a narrow screen it disappears — it doesn't turn into a hamburger, it doesn't ask for attention: it gives the space back to the text, which is the real protagonist.
+
+<Demo title="Floating ToC · scroll-spy with side marker" tag="05.f">
+  <FloatingToc />
+  <div slot="note">
+    <p>Five sections, five entries in the index. The active entry is chosen by an <code>IntersectionObserver</code> measuring the largest visible intersection, with <code>rootMargin: '-30% 0px -50% 0px'</code> to lift the "reading line" — the highlight changes when the eye is actually on the new section, not when its edge has just entered. The side marker (the accent on the left border) slides with a 220 ms transition, enough not to lose the thread, little enough not to feel like a trick.</p>
+    <p>Links work with the keyboard: visible focus, <code>scroll-behavior: smooth</code> for the navigation, <code>scroll-margin-block-start</code> on sections so the title doesn't end up glued to the edge. On <code>prefers-reduced-motion</code> smooth scroll becomes instant and the marker transition disappears: whoever asked for less motion gets the same information, in the same place, without the journey. Same principle as the first demo: reducing motion doesn't mean hiding state.</p>
+  </div>
+</Demo>
+
+## What we take away
+
+Scrolling is the most transparent gesture we have. A page that goes along with it — instead of chasing it — is a page that lets itself be read to the end. The six demos above show six ways to "tell with the scroll" without taking themselves too seriously:
+
+1. **The reading bar** that maps position, scroll-driven, never animated.
+2. **The reveal that happens once**, because a page that re-animates on every pass is a restless page.
+3. **The sticky title** that changes in silence — one slot to avoid double-stickies.
+4. **The honest parallax**, under 20 px, with a complete off-switch on reduced motion.
+5. **The stepped scrollytelling** — three discrete states, semantics intact on keyboard.
+6. **The floating index** that highlights, never stands in front, and gives space to the reader.
+
+Six ways, one rule: scrolling is the user's gesture, and the interface that respects it is the one that lets itself be scrolled without running after you. The next chapter changes register — *numbers that have weight* — because after teaching the scroll to tell a story, it's time to let the quantities speak too: tabular figures, honest count-ups, signed deltas, and formats that recognise who's looking.

@@ -1,0 +1,236 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HonestParallax — la profondità che non dà nausea.
+
+   Tre layer dietro al testo, ognuno si muove più lento del
+   contenuto. Movimento *molto* contenuto: ±18px sul layer più
+   profondo, ±8px su quello intermedio, ±3px su quello vicino.
+   Mai oltre — la quantità è la differenza fra "atmosfera" e
+   "carosello da fiera".
+
+   Implementazione: `animation-timeline: scroll()` nativo dove
+   supportato; fallback transform via passive scroll listener.
+
+   Reduced motion: TUTTO il movimento di parallasse si annulla.
+   Niente compromessi: chi chiede meno motion non vuole vedere
+   un trucchetto in versione "soft".
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="hp">
+  <div class="hp__scroller" data-scroller tabindex="0" aria-label="Pagina con effetto parallasse">
+    <div class="hp__scene" data-scene>
+      <div class="hp__layer hp__layer--far" data-layer="far" aria-hidden="true">
+        <span class="hp__chip hp__chip--moon"></span>
+        <span class="hp__chip hp__chip--star hp__chip--s1"></span>
+        <span class="hp__chip hp__chip--star hp__chip--s2"></span>
+        <span class="hp__chip hp__chip--star hp__chip--s3"></span>
+      </div>
+      <div class="hp__layer hp__layer--mid" data-layer="mid" aria-hidden="true">
+        <span class="hp__ridge hp__ridge--left"></span>
+        <span class="hp__ridge hp__ridge--right"></span>
+      </div>
+      <div class="hp__layer hp__layer--near" data-layer="near" aria-hidden="true">
+        <span class="hp__pebble hp__pebble--a"></span>
+        <span class="hp__pebble hp__pebble--b"></span>
+      </div>
+
+      <div class="hp__content">
+        <header class="hp__hero">
+          <span class="hp__kicker tabular">Capitolo zero</span>
+          <h3>Il fondale si muove appena</h3>
+          <p>Tre layer dietro a queste parole. Scorri e nota: la luna in cima si sposta di pochi pixel, le creste a metà altezza un po' di più, i sassolini in basso quasi quanto il testo.</p>
+        </header>
+
+        <section class="hp__body">
+          <p>La parallasse onesta non si vede a colpo d'occhio. Si vede quando la togli: la pagina sembra piatta, mentre prima sembrava semplicemente "buona". Quello scarto sottile è il regalo del trucco.</p>
+          <p>La regola dei millimetri vale anche qui: meno di 20 px di translazione su tutto il viaggio dello scroll. Oltre, la stomaco se ne accorge prima dell'occhio.</p>
+          <p>Le tre quote di profondità sono coerenti: più un layer è "lontano", più lentamente si muove. È la fisica: la luna è più stabile delle nuvole, le nuvole sono più stabili degli alberi.</p>
+        </section>
+
+        <footer class="hp__outro">
+          <p>Hai chiesto meno motion? Tutta la parallasse è spenta — niente trucchetti morbidi, niente versione "soft". Il rispetto è binario.</p>
+        </footer>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .hp {
+    inline-size: min(34rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hp__scroller {
+    block-size: 24rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .hp__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .hp__scene {
+    position: relative;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--accent-soft) 60%, var(--surface)) 0%,
+      var(--surface) 50%,
+      var(--surface-sunken) 100%
+    );
+    min-block-size: 56rem; /* abbastanza alto per godere lo scroll */
+    isolation: isolate;
+  }
+
+  /* Layer di parallasse — sticky in alto allo scroller, traslano via JS o animation-timeline */
+  .hp__layer {
+    position: sticky;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    block-size: 24rem;
+    margin-block-end: -24rem; /* sticky senza occupare flusso */
+    pointer-events: none;
+    will-change: transform;
+  }
+  .hp__layer--far  { z-index: 0; }
+  .hp__layer--mid  { z-index: 1; }
+  .hp__layer--near { z-index: 2; }
+
+  /* Decorazioni */
+  .hp__chip,
+  .hp__ridge,
+  .hp__pebble {
+    position: absolute;
+    background-color: currentColor;
+  }
+
+  .hp__chip--moon {
+    inline-size: 3.2rem;
+    block-size: 3.2rem;
+    border-radius: 50%;
+    color: light-dark(oklch(0.93 0.04 var(--hue-warm)), oklch(0.86 0.05 var(--hue-warm)));
+    inset-block-start: 1.4rem;
+    inset-inline-end: 2.2rem;
+    box-shadow: 0 0 24px 4px color-mix(in oklab, currentColor 30%, transparent);
+  }
+  .hp__chip--star {
+    inline-size: 0.25rem;
+    block-size: 0.25rem;
+    border-radius: 50%;
+    color: var(--ink-subtle);
+    opacity: 0.7;
+  }
+  .hp__chip--s1 { inset-block-start: 0.8rem; inset-inline-start: 12%; }
+  .hp__chip--s2 { inset-block-start: 2.3rem; inset-inline-start: 28%; opacity: 0.5; }
+  .hp__chip--s3 { inset-block-start: 1.3rem; inset-inline-start: 55%; }
+
+  .hp__ridge {
+    inset-block-end: 35%;
+    block-size: 6rem;
+    border-radius: 100% 100% 0 0 / 100% 100% 0 0;
+    color: light-dark(oklch(0.78 0.04 var(--hue-warm)), oklch(0.32 0.02 var(--hue-warm)));
+    opacity: 0.7;
+  }
+  .hp__ridge--left  { inset-inline-start: -10%; inline-size: 70%; }
+  .hp__ridge--right { inset-inline-end: -10%; inline-size: 65%; inset-block-end: 33%; opacity: 0.55; }
+
+  .hp__pebble {
+    inset-block-end: 6%;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    color: light-dark(oklch(0.55 0.03 var(--hue-warm)), oklch(0.45 0.02 var(--hue-warm)));
+  }
+  .hp__pebble--a { inline-size: 1.2rem; inset-inline-start: 24%; }
+  .hp__pebble--b { inline-size: 0.8rem; inset-inline-end: 18%; inset-block-end: 9%; }
+
+  /* Animation timeline nativo — translateY ai layer in base allo scroll del scroller */
+  @supports (animation-timeline: scroll()) {
+    .hp__scroller { scroll-timeline-name: --hp-scroll; }
+    .hp__layer--far  { animation: hp-far  linear forwards; animation-timeline: --hp-scroll; }
+    .hp__layer--mid  { animation: hp-mid  linear forwards; animation-timeline: --hp-scroll; }
+    .hp__layer--near { animation: hp-near linear forwards; animation-timeline: --hp-scroll; }
+    @keyframes hp-far  { to { transform: translateY(-18px); } }
+    @keyframes hp-mid  { to { transform: translateY(-8px); } }
+    @keyframes hp-near { to { transform: translateY(-3px); } }
+  }
+
+  /* Contenuto in primo piano */
+  .hp__content {
+    position: relative;
+    z-index: 3;
+    padding: 18rem var(--space-lg) var(--space-2xl);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .hp__hero { margin-block-end: var(--space-xl); }
+  .hp__kicker {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+  .hp__hero h3 {
+    margin: 0.25rem 0 var(--space-sm);
+    color: var(--ink-strong);
+    font-size: var(--text-lg);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    font-weight: var(--weight-semibold);
+    max-inline-size: 22ch;
+  }
+  .hp__hero p { margin: 0; max-inline-size: 38ch; }
+  .hp__body p { margin: 0 0 var(--space-sm); max-inline-size: 38ch; }
+  .hp__outro {
+    margin-block-start: var(--space-xl);
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+  }
+  .hp__outro p { margin: 0; max-inline-size: 40ch; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hp__layer { animation: none !important; transform: none !important; }
+  }
+</style>
+
+<script>
+  /* Fallback parallasse via scroll listener. Range chiusi (clamp) e
+     ampiezza minuscola — non vogliamo "movimento bello": vogliamo
+     atmosfera. */
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.hp').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced) return;
+
+      const supportsST = CSS.supports?.('animation-timeline: scroll()') ?? false;
+      if (supportsST) return; // il CSS basta
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const layers = {
+        far:  el.querySelector<HTMLElement>('[data-layer="far"]'),
+        mid:  el.querySelector<HTMLElement>('[data-layer="mid"]'),
+        near: el.querySelector<HTMLElement>('[data-layer="near"]'),
+      };
+
+      const update = () => {
+        const max = scroller.scrollHeight - scroller.clientHeight;
+        const ratio = max <= 0 ? 0 : Math.min(1, Math.max(0, scroller.scrollTop / max));
+        if (layers.far)  layers.far.style.transform  = `translateY(${(-18 * ratio).toFixed(2)}px)`;
+        if (layers.mid)  layers.mid.style.transform  = `translateY(${(-8  * ratio).toFixed(2)}px)`;
+        if (layers.near) layers.near.style.transform = `translateY(${(-3  * ratio).toFixed(2)}px)`;
+      };
+
+      scroller.addEventListener('scroll', update, { passive: true });
+      update();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,231 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   RevealOnEnter — gli elementi si svelano alla prima entrata.
+
+   Regola: una sola volta. Se rifaccio scroll sopra e sotto,
+   restano dove sono. Le pagine che ri-animano a ogni passaggio
+   sembrano nervose; quelle che animano una volta sembrano
+   abitate.
+
+   IntersectionObserver con `unobserve` dopo il primo trigger.
+   Reduced-motion: nessuna transizione, gli elementi appaiono
+   subito. Niente layout shift in entrambi i casi (l'opacità
+   parte da 0, lo spazio è già occupato).
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="ro">
+  <div class="ro__bar" aria-hidden="true">
+    <button class="ro__cta" type="button" data-action="rewind">Riavvolgi</button>
+    <span class="ro__hint">Scorri verso il basso →</span>
+  </div>
+
+  <div class="ro__scroller" data-scroller tabindex="0" aria-label="Galleria scrollabile con reveal">
+    <div class="ro__lede">
+      <p>Sei carte sotto. Ognuna entra una volta sola, alla sua prima apparizione in viewport. Se torni indietro, restano ferme.</p>
+    </div>
+
+    <ul class="ro__list">
+      <li class="ro__card" data-reveal style="--i: 0">
+        <span class="ro__num tabular">01</span>
+        <h4>Il primo gesto</h4>
+        <p>Una scheda nuova entra dal basso, salendo di pochi pixel. L'occhio nota il movimento, non lo subisce.</p>
+      </li>
+      <li class="ro__card" data-reveal style="--i: 1">
+        <span class="ro__num tabular">02</span>
+        <h4>Il ritardo onesto</h4>
+        <p>Ogni scheda ritarda la sua entrata di 40 ms rispetto alla precedente. Stagger, ma corto: niente coda di pavone.</p>
+      </li>
+      <li class="ro__card" data-reveal style="--i: 2">
+        <span class="ro__num tabular">03</span>
+        <h4>Una sola volta</h4>
+        <p>Se scrollo sopra e sotto, queste schede non rifanno la scena. La memoria visiva si costruisce, non si interrompe.</p>
+      </li>
+      <li class="ro__card" data-reveal style="--i: 3">
+        <span class="ro__num tabular">04</span>
+        <h4>La soglia</h4>
+        <p>Il trigger scatta a 18% dell'altezza visibile. Più basso sarebbe nervoso, più alto farebbe "saltare" gli ultimi.</p>
+      </li>
+      <li class="ro__card" data-reveal style="--i: 4">
+        <span class="ro__num tabular">05</span>
+        <h4>Reduced motion</h4>
+        <p>Chi ha chiesto meno movimento riceve subito tutto al posto giusto. L'informazione non si conquista: appare.</p>
+      </li>
+      <li class="ro__card" data-reveal style="--i: 5">
+        <span class="ro__num tabular">06</span>
+        <h4>Lo spazio è già lì</h4>
+        <p>L'opacità parte da 0, ma lo spazio della scheda è già riservato. Nessun salto del layout, mai.</p>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<style>
+  .ro {
+    inline-size: min(32rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ro__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-2xs) var(--space-md);
+    border-block-end: 1px solid var(--border);
+    background-color: var(--surface);
+  }
+
+  .ro__cta {
+    appearance: none;
+    background-color: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-2xs);
+    padding: 0.2rem 0.65rem;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft),
+                border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .ro__cta:hover { background-color: var(--surface-sunken); border-color: var(--border-strong); }
+  .ro__cta:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .ro__hint {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .ro__scroller {
+    block-size: 22rem;
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+    overscroll-behavior: contain;
+  }
+  .ro__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .ro__lede {
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 38ch;
+    margin-block-end: var(--space-md);
+  }
+  .ro__lede p { margin: 0; }
+
+  .ro__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  .ro__card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm) var(--space-md);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-2xs) var(--space-sm);
+    align-items: baseline;
+
+    opacity: 0;
+    transform: translateY(12px);
+    will-change: opacity, transform;
+  }
+
+  .ro__card[data-revealed='true'] {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 480ms var(--ease-out-soft) calc(var(--i, 0) * 40ms),
+      transform 520ms var(--ease-out-snug) calc(var(--i, 0) * 40ms);
+  }
+
+  .ro__num {
+    grid-row: 1 / 3;
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    align-self: start;
+    padding-block-start: 0.25rem;
+  }
+  .ro__card h4 {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .ro__card p {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 42ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ro__card,
+    .ro__card[data-revealed='true'] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ro').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const cards = el.querySelectorAll<HTMLElement>('[data-reveal]');
+      const rewindBtn = el.querySelector<HTMLButtonElement>('[data-action="rewind"]')!;
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduced) {
+        cards.forEach((c) => c.dataset.revealed = 'true');
+        rewindBtn.disabled = true;
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.target instanceof HTMLElement) {
+              entry.target.dataset.revealed = 'true';
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { root: scroller, threshold: 0.18 }
+      );
+
+      cards.forEach((c) => observer.observe(c));
+
+      rewindBtn.addEventListener('click', () => {
+        scroller.scrollTo({ top: 0, behavior: 'smooth' });
+        cards.forEach((c) => {
+          delete c.dataset.revealed;
+          observer.observe(c);
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

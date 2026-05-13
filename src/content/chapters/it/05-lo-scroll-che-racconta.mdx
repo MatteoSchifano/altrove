@@ -1,0 +1,108 @@
+---
+lang: "it"
+translationKey: "chapter-05"
+number: "05"
+title: "Lo scroll che racconta"
+excerpt: "Lo scroll è il gesto più trasparente che abbiamo. Non chiede permesso, non interrompe, non si insegna: già lo sappiamo fare. Una pagina che lo asseconda — invece di rincorrerlo — è una pagina che si lascia leggere fino in fondo."
+date: "maggio 2026"
+tags: ["editoriale", "scroll", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import ReadingProgress from '../../../components/scrolling/ReadingProgress.astro';
+import RevealOnEnter from '../../../components/scrolling/RevealOnEnter.astro';
+import StickyHeading from '../../../components/scrolling/StickyHeading.astro';
+import HonestParallax from '../../../components/scrolling/HonestParallax.astro';
+import ScrollyStory from '../../../components/scrolling/ScrollyStory.astro';
+import FloatingToc from '../../../components/scrolling/FloatingToc.astro';
+
+C'è un gesto, nel modo in cui usiamo il web, che non abbiamo mai dovuto imparare: scorrere. Non c'è nessun tutorial per lo scroll, nessuna voce che dice "puoi continuare a leggere se vai giù". Eppure è il gesto più comune che facciamo in una giornata davanti a uno schermo — il pollice che sale, la rotella che gira, la barra spaziatrice premuta a metà di un paragrafo. Una pagina che vale è una pagina che riconosce questo gesto come l'azione principale dell'utente, e che decide cosa farne.
+
+Lo scroll è una variabile narrativa: può essere il tempo di una storia, l'asse di un argomento, la cadenza di una rivelazione. Ma può anche essere il rumore di un'interfaccia che insegue il pollice — rivela, nasconde, anima, sussulta. La differenza fra le due cose non è quanto si "muove" la pagina, è *cosa* si muove e *quando*. Le pagine che raccontano qualcosa con lo scroll lo fanno con una mano leggera: la mappa del progresso, un dettaglio che entra, un titolo che resta. Mai un'orchestra.
+
+In questo capitolo apriamo sei modi diversi di "scorrere bene". Dal più discreto — una barra che dice solo dove sei — al più strutturato — un'illustrazione che cambia man mano che la storia avanza. Sei modi, una stessa filosofia: lo scroll è il *gesto dell'utente*, e l'interfaccia che lo rispetta è quella che si fa scorrere senza scorrerlo dietro.
+
+## La barra che sa dove sei
+
+In ogni lettura un po' lunga c'è un momento in cui l'occhio cerca un appiglio: *quanto manca?* La risposta migliore non è una percentuale gigante, e neanche un "scrolla fino alla fine per scoprire". È una barretta sottile, in alto, che si riempie con lo scroll — niente di più. Una mappa di posizione, non un'animazione.
+
+<Demo title="Barra di lettura · scroll-driven, niente teatro" tag="05.a">
+  <ReadingProgress />
+  <div slot="note">
+    <p>La barra è guidata dallo scroll dello scroller via <code>animation-timeline: scroll(self)</code> — il CSS legge la posizione direttamente dal compositor, senza passare dal main thread. Non c'è <code>scroll</code> event, non c'è <code>requestAnimationFrame</code>: zero JS per il rendering. Sui browser senza supporto, un fallback con listener passivo dà lo stesso risultato — più tradizionale, più costoso, ma onesto.</p>
+    <p>Il valore percentuale a destra usa <code>font-variant-numeric: tabular-nums</code>: cifre a larghezza fissa, così quando passa da 9 a 10 non sussulta. È un dettaglio invisibile finché non lo togli — è esattamente il tipo di cura che fa la differenza fra "barra che funziona" e "barra che si lascia guardare". Reduced motion non cambia niente, perché non c'è motion: c'è solo mappatura. Una distinzione importante che torna anche nelle altre demo.</p>
+  </div>
+</Demo>
+
+## Gli elementi che si svelano una volta sola
+
+Il pattern del "fade-up on scroll" è uno dei più abusati del web. Quando funziona, sembra che la pagina si svegli mentre scendi; quando viene applicato senza criterio, sembra che insegua il pollice. La regola è semplice: una sola volta. Se rifai scroll sopra e sotto, gli elementi restano dove sono. Le pagine che ri-animano a ogni passaggio sembrano nervose; quelle che animano una volta sembrano abitate.
+
+<Demo title="Reveal al primo ingresso · niente rincorsa" tag="05.b">
+  <RevealOnEnter />
+  <div slot="note">
+    <p>Un <code>IntersectionObserver</code> con soglia al 18% e <code>unobserve</code> dopo il primo trigger. Ogni card riceve un <code>data-revealed="true"</code> permanente, le transizioni CSS partono da lì. Lo stagger fra una card e l'altra è di 40 ms — corto, niente coda di pavone. Più lungo sarebbe celebrazione, più corto un'unica cosa che entra.</p>
+    <p>Lo spazio della card è già riservato in layout: l'opacità parte da 0 ma la geometria no. È la differenza fra "reveal" e "layout shift". Su <code>prefers-reduced-motion: reduce</code> tutte le card appaiono subito al loro posto e l'observer non viene neanche allestito — chi ha chiesto meno movimento non riceve "meno movimento", riceve <em>l'informazione</em>. È un punto importante: ridurre il motion non significa rallentare, significa dare lo stesso stato finale senza il tragitto.</p>
+  </div>
+</Demo>
+
+## Il titolo che resta, e cambia in silenzio
+
+Quando un articolo è diviso in sezioni, ognuna con il suo titolo, c'è un momento sottile: il lettore arriva a metà di una sezione e dimentica dove si trova. Le pagine migliori lo aiutano senza chiederglielo — un piccolo sticky in alto, con il titolo della sezione corrente, che cambia con un cross-fade morbido quando ne entra una nuova. Non un menu, non una breadcrumb: solo un'etichetta tipografica.
+
+<Demo title="Sticky heading · cross-fade fra sezioni" tag="05.c">
+  <StickyHeading />
+  <div slot="note">
+    <p>Un solo elemento sticky, non uno per sezione. Quando una nuova sezione attraversa la "linea di lettura" (rootMargin <code>-15% 0px -55% 0px</code> sull'IntersectionObserver), il testo dentro lo slot fa cross-fade — il vecchio sale e svanisce, il nuovo sale ed entra. Durata 260 ms. Più lungo si trasformerebbe in animazione celebrativa; più corto sembrerebbe un salto.</p>
+    <p>Il pattern evita un classico inciampo: il "doppio sticky" che si scavalca. Avere un titolo per sezione che diventa sticky a turno crea momenti in cui due titoli sono visibili contemporaneamente, uno che esce e uno che entra. Tenere <em>un solo</em> slot tipografico, e farne ruotare il contenuto, è più semplice e più onesto. Funziona anche meglio con i lettori vocali: l'elemento è marcato <code>aria-hidden="true"</code> perché è un duplicato visivo dei titoli reali sotto.</p>
+  </div>
+</Demo>
+
+## La profondità che non dà nausea
+
+La parallasse è un trucco antico — lo usavano già i cartoni Disney, anni prima dei browser. Sul web ha vissuto un decennio di abusi: layer che si rincorrono, sfondi che galoppano, scene che si "rivelano" come al circo. La versione onesta è quasi invisibile: i layer si muovono di pochi pixel, le proporzioni sono coerenti (la luna più lenta delle creste, le creste più lente dei sassolini), e su <code>prefers-reduced-motion</code> tutto si spegne. Atmosfera, non spettacolo.
+
+<Demo title="Parallasse onesto · meno di 20px su tutto lo scroll" tag="05.d">
+  <HonestParallax />
+  <div slot="note">
+    <p>Tre layer sticky in cima allo scroller, animati con <code>animation-timeline: scroll()</code> sul singolo asse Y. Ampiezze: −18px sul layer "lontano" (luna e stelle), −8px sul medio (creste), −3px sul vicino (sassolini). Niente oltre. Una parallasse che si vede a colpo d'occhio è una parallasse di troppo: l'occhio l'apprezza, lo stomaco no.</p>
+    <p>La scelta di rispettare la fisica — più lontano è un layer, più lentamente si muove — non è feticismo: è la chiave per cui la profondità sembra reale invece di "effetto". Su <code>prefers-reduced-motion: reduce</code> non offriamo una versione "soft" con meno ampiezza: spegniamo tutto. Il rispetto del setting è binario; chi ha chiesto meno motion non vuole vedere il trucco in versione attenuata, vuole non vederlo per niente.</p>
+  </div>
+</Demo>
+
+## Due fili sincronizzati, senza scrub
+
+Lo scrollytelling — testo a sinistra che scorre, immagine a destra che cambia — è una delle forme narrative più belle del web, ed è anche una delle più fragili. La versione "millimetrica" (ogni pixel di scroll sposta un pixel dell'illustrazione) sembra magica per dieci secondi e poi diventa nervosa: a bassa banda, con tastiera, con uno screen reader, smette di significare. La versione *a passi* è più onesta: tre stati discreti, tre soglie chiare, una transizione corta fra l'uno e l'altro.
+
+<Demo title="Scrollytelling a passi · seme, albero, bosco" tag="05.e">
+  <ScrollyStory />
+  <div slot="note">
+    <p>Il testo scorre normalmente; il pannello laterale è in <code>position: sticky</code> e cambia stato quando una nuova sezione del testo attraversa la zona centrale del viewport (IntersectionObserver con rootMargin <code>-20% 0px -20% 0px</code>). Le tre illustrazioni — seme, albero, bosco — vivono nello stesso SVG sovrapposte; quella attiva diventa opaca con una piccola scala-up, le altre svaniscono. Cross-fade, non morph.</p>
+    <p>Perché a passi e non scrub continuo? Perché su tastiera, screen reader e zoom 200% lo scrub continuo è essenzialmente invisibile: non c'è "metà strada" semantica fra "seme" e "albero". A passi, ogni stato è un'unità di significato, raggiungibile e annunciabile. Su mobile (sotto 32rem) il pannello laterale diventa una card in cima — stesso markup, geometria diversa, semantica intatta.</p>
+  </div>
+</Demo>
+
+## L'indice che segue, mai si mette davanti
+
+Un articolo lungo che si divide in sezioni vuole un indice — non un menu, non una breadcrumb: una piccola colonnina che dice "stai leggendo questa". La voce attiva si sposta da sola mentre scorri, e cliccarci sopra ti porta lì con un scroll dolce. La regola della discrezione: l'indice esiste finché serve. Su uno schermo stretto sparisce — non si trasforma in un hamburger, non chiede attenzione: cede lo spazio al testo, che è il vero protagonista.
+
+<Demo title="Indice flottante · scroll-spy con marker laterale" tag="05.f">
+  <FloatingToc />
+  <div slot="note">
+    <p>Cinque sezioni, cinque voci nell'indice. La voce attiva è scelta da un <code>IntersectionObserver</code> che misura la maggior intersezione visibile, con un <code>rootMargin: '-30% 0px -50% 0px'</code> per alzare la "linea di lettura" — l'evidenziazione cambia quando l'occhio è davvero sulla nuova sezione, non quando il suo bordo è entrato per primo. Il marker laterale (l'accento sul bordo sinistro) scivola con una transizione di 220 ms, abbastanza per non perdere il filo, abbastanza poco per non sembrare un trucchetto.</p>
+    <p>I link funzionano da tastiera: focus visibile, <code>scroll-behavior: smooth</code> per il navigatore vocale, <code>scroll-margin-block-start</code> sulle sezioni perché il titolo non finisca incollato al bordo. Su <code>prefers-reduced-motion</code> lo smooth scroll diventa istantaneo e la transizione del marker sparisce: chi ha chiesto meno motion riceve la stessa informazione, nello stesso posto, senza il tragitto. È lo stesso principio della prima demo: ridurre il motion non significa nascondere lo stato.</p>
+  </div>
+</Demo>
+
+## Cosa portiamo via
+
+Lo scroll è il gesto più trasparente che abbiamo. Una pagina che lo asseconda — invece di rincorrerlo — è una pagina che si lascia leggere fino in fondo. Le sei dimostrazioni qui sopra mostrano sei modi di "raccontare con lo scroll" senza prendersi troppo sul serio:
+
+1. **La barra di lettura** che mappa la posizione, scroll-driven, mai animata.
+2. **Il reveal una sola volta**, perché una pagina che ri-anima a ogni passaggio è una pagina nervosa.
+3. **Il titolo sticky** che cambia in silenzio, un solo slot per evitare i doppi-sticky.
+4. **La parallasse onesta**, sotto i 20 px, completa di spegnimento totale con reduced-motion.
+5. **Lo scrollytelling a passi** — tre stati discreti, semantica intatta su tastiera.
+6. **L'indice flottante** che evidenzia, mai si mette davanti, e cede lo spazio a chi legge.
+
+Sei modi, una sola regola: lo scroll è il gesto dell'utente, e l'interfaccia che lo rispetta è quella che si fa scorrere senza scorrerlo dietro. Il prossimo capitolo cambia registro — *numeri che hanno peso* — perché dopo aver imparato a far raccontare lo scroll, è tempo di imparare anche a far parlare le quantità: cifre tabulari, count-up onesti, delta con segno, e formati che riconoscono chi sta guardando.

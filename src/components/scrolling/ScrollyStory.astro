@@ -1,0 +1,308 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ScrollyStory — scrollytelling laterale, due fili sincronizzati.
+
+   A sinistra: testo che scorre normalmente.
+   A destra: pannello "sticky" che cambia stato man mano che il
+   testo attraversa le sue soglie.
+
+   La sincronizzazione usa IntersectionObserver sugli step. Non
+   c'è scrub millimetrico — c'è una transizione "a passi", che
+   è quello che il lettore percepisce davvero. Lo scrub continuo
+   è fascinoso ma fragile: a bassa banda, su tastiera o su
+   reader, smette di significare.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="ss">
+  <div class="ss__scroller" data-scroller tabindex="0" aria-label="Storia scrollabile a due colonne">
+    <div class="ss__grid">
+      <div class="ss__text">
+        <header class="ss__intro">
+          <h3>Un seme, un albero, un bosco</h3>
+          <p>Tre passi, tre stati. Scorri per cambiarli.</p>
+        </header>
+
+        <section class="ss__step" data-step="0" data-active>
+          <span class="ss__num tabular">01</span>
+          <h4>Il seme</h4>
+          <p>Tutto comincia in piccolo. Una proprietà CSS, un evento, una transizione di 200 ms. Nessuna di queste cose, da sola, fa una buona interfaccia.</p>
+          <p>Ma è da queste briciole che la qualità si compone: la cura del singolo dettaglio, ripetuta cento volte, è quello che il lettore "sente" senza poterlo nominare.</p>
+        </section>
+
+        <section class="ss__step" data-step="1">
+          <span class="ss__num tabular">02</span>
+          <h4>L'albero</h4>
+          <p>I componenti si combinano in pattern. Una conferma diventa un'azione, un'azione una rotta, una rotta una sezione. La pagina prende forma — diventa abitabile.</p>
+          <p>A questo livello la decisione più importante non è "cosa fa", è "come si comporta quando l'utente sbaglia". L'errore gentile è la firma del progettista.</p>
+        </section>
+
+        <section class="ss__step" data-step="2">
+          <span class="ss__num tabular">03</span>
+          <h4>Il bosco</h4>
+          <p>Quando i pattern si stratificano, nasce una voce. Non è scelta a tavolino: emerge dalle ripetizioni piccole. Le interfacce che hanno una voce sono quelle che chi le usa riconosce a colpo d'occhio.</p>
+          <p>Il bosco non è la somma degli alberi. È quello che resta quando i singoli alberi spariscono — il ritmo, il silenzio, l'aria fra una cosa e l'altra.</p>
+        </section>
+
+        <footer class="ss__outro">
+          <p>(Fine. Torna su per ricominciare.)</p>
+        </footer>
+      </div>
+
+      <aside class="ss__panel" aria-hidden="true">
+        <div class="ss__art">
+          <svg class="ss__stage-art" viewBox="0 0 120 120" role="img" aria-label="Illustrazione che cambia con lo scorrimento">
+            <!-- terreno comune -->
+            <line class="ss__ground" x1="10" y1="100" x2="110" y2="100" stroke="currentColor" stroke-width="0.7" />
+
+            <!-- stage 0: seme -->
+            <g class="ss__seed" data-art="0">
+              <ellipse cx="60" cy="98" rx="3.5" ry="2" fill="currentColor" opacity="0.6" />
+              <path d="M60 96 q1 -3 0 -6" stroke="currentColor" stroke-width="0.7" fill="none" stroke-linecap="round" />
+            </g>
+
+            <!-- stage 1: albero -->
+            <g class="ss__tree" data-art="1">
+              <line x1="60" y1="100" x2="60" y2="62" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" />
+              <circle cx="60" cy="55" r="14" fill="none" stroke="currentColor" stroke-width="0.9" />
+              <circle cx="60" cy="55" r="6" fill="currentColor" opacity="0.18" />
+            </g>
+
+            <!-- stage 2: bosco -->
+            <g class="ss__forest" data-art="2">
+              <g opacity="0.55">
+                <line x1="28" y1="100" x2="28" y2="72" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+                <circle cx="28" cy="68" r="9" fill="none" stroke="currentColor" stroke-width="0.7" />
+              </g>
+              <g>
+                <line x1="60" y1="100" x2="60" y2="58" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+                <circle cx="60" cy="52" r="13" fill="none" stroke="currentColor" stroke-width="0.9" />
+                <circle cx="60" cy="52" r="6" fill="currentColor" opacity="0.16" />
+              </g>
+              <g opacity="0.7">
+                <line x1="92" y1="100" x2="92" y2="76" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+                <circle cx="92" cy="71" r="10" fill="none" stroke="currentColor" stroke-width="0.7" />
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="ss__chip tabular" data-chip>01 / 03 · il seme</div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ss {
+    inline-size: min(38rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .ss__scroller {
+    block-size: 26rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0;
+  }
+  .ss__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .ss__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  @media (min-width: 32rem) {
+    .ss__grid { grid-template-columns: 1.2fr 1fr; gap: var(--space-md); padding-inline: var(--space-md); }
+  }
+
+  .ss__text {
+    padding: var(--space-md) var(--space-md) var(--space-xl);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  @media (min-width: 32rem) {
+    .ss__text { padding-inline: 0; }
+  }
+
+  .ss__intro h3 {
+    margin: 0 0 0.25rem;
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+    font-weight: var(--weight-medium);
+  }
+  .ss__intro p {
+    margin: 0 0 var(--space-lg);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+  }
+
+  .ss__step {
+    margin-block-end: 60vh; /* respiro lungo, ogni step ha la sua finestra */
+    transition: opacity var(--dur-slow) var(--ease-out-soft);
+    opacity: 0.4;
+  }
+  .ss__step[data-active] { opacity: 1; }
+
+  .ss__step:last-of-type { margin-block-end: var(--space-xl); }
+
+  .ss__num {
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+  }
+  .ss__step h4 {
+    margin: 0.25rem 0 var(--space-2xs);
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .ss__step p {
+    margin: 0 0 var(--space-sm);
+    max-inline-size: 38ch;
+  }
+
+  .ss__outro {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    margin-block-end: var(--space-lg);
+  }
+  .ss__outro p { margin: 0; }
+
+  /* Pannello sticky a destra */
+  .ss__panel {
+    position: sticky;
+    inset-block-start: var(--space-sm);
+    align-self: start;
+    display: grid;
+    place-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) 0 var(--space-md);
+    /* Su mobile diventa una "card" che precede il testo */
+  }
+  @media (max-width: 32rem) {
+    .ss__panel {
+      position: static;
+      order: -1;
+      padding: var(--space-md);
+      border-block-end: 1px solid var(--border);
+      background-color: var(--surface);
+    }
+  }
+
+  .ss__art {
+    inline-size: min(14rem, 100%);
+    aspect-ratio: 1 / 1;
+    color: var(--ink-strong);
+    background-color: var(--surface-sunken);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    padding: var(--space-sm);
+  }
+  .ss__stage-art { inline-size: 100%; block-size: 100%; }
+
+  /* Le tre scene sono sovrapposte; opacità guidata dallo step attivo. */
+  .ss__art [data-art] {
+    transition: opacity var(--dur-slow) var(--ease-out-soft),
+                transform var(--dur-slow) var(--ease-out-snug);
+    transform-origin: center bottom;
+  }
+  .ss__art [data-art]:not([data-art-active]) {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  .ss__art [data-art][data-art-active] {
+    opacity: 1;
+    transform: none;
+  }
+  /* L'illustrazione "del momento" si sovrappone alle altre */
+  .ss__art [data-art] { pointer-events: none; }
+  .ss__art svg g.ss__seed,
+  .ss__art svg g.ss__tree,
+  .ss__art svg g.ss__forest { transform-box: fill-box; }
+
+  /* I gruppi vivono nello stesso SVG, sovrapposti — non serve position */
+
+  .ss__chip {
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ss__step,
+    .ss__art [data-art] {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  type StepData = { title: string };
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ss').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const steps = Array.from(el.querySelectorAll<HTMLElement>('.ss__step'));
+      const arts = Array.from(el.querySelectorAll<HTMLElement>('.ss__art [data-art]'));
+      const chip = el.querySelector<HTMLElement>('[data-chip]')!;
+
+      const labels: StepData[] = [
+        { title: 'il seme' },
+        { title: 'l’albero' },
+        { title: 'il bosco' },
+      ];
+
+      const setActive = (idx: number) => {
+        steps.forEach((s, i) => {
+          if (i === idx) s.dataset.active = 'true';
+          else delete s.dataset.active;
+        });
+        arts.forEach((a) => {
+          if (a.dataset.art === String(idx)) a.dataset.artActive = 'true';
+          else delete a.dataset.artActive;
+        });
+        const n = String(idx + 1).padStart(2, '0');
+        const total = String(steps.length).padStart(2, '0');
+        chip.textContent = `${n} / ${total} · ${labels[idx]?.title ?? ''}`;
+      };
+
+      // Trigger sullo step "più vicino al centro" del viewport del scroller
+      const observer = new IntersectionObserver(
+        (entries) => {
+          // Trova quello con la maggior intersectionRatio
+          let best: IntersectionObserverEntry | null = null;
+          entries.forEach((e) => {
+            if (!e.isIntersecting) return;
+            if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+          });
+          if (best && best.target instanceof HTMLElement) {
+            const idx = Number(best.target.dataset.step);
+            if (Number.isFinite(idx)) setActive(idx);
+          }
+        },
+        { root: scroller, threshold: [0.35, 0.6, 0.9], rootMargin: '-20% 0px -20% 0px' }
+      );
+
+      steps.forEach((s) => observer.observe(s));
+      setActive(0);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

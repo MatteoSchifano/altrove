@@ -1,0 +1,220 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   StickyHeading — il titolo che resta, e cambia in silenzio.
+
+   Quando si scorre dentro una pagina lunga divisa in sezioni,
+   il titolo della sezione corrente si "appiccica" in alto: chi
+   è arrivato a metà di una lettura sa sempre dove si trova.
+
+   Trucco onesto: il titolo sticky è un solo elemento, non uno
+   per sezione. Quando una nuova sezione entra in viewport,
+   facciamo un cross-fade del testo dentro lo stesso slot. Niente
+   doppi sticky che si "scavalcano".
+   ───────────────────────────────────────────────────────────── */
+
+const sections = [
+  { id: 'a', label: 'Il primo respiro' },
+  { id: 'b', label: 'La pausa' },
+  { id: 'c', label: 'La ripresa' },
+  { id: 'd', label: 'Il commiato' },
+];
+---
+
+<div class="sh">
+  <div class="sh__scroller" data-scroller tabindex="0" aria-label="Articolo con titolo di sezione fisso">
+    <header class="sh__sticky" aria-hidden="true">
+      <span class="sh__eyebrow tabular">In lettura</span>
+      <span class="sh__title" data-title>
+        <span class="sh__title-current" data-current>{sections[0].label}</span>
+        <span class="sh__title-incoming" data-incoming aria-hidden="true"></span>
+      </span>
+      <span class="sh__progress tabular" data-progress>1 / {sections.length}</span>
+    </header>
+
+    <article class="sh__article">
+      {sections.map((s, i) => (
+        <section class="sh__section" data-section={s.id} data-index={i} data-label={s.label}>
+          <h3 class="sh__h">{s.label}</h3>
+          <p>Una sezione esiste perché l'occhio sa dove sta. Quando il titolo lavora per chi legge, la lettura cambia ritmo da sola — non serve dire "torna su per ricordartelo".</p>
+          <p>Lo sticky della testata fa un solo lavoro: dirti, nella periferia della vista, dove sei. Non fa ombra, non si gonfia, non chiede attenzione. È un dettaglio tipografico, non un componente.</p>
+          <p>Il cross-fade del titolo dura 260 ms. Basta. Più lungo si trasformerebbe in un'animazione celebrativa; più corto sembrerebbe un salto. La distanza fra "movimento" e "rumore" è di poche decine di millisecondi.</p>
+          <p>Continuiamo. La prossima sezione arriva da sola.</p>
+        </section>
+      ))}
+    </article>
+  </div>
+</div>
+
+<style>
+  .sh {
+    inline-size: min(32rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .sh__scroller {
+    block-size: 24rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    position: relative;
+  }
+  .sh__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .sh__sticky {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: var(--space-sm);
+    padding: var(--space-2xs) var(--space-md);
+    background-color: color-mix(in oklab, var(--surface-raised) 92%, transparent);
+    backdrop-filter: saturate(140%) blur(6px);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .sh__eyebrow {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .sh__title {
+    position: relative;
+    display: inline-block;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    min-block-size: 1.25em;
+  }
+
+  .sh__title-current,
+  .sh__title-incoming {
+    position: relative;
+    display: inline-block;
+    will-change: transform, opacity;
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+
+  /* Stato "in transizione": il vecchio sale e svanisce, il nuovo sale ed entra */
+  .sh__title[data-transitioning='true'] .sh__title-current {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  .sh__title[data-transitioning='true'] .sh__title-incoming {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .sh__title-incoming {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  .sh__progress {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+  }
+
+  .sh__article {
+    padding: var(--space-md) var(--space-md) var(--space-xl);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .sh__section {
+    margin-block-end: var(--space-xl);
+  }
+
+  .sh__h {
+    margin: 0 0 var(--space-sm);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .sh__section p {
+    margin: 0 0 var(--space-sm);
+    max-inline-size: 38ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sh__scroller { scroll-behavior: auto; }
+    .sh__title-current,
+    .sh__title-incoming { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sh').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const sections = Array.from(el.querySelectorAll<HTMLElement>('.sh__section'));
+      const titleBox = el.querySelector<HTMLElement>('[data-title]')!;
+      const currentSlot = el.querySelector<HTMLElement>('[data-current]')!;
+      const incomingSlot = el.querySelector<HTMLElement>('[data-incoming]')!;
+      const progress = el.querySelector<HTMLElement>('[data-progress]')!;
+
+      let activeIndex = 0;
+
+      const swap = (toIndex: number) => {
+        if (toIndex === activeIndex) return;
+        const target = sections[toIndex];
+        if (!target) return;
+        const newLabel = target.dataset.label ?? '';
+        incomingSlot.textContent = newLabel;
+        titleBox.dataset.transitioning = 'true';
+
+        // Aspetta la fine della transizione, poi commetti il nuovo come "current"
+        const finish = () => {
+          currentSlot.textContent = newLabel;
+          incomingSlot.textContent = '';
+          delete titleBox.dataset.transitioning;
+          activeIndex = toIndex;
+          progress.textContent = `${toIndex + 1} / ${sections.length}`;
+          incomingSlot.removeEventListener('transitionend', finish);
+        };
+        incomingSlot.addEventListener('transitionend', finish, { once: true });
+        // Sicurezza nel caso reduced-motion non emetta transitionend
+        setTimeout(() => { if (titleBox.dataset.transitioning) finish(); }, 320);
+      };
+
+      const ratios = new Map<number, number>();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            const idx = Number((e.target as HTMLElement).dataset.index);
+            ratios.set(idx, e.isIntersecting ? e.intersectionRatio : 0);
+          });
+          let bestIdx = activeIndex;
+          let bestR = 0;
+          ratios.forEach((r, i) => { if (r > bestR) { bestR = r; bestIdx = i; } });
+          if (bestR > 0) swap(bestIdx);
+        },
+        { root: scroller, threshold: [0.2, 0.5, 0.8], rootMargin: '-15% 0px -55% 0px' }
+      );
+      sections.forEach((s) => observer.observe(s));
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
