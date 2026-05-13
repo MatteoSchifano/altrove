@@ -1,0 +1,53 @@
+src/components/emptiness/NoResults.astro
+  s_e9052ede34b2ef::t_4a1629aa8aea9a 146-149,151-152,154-156
+  s_e9052ede34b2ef::t_3eb1fb6298ac4c 124-126,128
+  s_e9052ede34b2ef::t_9b9729bf6d9bd7 1-123,127,129-145,150,153,157-387
+src/content/chapters/it/03-la-voce-del-vuoto.mdx
+  s_e9052ede34b2ef::t_8a4acf44b5145f 1-108
+src/components/emptiness/PermissionAsk.astro
+  s_e9052ede34b2ef::t_3d60695abd38a9 1-321
+src/components/dialog/AnchoredPopover.astro
+  s_e9052ede34b2ef::t_84f34e3887884f 1-347
+src/content/chapters/en/04-the-silent-dialogue.mdx
+  s_e9052ede34b2ef::t_c457f94dc1ddd5 1-108
+src/content/chapters/en/03-the-voice-of-emptiness.mdx
+  s_e9052ede34b2ef::t_46a51289826876 1-108
+src/components/dialog/NestedDialog.astro
+  s_e9052ede34b2ef::t_81e7fe1aecebdc 1-309
+src/components/emptiness/ZeroDashboard.astro
+  s_e9052ede34b2ef::t_cfda9994e2ad8d 1-385
+src/components/dialog/KeyboardOverlay.astro
+  s_e9052ede34b2ef::t_28c9073480a056 1-275
+src/components/dialog/InlineConfirm.astro
+  s_e9052ede34b2ef::t_4b04463775740c 1-281
+src/components/emptiness/Voice404.astro
+  s_e9052ede34b2ef::t_0a8222eb501b21 1-322
+src/components/emptiness/KindError.astro
+  s_e9052ede34b2ef::t_03a816350d30cc 1-267
+CAPITOLI.md
+  s_e9052ede34b2ef::t_25f182aecf2d9e 16-18
+src/components/dialog/BottomSheet.astro
+  s_e9052ede34b2ef::t_aa06efbfaaeac9 1-306
+src/components/emptiness/EmptyList.astro
+  s_e9052ede34b2ef::t_24b56ac63bf703 1-292
+src/content/chapters/it/04-il-dialogo-silenzioso.mdx
+  s_e9052ede34b2ef::t_65c9b806fab630 1-108
+src/components/dialog/DestructiveConfirm.astro
+  s_e9052ede34b2ef::t_f50aca3e6234f3 1-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "6140732c4b16151b20a8cb248997922ea4927e52",
+  "prompts": {},
+  "sessions": {
+    "s_e9052ede34b2ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "690d89db-6284-4d88-be65-772c1dabffcb",
+        "model": "unknown"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
