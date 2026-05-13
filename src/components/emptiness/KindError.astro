@@ -1,0 +1,267 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   KindError — l'errore che spiega invece di urlare.
+
+   Pattern: niente toast distruttivo, niente modal d'emergenza.
+   L'errore vive *dentro* la card che lo ha causato. Bordo
+   ambra discreto, icona piccola, titolo in linguaggio umano,
+   timestamp che dice quando, due CTA — Riprova e Dettagli
+   tecnici (in <details>, per chi vuole davvero leggere).
+
+   Il titolo è in role="alert" + aria-live="assertive" — un
+   sussurro forte per screen reader, ma in una sola frase.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="kerr" data-state="idle">
+  <header class="kerr__head">
+    <span class="kerr__icon" data-state-icon aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6.5a5 5 0 1 1 1.7 3.7" />
+        <path d="M3 3.5v3h3" />
+      </svg>
+    </span>
+    <div>
+      <h4 class="kerr__title">Sincronizzazione note</h4>
+      <p class="kerr__sub">12 voci · ultimo aggiornamento alle 14:31</p>
+    </div>
+  </header>
+
+  {/* Stato idle / busy */}
+  <div class="kerr__body">
+    <button class="kerr__sync" type="button">Sincronizza ora</button>
+  </div>
+
+  {/* Stato errore */}
+  <output class="kerr__error" role="alert" aria-live="assertive">
+    <p class="kerr__err-title">Non riesco a parlare con il server</p>
+    <p class="kerr__err-body">È probabile un problema di connessione temporaneo. Le note locali sono al sicuro.</p>
+    <p class="kerr__err-meta tabular">Ultimo tentativo: <time data-time>—</time></p>
+    <div class="kerr__err-actions">
+      <button class="kerr__retry" type="button">Riprova</button>
+      <details class="kerr__details">
+        <summary class="kerr__details-summary">Dettagli tecnici</summary>
+        <pre class="kerr__pre" aria-live="polite"><code>NetworkError: fetch failed
+  at sync.ts:42:12
+  at handleSyncTick
+  status: 0 (offline?)</code></pre>
+      </details>
+    </div>
+  </output>
+</div>
+
+<style>
+  .kerr {
+    inline-size: min(28rem, 100%);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    transition:
+      border-color var(--dur-normal) var(--ease-out-soft),
+      background-color var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .kerr[data-state='error'] {
+    border-color: oklch(0.78 0.13 75);
+    background-color: light-dark(
+      oklch(0.985 0.012 75),
+      oklch(0.22 0.018 75)
+    );
+  }
+
+  .kerr__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .kerr__icon {
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+  }
+  .kerr__icon svg { inline-size: 0.95rem; block-size: 0.95rem; }
+
+  .kerr[data-state='error'] .kerr__icon {
+    border-color: oklch(0.78 0.13 75);
+    color: oklch(0.62 0.16 65);
+    background-color: light-dark(
+      oklch(0.96 0.025 75),
+      oklch(0.28 0.04 75)
+    );
+  }
+
+  .kerr__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .kerr__sub {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  /* ─── Body idle ─── */
+  .kerr__body { padding-block-start: var(--space-md); }
+  .kerr[data-state='error'] .kerr__body { display: none; }
+
+  .kerr__sync {
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .kerr__sync:hover { background-color: var(--surface-raised); border-color: var(--border-strong); }
+  .kerr__sync:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .kerr[data-state='busy'] .kerr__sync { opacity: 0.7; cursor: progress; }
+
+  /* ─── Error block ─── */
+  .kerr__error {
+    display: none;
+    padding-block-start: var(--space-md);
+  }
+  .kerr[data-state='error'] .kerr__error {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .kerr__err-title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .kerr__err-body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .kerr__err-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .kerr__err-actions {
+    margin-block-start: var(--space-2xs);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .kerr__retry {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .kerr__retry:hover { transform: translateY(-1px); }
+  .kerr__retry:active { transform: translateY(0); }
+  .kerr__retry:focus-visible { outline: none; box-shadow: var(--halo-focus), var(--shadow-xs); }
+
+  .kerr__details summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .kerr__details summary::-webkit-details-marker { display: none; }
+  .kerr__details summary:hover { color: var(--ink); border-color: var(--border-strong); }
+  .kerr__details summary:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .kerr__details[open] summary {
+    color: var(--ink-strong);
+    border-color: var(--border-strong);
+  }
+
+  .kerr__pre {
+    margin: var(--space-2xs) 0 0;
+    padding: var(--space-sm);
+    background-color: var(--surface-sunken);
+    border-radius: var(--radius-md);
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: var(--leading-relaxed);
+    overflow-x: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kerr,
+    .kerr__icon,
+    .kerr__retry { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.kerr').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const syncBtn = el.querySelector<HTMLButtonElement>('.kerr__sync')!;
+      const retryBtn = el.querySelector<HTMLButtonElement>('.kerr__retry')!;
+      const time = el.querySelector<HTMLElement>('[data-time]')!;
+
+      const stamp = () => {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        time.textContent = `${hh}:${mm}:${ss}`;
+        time.setAttribute('datetime', d.toISOString());
+      };
+
+      const attempt = async () => {
+        el.dataset.state = 'busy';
+        syncBtn.textContent = 'Sincronizzo…';
+        await new Promise((r) => setTimeout(r, 900));
+        // Demo deterministica: fallisce sempre
+        stamp();
+        el.dataset.state = 'error';
+        syncBtn.textContent = 'Sincronizza ora';
+      };
+
+      syncBtn.addEventListener('click', attempt);
+      retryBtn.addEventListener('click', attempt);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

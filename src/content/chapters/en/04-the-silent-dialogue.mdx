@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-04"
+number: "04"
+title: "The silent dialogue"
+excerpt: "A dialog is an interruption that asks permission. When it really must speak, it does so with the keyboard in hand: focus where it belongs, Escape that mends, motion that enters like a sigh and never like a shout."
+date: "May 2026"
+tags: ["interaction", "accessibility", "keyboard"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import KeyboardOverlay from '../../../components/dialog/KeyboardOverlay.astro';
+import DestructiveConfirm from '../../../components/dialog/DestructiveConfirm.astro';
+import BottomSheet from '../../../components/dialog/BottomSheet.astro';
+import NestedDialog from '../../../components/dialog/NestedDialog.astro';
+import InlineConfirm from '../../../components/dialog/InlineConfirm.astro';
+import AnchoredPopover from '../../../components/dialog/AnchoredPopover.astro';
+
+There's a silent cruelty in badly made dialogs: they steal focus mid-thought, they make you hunt for the "Cancel" button with your mouse, they slam the door on the context underneath. The best dialog does the opposite — it knows it's an interruption and behaves like a guest: it knocks, it waits for you to be ready, and it leaves the room in the state it found it.
+
+Behind a dialog hide ten responsibilities. Where does focus go on open? Where does it return on close? Is the keyboard really trapped inside, or does a clumsy Tab leak out? Can you exit with Escape? Is the background really non-interactive, even to a screen reader? Does clicking the backdrop close it — always, never, or sometimes? The answer to each question is a small decision of respect.
+
+We open six different dialogs — from the friendliest (an overlay that explains its own language) to the strictest (the confirmation of an irreversible action) — and we show how each one stays quiet in a different way.
+
+## The overlay that explains its own language
+
+Keyboard shortcuts are a gift you make only to those who discover them. But discovery shouldn't be archaeology: a good interface always has a `?` that calls an overlay with every combination, grouped, legible, and that closes with Escape like a guide who's done speaking.
+
+<Demo title="Shortcuts overlay · `?` opens, Esc closes" tag="04.a">
+  <KeyboardOverlay />
+  <div slot="note">
+    <p>The overlay opens with <code>&lt;dialog&gt;.showModal()</code> — a native HTML element that gives you focus trap, Escape handling, top-layer rendering, and backdrop dismiss. No libraries, no manual focus traps. The global listener listens for `?` only when focus is *not* in an input — because someone typing "why" doesn't want to see the shortcuts.</p>
+    <p>Entry lasts 220 ms, exit 160 ms — golden rule of motion: things leave faster than they arrive. It matches how physical objects behave (they enter view slowly, get whisked away) and what users already expect. Reduced motion drops everything to 1 ms; the overlay still works.</p>
+  </div>
+</Demo>
+
+## The confirmation that works to tell you no
+
+A destructive-action confirmation has a strange job: it must allow the action, but its *real* work is to prevent it from happening by accident. A good confirmation dialog puts the safe default under the user's hand — focus on Cancel, Enter confirms Cancel, clicking the backdrop doesn't close. The machine works to tell you no.
+
+<Demo title="Destructive confirm · safe default on Cancel" tag="04.b">
+  <DestructiveConfirm />
+  <div slot="note">
+    <p>Three notes in a list. Click the trash can to open the dialog: honest title ("Delete this note?"), description that recalls the irreversibility ("This can't be undone."), two buttons — <em>Cancel</em> (visual primary, <code>autofocus</code>, accent-ink) and <em>Delete</em> (text only, desaturated red, secondary). Enter cancels, Esc cancels, clicking the backdrop <strong>doesn't</strong> close. Confirming the deletion takes a deliberate act: Tab + Enter or an explicit click.</p>
+    <p><code>aria-labelledby</code> points to the title, <code>aria-describedby</code> to the description — a screen reader knows immediately what the dialog is about and what's about to happen. When the user cancels, an <code>aria-live="polite"</code> whispers "Cancelled" — not to celebrate, but to close the sentence that started. It's a small invisible detail, but when it's missing you can tell.</p>
+  </div>
+</Demo>
+
+## The sheet that comes up from below
+
+The same content on a phone and on a desktop demands two different shapes: at the top centre, a dialog behaves like a poster; at the bottom full-width, it behaves like a drawer pulling open. A well-made bottom sheet on mobile becomes a centred dialog on desktop without changing markup — only its geometry adapts to thumb or cursor.
+
+<Demo title="Bottom sheet · up from the bottom on mobile, centred on desktop" tag="04.c">
+  <BottomSheet />
+  <div slot="note">
+    <p>Click "Share" opens a native <code>&lt;dialog&gt;</code>. On `&lt; 640px` the styling makes it come from the bottom edge with a 320 ms slide-up (<em>gentle</em> spring preset); on `≥ 640px` it becomes a standard centred dialog. The drag-handle at the top lets you close it with a swipe-down (PointerEvent, 60 px threshold) — a natural gesture for mobile users, invisible for everyone else.</p>
+    <p>Three options: copy link, email, other. No avatars, no superfluous icons — it's a sheet that does one thing, does it well, and gets out. Tap outside closes (state is recoverable, no work lost). Reduced motion replaces the slide with an instant fade: the sheet just appears, without moving through space.</p>
+  </div>
+</Demo>
+
+## A dialog inside a dialog, without stumbling
+
+The hardest case is also more common than you'd think: a dialog open that requires another. Account settings asking for confirmation to disable themselves. The wrong answer is to close the first and open the second — the user loses context. The right answer is to stack the dialogs, mark the previous as `inert`, and stitch focus back on close.
+
+<Demo title="Nested dialog · one inside the other, without trapping" tag="04.d">
+  <NestedDialog />
+  <div slot="note">
+    <p>Click "Account settings" opens the first dialog. Inside, "Disable account" opens a second dialog *over* the first. The first stays visible underneath but receives the <code>inert</code> attribute: Tab, click, and screen readers skip its elements entirely. The second dialog's backdrop has a darker tone (perceptual sum): you can clearly see it's an extra layer.</p>
+    <p>The focus restoration pattern is a manual stack: I save the active element before each open, restore it on the matching close. Closing the nested, focus returns to the "Disable account" button *inside* the first dialog (not to the original trigger). Closing the first, it returns to the trigger in the stage. It's a small choreography that, done well, feels natural. Done badly, it's the fastest way to lose trust.</p>
+  </div>
+</Demo>
+
+## When the dialog is too much: confirm in place
+
+The most common mistake with dialogs is... opening too many. A confirmation for every small action is a constant toll: the user stops reading and clicks through. The best confirmation, when the action is reversible or small, is *in place* — the message turns into its own "are you sure?" without moving context, without trapping focus, without disturbing the background.
+
+<Demo title="Inline confirm · when the modal is too much" tag="04.e">
+  <InlineConfirm />
+  <div slot="note">
+    <p>Three messages in a fake conversation. Hover on a message reveals a trash can. Click <strong>doesn't</strong> open a dialog: the message turns into an inline panel — <em>"Delete?"</em> + two small CTAs, <em>Cancel</em> (default, focus, accent) and <em>Yes</em>. A 5-second auto-timeout restores the original state. Esc cancels. It's the dialog without the dialog.</p>
+    <p>The voice in <code>aria-live="polite"</code> announces "Confirm deletion" to screen readers — a micro-interruption that doesn't break the thread. It's the dialog anti-pattern: it shows that <em>you don't always need to open one</em>. When the action is small, when the context is already visible, when the error is reversible — a dialog is wasted attention. The inline confirm does the same work, in silence.</p>
+  </div>
+</Demo>
+
+## The popover that stays where it's needed
+
+The last case is the *non-modal* dialog: a small contextual window that opens near its trigger, doesn't block the background, and closes itself when the user clicks away. It's the right pattern for filters, quick choices, micro-forms. The rule: if the information is contextual, don't move it to the centre of the screen.
+
+<Demo title="Anchored popover · non-modal, doesn't interrupt" tag="04.f">
+  <AnchoredPopover />
+  <div slot="note">
+    <p>A "Filters" button opens an anchored popover below. Three checkboxes and an "Apply" CTA. No backdrop, no blocking: the background stays clickable, and clicking outside closes the popover (committing the filters). Esc cancels (the filters revert to their previous state). Tab inside cycles between the options — but it's a <em>soft</em> focus trap: after the last element, Tab leaves and closes the popover. The user isn't trapped.</p>
+    <p>Technically we use the native Popover API (<code>popover="auto"</code> + <code>popovertarget</code>) — a recent web addition that gives light-dismiss and Escape handling for free. Anchoring under the trigger uses CSS Anchor Positioning (<code>anchor-name</code> / <code>position-anchor</code>) where supported, with a JS-computed <code>position: absolute</code> fallback for older browsers. <code>aria-expanded</code> on the trigger always reflects the state.</p>
+  </div>
+</Demo>
+
+## What we take away
+
+A dialog is an interruption. When it's necessary, it must make itself small. The six demos above show six different ways to "interrupt well":
+
+1. **The tool overlay** that explains its own language (and leaves with the same shortcut that called it).
+2. **The destructive confirm** that works to tell you no — safe default, armoured backdrop.
+3. **The adaptive sheet** that changes geometry between mobile and desktop without changing markup.
+4. **The nested dialog** that stacks context without breaking it.
+5. **The anti-dialog**, inline — showing when *not* to open a modal.
+6. **The anchored popover**, non-modal, staying where the user is already looking.
+
+Six kinds of interruption, one philosophy: respect the thread of thought of whoever's using the interface. The next chapter changes scale — *the scroll that tells a story* — because after learning to interrupt well, it's time to learn how not to interrupt at all, letting the user's gesture carry the story forward.

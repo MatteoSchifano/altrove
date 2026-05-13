@@ -1,0 +1,297 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   DestructiveConfirm — la conferma che lavora per dirti no.
+
+   Pattern: <dialog> nativo. Annulla ha autofocus, Enter conferma
+   Annulla, Esc annulla, backdrop NON-dismiss (azione distruttiva
+   non si chiude per sbaglio). aria-labelledby + aria-describedby.
+
+   Lista di tre note: ogni cestino apre il dialog impostando
+   l'item target. Conferma rimuove l'item con un fade discreto.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="dconf">
+  <ol class="dconf__list" role="list">
+    <li class="dconf__item" data-id="1">
+      <div>
+        <h5 class="dconf__item-title">Pensieri di domenica</h5>
+        <p class="dconf__item-meta tabular">aggiornato il 12 maggio</p>
+      </div>
+      <button class="dconf__trash" type="button" aria-label="Elimina pensieri di domenica" data-target="1">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+        </svg>
+      </button>
+    </li>
+    <li class="dconf__item" data-id="2">
+      <div>
+        <h5 class="dconf__item-title">Lista letture</h5>
+        <p class="dconf__item-meta tabular">8 voci</p>
+      </div>
+      <button class="dconf__trash" type="button" aria-label="Elimina lista letture" data-target="2">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+        </svg>
+      </button>
+    </li>
+    <li class="dconf__item" data-id="3">
+      <div>
+        <h5 class="dconf__item-title">Frammenti per il colofone</h5>
+        <p class="dconf__item-meta tabular">3 voci</p>
+      </div>
+      <button class="dconf__trash" type="button" aria-label="Elimina frammenti per il colofone" data-target="3">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+        </svg>
+      </button>
+    </li>
+  </ol>
+
+  <p class="dconf__live sr-only" aria-live="polite"></p>
+
+  <dialog class="dconf__dialog" aria-labelledby="dconf-title" aria-describedby="dconf-body">
+    <div class="dconf__panel">
+      <h2 id="dconf-title" class="dconf__title">Eliminare questa nota?</h2>
+      <p id="dconf-body" class="dconf__body">
+        L'azione non si annulla. La nota <em data-target-name>—</em> verrà rimossa subito.
+      </p>
+      <div class="dconf__actions">
+        <button class="dconf__cancel" type="button" autofocus data-action="cancel">Annulla</button>
+        <button class="dconf__confirm" type="button" data-action="confirm">Elimina</button>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .dconf {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .dconf__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .dconf__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: 0.65rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .dconf__item[data-removing='true'] {
+    opacity: 0;
+    transform: translateX(-6px);
+    pointer-events: none;
+  }
+
+  .dconf__item-title {
+    margin: 0 0 0.1rem;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .dconf__item-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .dconf__trash {
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .dconf__trash:hover { color: oklch(0.55 0.18 22); background-color: var(--surface-sunken); border-color: var(--border); }
+  .dconf__trash:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .dconf__trash svg { inline-size: 0.95rem; block-size: 0.95rem; }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ─── Dialog ─── */
+  .dconf__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(24rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .dconf__dialog:not([open]) { display: none; }
+  .dconf__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  @keyframes dconf-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes dconf-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+
+  .dconf__dialog[open] .dconf__panel { animation: dconf-in 200ms var(--ease-out-soft); }
+  .dconf__dialog[data-closing='true'] .dconf__panel { animation: dconf-out 140ms var(--ease-out-soft) forwards; }
+
+  .dconf__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .dconf__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .dconf__body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .dconf__body em { color: var(--ink); font-style: normal; font-weight: var(--weight-medium); }
+
+  .dconf__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    padding-block-start: var(--space-2xs);
+  }
+
+  .dconf__cancel,
+  .dconf__confirm {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  .dconf__cancel {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+  }
+  .dconf__cancel:hover { opacity: 0.92; }
+  .dconf__cancel:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .dconf__confirm {
+    background: transparent;
+    color: oklch(0.55 0.18 22);
+    border: 1px solid var(--border);
+  }
+  .dconf__confirm:hover { border-color: oklch(0.55 0.18 22); background-color: color-mix(in oklab, oklch(0.55 0.18 22) 8%, transparent); }
+  .dconf__confirm:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .dconf__confirm:active { transform: scale(0.97); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dconf__dialog[open] .dconf__panel,
+    .dconf__dialog[data-closing='true'] .dconf__panel { animation-duration: 1ms; }
+    .dconf__item { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.dconf').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const dialog = el.querySelector<HTMLDialogElement>('.dconf__dialog')!;
+      const targetName = el.querySelector<HTMLElement>('[data-target-name]')!;
+      const cancelBtn = el.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+      const confirmBtn = el.querySelector<HTMLButtonElement>('[data-action="confirm"]')!;
+      const live = el.querySelector<HTMLElement>('.dconf__live')!;
+
+      let targetId: string | null = null;
+
+      const close = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+        };
+        dialog.addEventListener('animationend', onEnd);
+        setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 200);
+      };
+
+      el.querySelectorAll<HTMLButtonElement>('.dconf__trash').forEach((trash) => {
+        trash.addEventListener('click', () => {
+          targetId = trash.dataset.target ?? null;
+          const item = el.querySelector<HTMLElement>(`.dconf__item[data-id="${targetId}"]`);
+          const title = item?.querySelector('.dconf__item-title')?.textContent ?? '—';
+          targetName.textContent = title;
+          dialog.showModal();
+        });
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        live.textContent = 'Annullato';
+        close();
+      });
+
+      confirmBtn.addEventListener('click', () => {
+        const item = el.querySelector<HTMLElement>(`.dconf__item[data-id="${targetId}"]`);
+        if (item) {
+          item.dataset.removing = 'true';
+          setTimeout(() => item.remove(), 280);
+        }
+        live.textContent = 'Eliminato';
+        close();
+      });
+
+      // Esc → cancel (dialog dispatches 'cancel' event)
+      dialog.addEventListener('cancel', (e) => {
+        e.preventDefault(); // intercetta per usare la nostra animazione
+        live.textContent = 'Annullato';
+        close();
+      });
+
+      // Backdrop NON dismiss (azione distruttiva). Niente listener su backdrop click.
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

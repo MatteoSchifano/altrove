@@ -13,9 +13,9 @@
 |---|--------|-------|
 | 01 | Anatomia di un bottone | ✅ pubblicato |
 | 02 | L'arte dell'attesa | ✅ pubblicato |
-| 03 | La voce del vuoto | 📋 in roadmap (prossimo naturale) |
-| 04 | Il dialogo silenzioso | 📋 in roadmap |
-| 05 | Lo scroll che racconta | 📋 in roadmap |
+| 03 | La voce del vuoto | ✅ pubblicato |
+| 04 | Il dialogo silenzioso | ✅ pubblicato |
+| 05 | Lo scroll che racconta | 📋 in roadmap (prossimo naturale) |
 | 06 | Numeri che hanno peso | 📋 in roadmap |
 | 07 | Anatomia di un input | 📋 in roadmap |
 | 08 | La micro-tipografia | 📋 in roadmap |

@@ -1,0 +1,309 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   NestedDialog — un dialog dentro un dialog, senza inciampare.
+
+   Pattern: due <dialog> nativi. Quando si apre il secondo, il
+   primo riceve l'attributo `inert` (Tab, click e screen reader
+   lo saltano) e il backdrop del secondo è più scuro per dare
+   somma percettiva di "strato in più".
+
+   Focus restoration: stack manuale. All'apertura salviamo il
+   trigger; alla chiusura ripristiniamo il focus su di esso.
+   Chiudendo il nested, il focus torna al "Disattiva account"
+   *dentro* il primo dialog. Chiudendo il primo, torna al trigger
+   originale nello stage.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="nstd">
+  <button class="nstd__trigger" type="button" data-action="open-outer">Impostazioni account</button>
+  <p class="nstd__live sr-only" aria-live="polite"></p>
+
+  {/* Outer dialog */}
+  <dialog class="nstd__dialog nstd__dialog--outer" aria-labelledby="nstd-outer-title">
+    <div class="nstd__panel">
+      <header class="nstd__head">
+        <h2 id="nstd-outer-title" class="nstd__title">Impostazioni account</h2>
+        <button class="nstd__close" type="button" aria-label="Chiudi" data-action="close-outer">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
+      </header>
+      <dl class="nstd__rows">
+        <div class="nstd__row"><dt>Email</dt><dd>anna@altrove.it</dd></div>
+        <div class="nstd__row"><dt>Piano</dt><dd>Studio · annuale</dd></div>
+        <div class="nstd__row"><dt>Notifiche</dt><dd>Solo settimanali</dd></div>
+      </dl>
+      <button class="nstd__danger" type="button" data-action="open-inner">Disattiva account</button>
+    </div>
+  </dialog>
+
+  {/* Inner dialog (nested) */}
+  <dialog class="nstd__dialog nstd__dialog--inner" aria-labelledby="nstd-inner-title" aria-describedby="nstd-inner-body">
+    <div class="nstd__panel">
+      <h2 id="nstd-inner-title" class="nstd__title">Disattivare l'account?</h2>
+      <p id="nstd-inner-body" class="nstd__body">
+        Sospendiamo l'accesso e archiviamo i tuoi capitoli. Potrai riattivare l'account entro <strong>30 giorni</strong>, poi i dati vengono eliminati.
+      </p>
+      <div class="nstd__actions">
+        <button class="nstd__cancel" type="button" autofocus data-action="close-inner">Non ancora</button>
+        <button class="nstd__confirm" type="button" data-action="confirm-inner">Disattiva</button>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .nstd {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .nstd__trigger {
+    align-self: flex-start;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .nstd__trigger:hover { background-color: var(--surface); border-color: var(--border-strong); }
+  .nstd__trigger:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ─── Dialog comune ─── */
+  .nstd__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(24rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .nstd__dialog:not([open]) { display: none; }
+  .nstd__dialog--outer::backdrop {
+    background-color: oklch(0 0 0 / 0.35);
+    backdrop-filter: blur(2px);
+  }
+  /* Il nested ha backdrop più scuro: somma percettiva. */
+  .nstd__dialog--inner::backdrop {
+    background-color: oklch(0 0 0 / 0.55);
+    backdrop-filter: blur(3px);
+  }
+
+  @keyframes nstd-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes nstd-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+  .nstd__dialog[open] .nstd__panel { animation: nstd-in 200ms var(--ease-out-soft); }
+  .nstd__dialog[data-closing='true'] .nstd__panel { animation: nstd-out 140ms var(--ease-out-soft) forwards; }
+
+  .nstd__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .nstd__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .nstd__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .nstd__body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .nstd__close {
+    inline-size: 1.85rem;
+    block-size: 1.85rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .nstd__close:hover { background-color: var(--surface-sunken); color: var(--ink); }
+  .nstd__close:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .nstd__close svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  .nstd__rows {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .nstd__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-block: 0.3rem;
+    border-block-end: 1px dashed var(--border);
+  }
+  .nstd__row:last-child { border-block-end: 0; }
+  .nstd__row dt { margin: 0; color: var(--ink-subtle); font-size: var(--text-xs); }
+  .nstd__row dd { margin: 0; color: var(--ink); font-size: var(--text-sm); }
+
+  .nstd__danger {
+    align-self: flex-start;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: oklch(0.55 0.18 22);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .nstd__danger:hover { border-color: oklch(0.55 0.18 22); background-color: color-mix(in oklab, oklch(0.55 0.18 22) 8%, transparent); }
+  .nstd__danger:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .nstd__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    padding-block-start: var(--space-2xs);
+  }
+  .nstd__cancel {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+  .nstd__cancel:hover { opacity: 0.92; }
+  .nstd__cancel:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .nstd__confirm {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: oklch(0.55 0.18 22);
+    border: 1px solid var(--border);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+  .nstd__confirm:hover { border-color: oklch(0.55 0.18 22); background-color: color-mix(in oklab, oklch(0.55 0.18 22) 8%, transparent); }
+  .nstd__confirm:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nstd__dialog[open] .nstd__panel,
+    .nstd__dialog[data-closing='true'] .nstd__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.nstd').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const outer = el.querySelector<HTMLDialogElement>('.nstd__dialog--outer')!;
+      const inner = el.querySelector<HTMLDialogElement>('.nstd__dialog--inner')!;
+      const trigger = el.querySelector<HTMLButtonElement>('[data-action="open-outer"]')!;
+      const closeOuter = el.querySelector<HTMLButtonElement>('[data-action="close-outer"]')!;
+      const openInner = el.querySelector<HTMLButtonElement>('[data-action="open-inner"]')!;
+      const closeInner = el.querySelector<HTMLButtonElement>('[data-action="close-inner"]')!;
+      const confirmInner = el.querySelector<HTMLButtonElement>('[data-action="confirm-inner"]')!;
+      const live = el.querySelector<HTMLElement>('.nstd__live')!;
+
+      const closeDialog = (d: HTMLDialogElement, after?: () => void) => {
+        if (!d.open) return;
+        d.dataset.closing = 'true';
+        const onEnd = () => {
+          d.removeEventListener('animationend', onEnd);
+          d.close();
+          delete d.dataset.closing;
+          after?.();
+        };
+        d.addEventListener('animationend', onEnd);
+        setTimeout(() => { if (d.dataset.closing) onEnd(); }, 200);
+      };
+
+      // ─── Outer
+      trigger.addEventListener('click', () => outer.showModal());
+      closeOuter.addEventListener('click', () => closeDialog(outer));
+      outer.addEventListener('cancel', (e) => { e.preventDefault(); closeDialog(outer); });
+      outer.addEventListener('click', (e) => { if (e.target === outer) closeDialog(outer); });
+
+      // ─── Inner
+      openInner.addEventListener('click', () => {
+        // Marca l'outer come inert: Tab e screen reader lo saltano.
+        outer.setAttribute('inert', '');
+        inner.showModal();
+      });
+
+      const closeInnerAndUnlock = () => {
+        closeDialog(inner, () => {
+          outer.removeAttribute('inert');
+          // Riporta il focus al bottone che ha aperto il nested
+          openInner.focus();
+        });
+      };
+
+      closeInner.addEventListener('click', () => {
+        live.textContent = 'Annullato';
+        closeInnerAndUnlock();
+      });
+      inner.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        live.textContent = 'Annullato';
+        closeInnerAndUnlock();
+      });
+      // Backdrop click sul nested: chiude (lo stato è ancora recuperabile —
+      // l'azione "Disattiva" deve essere esplicita)
+      inner.addEventListener('click', (e) => {
+        if (e.target === inner) {
+          live.textContent = 'Annullato';
+          closeInnerAndUnlock();
+        }
+      });
+
+      confirmInner.addEventListener('click', () => {
+        live.textContent = 'Account disattivato (demo)';
+        closeInnerAndUnlock();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

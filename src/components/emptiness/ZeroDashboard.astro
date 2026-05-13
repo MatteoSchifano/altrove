@@ -1,0 +1,385 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ZeroDashboard — la dashboard che insegna se stessa.
+
+   Pattern: il vuoto come onboarding implicito. Quattro widget,
+   tutti senza dati, ma ciascuno mostra un'impronta-fantasma
+   della propria forma finale (grafico tratteggiato, numeri
+   "—", lista placeholder, anelli al 0%), accompagnata da una
+   micro-azione contestuale ("Connetti una sorgente",
+   "Importa CSV", "Aggiungi manualmente").
+
+   Toggle "anteprima con dati": popola tutti i widget con dati
+   finti — count-up tipografico, anelli che si riempiono, lista
+   che fa stagger. Niente Apple Watch ring oltre 100% — anche
+   gli esempi dicono la verità.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="zdash" data-state="empty">
+  <header class="zdash__head">
+    <h4 class="zdash__title">Riepilogo · maggio</h4>
+    <button class="zdash__toggle" type="button" aria-pressed="false">
+      <span class="zdash__toggle-dot" aria-hidden="true"></span>
+      <span class="zdash__toggle-label">Anteprima con dati</span>
+    </button>
+  </header>
+
+  <div class="zdash__grid">
+    {/* Widget 1: numero singolo */}
+    <article class="zdash__w">
+      <p class="zdash__w-label">Visitatori unici</p>
+      <p class="zdash__w-value tabular" data-counter data-to="1284">—</p>
+      <p class="zdash__w-empty-action">
+        <button class="zdash__act" type="button">Connetti una sorgente</button>
+      </p>
+    </article>
+
+    {/* Widget 2: grafico finto */}
+    <article class="zdash__w">
+      <p class="zdash__w-label">Letture per giorno</p>
+      <svg class="zdash__chart" viewBox="0 0 120 50" aria-hidden="true">
+        <polyline
+          class="zdash__chart-line"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-dasharray="3 3"
+          points="0,42 15,38 30,40 45,30 60,33 75,22 90,28 105,18 120,24"
+          data-empty-points="0,42 15,38 30,40 45,30 60,33 75,22 90,28 105,18 120,24"
+          data-full-points="0,40 15,35 30,38 45,22 60,28 75,12 90,18 105,8 120,15"
+        />
+      </svg>
+      <p class="zdash__w-empty-action">
+        <button class="zdash__act" type="button">Importa CSV</button>
+      </p>
+    </article>
+
+    {/* Widget 3: lista */}
+    <article class="zdash__w">
+      <p class="zdash__w-label">Attività recenti</p>
+      <ul class="zdash__list" role="list">
+        <li class="zdash__list-row" data-row="empty"><span class="zdash__list-ph"></span><span class="zdash__list-ph zdash__list-ph--short"></span></li>
+        <li class="zdash__list-row" data-row="empty"><span class="zdash__list-ph"></span><span class="zdash__list-ph zdash__list-ph--short"></span></li>
+        <li class="zdash__list-row" data-row="empty"><span class="zdash__list-ph"></span><span class="zdash__list-ph zdash__list-ph--short"></span></li>
+      </ul>
+      <p class="zdash__w-empty-action">
+        <button class="zdash__act" type="button">Aggiungi manualmente</button>
+      </p>
+    </article>
+
+    {/* Widget 4: anelli di progresso */}
+    <article class="zdash__w">
+      <p class="zdash__w-label">Obiettivi settimanali</p>
+      <div class="zdash__rings" aria-hidden="true">
+        <svg class="zdash__ring" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15" class="zdash__ring-track"/>
+          <circle cx="18" cy="18" r="15" class="zdash__ring-fill" data-to="84" data-ring-fill style="--p: 0;"/>
+        </svg>
+        <svg class="zdash__ring" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15" class="zdash__ring-track"/>
+          <circle cx="18" cy="18" r="15" class="zdash__ring-fill" data-to="62" data-ring-fill style="--p: 0;"/>
+        </svg>
+        <svg class="zdash__ring" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15" class="zdash__ring-track"/>
+          <circle cx="18" cy="18" r="15" class="zdash__ring-fill" data-to="40" data-ring-fill style="--p: 0;"/>
+        </svg>
+      </div>
+      <p class="zdash__w-empty-action">
+        <button class="zdash__act" type="button">Definisci un obiettivo</button>
+      </p>
+    </article>
+  </div>
+</div>
+
+<style>
+  .zdash {
+    inline-size: min(32rem, 100%);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .zdash__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-end: var(--space-sm);
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--border);
+    gap: var(--space-sm);
+  }
+
+  .zdash__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .zdash__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .zdash__toggle:hover { background-color: var(--surface-sunken); }
+  .zdash__toggle:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .zdash__toggle-dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--border-strong);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .zdash__toggle[aria-pressed='true'] {
+    color: var(--ink-strong);
+    border-color: var(--border-strong);
+  }
+  .zdash__toggle[aria-pressed='true'] .zdash__toggle-dot {
+    background-color: var(--accent);
+  }
+
+  /* Grid 2×2 a desktop, 1 colonna mobile */
+  .zdash__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+  @media (max-width: 28rem) {
+    .zdash__grid { grid-template-columns: 1fr; }
+  }
+
+  .zdash__w {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-block-size: 6.5rem;
+  }
+
+  .zdash__w-label {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .zdash__w-value {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    line-height: 1;
+  }
+  .zdash[data-state='empty'] .zdash__w-value { color: var(--ink-subtle); }
+
+  /* Empty action vs reale */
+  .zdash__w-empty-action {
+    margin: auto 0 0;
+  }
+  .zdash[data-state='filled'] .zdash__w-empty-action { display: none; }
+
+  .zdash__act {
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    color: var(--ink-muted);
+    font-size: var(--text-2xs);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .zdash__act:hover { color: var(--ink); border-color: var(--ink-muted); }
+  .zdash__act:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Chart */
+  .zdash__chart {
+    inline-size: 100%;
+    block-size: auto;
+    color: var(--ink-subtle);
+    transition: color var(--dur-normal) var(--ease-out-soft);
+  }
+  .zdash[data-state='filled'] .zdash__chart { color: var(--accent); }
+  .zdash[data-state='filled'] .zdash__chart-line { stroke-dasharray: 0; }
+  .zdash__chart-line { transition: stroke-dasharray var(--dur-normal) var(--ease-out-soft); }
+
+  /* Lista */
+  .zdash__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .zdash__list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs);
+  }
+  .zdash__list-ph {
+    block-size: 0.6em;
+    inline-size: 60%;
+    border-radius: 0.25em;
+    background-color: var(--surface-sunken);
+  }
+  .zdash__list-ph--short { inline-size: 25%; }
+  .zdash[data-state='filled'] .zdash__list-row[data-row='empty'] { display: none; }
+
+  /* Rings */
+  .zdash__rings {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .zdash__ring {
+    inline-size: 2rem;
+    block-size: 2rem;
+  }
+  .zdash__ring-track {
+    fill: none;
+    stroke: var(--surface-sunken);
+    stroke-width: 4;
+  }
+  .zdash__ring-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    /* dasharray = circumference (~94.25); 'p' è 0–100. */
+    stroke-dasharray: 94.25;
+    stroke-dashoffset: calc(94.25 - (var(--p, 0) * 0.9425));
+    transition: stroke-dashoffset var(--dur-slow) var(--ease-out-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zdash__chart-line,
+    .zdash__ring-fill { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.zdash').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const toggle = el.querySelector<HTMLButtonElement>('.zdash__toggle')!;
+      const valueEls = el.querySelectorAll<HTMLElement>('[data-counter]');
+      const ringEls = el.querySelectorAll<SVGCircleElement>('[data-ring-fill]');
+      const chartLine = el.querySelector<SVGPolylineElement>('.zdash__chart-line')!;
+      const listRows = el.querySelectorAll<HTMLElement>('.zdash__list-row');
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const animateNumber = (node: HTMLElement, to: number, ms: number) => {
+        if (reduce) {
+          node.textContent = String(to);
+          return;
+        }
+        const start = performance.now();
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - start) / ms);
+          // Ease-out cubic
+          const e = 1 - Math.pow(1 - t, 3);
+          node.textContent = Math.round(to * e).toLocaleString('it-IT');
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+
+      const sampleItems = [
+        { title: 'Anna ha aperto "L\'arte dell\'attesa"', meta: '14:02' },
+        { title: 'Aggiunto un segnalibro', meta: '13:48' },
+        { title: 'Pubblicato "La voce del vuoto"', meta: '11:25' },
+      ];
+
+      const fill = () => {
+        el.dataset.state = 'filled';
+        toggle.setAttribute('aria-pressed', 'true');
+        toggle.querySelector('.zdash__toggle-label')!.textContent = 'Torna a vuoto';
+
+        // Numeri
+        valueEls.forEach((node) => {
+          const to = parseInt(node.dataset.to ?? '0', 10);
+          animateNumber(node, to, 720);
+        });
+
+        // Anelli
+        ringEls.forEach((ring) => {
+          const to = parseInt(ring.dataset.to ?? '0', 10);
+          ring.style.setProperty('--p', String(Math.min(100, to)));
+        });
+
+        // Chart — sostituisce i punti con quelli "veri"
+        const fullPoints = chartLine.dataset.fullPoints;
+        if (fullPoints) chartLine.setAttribute('points', fullPoints);
+
+        // Lista — popola i tre row
+        const list = el.querySelector<HTMLElement>('.zdash__list')!;
+        // Rimuovi eventuali filled precedenti
+        list.querySelectorAll('[data-row="filled"]').forEach((n) => n.remove());
+        sampleItems.forEach((item, i) => {
+          const li = document.createElement('li');
+          li.className = 'zdash__list-row';
+          li.dataset.row = 'filled';
+          li.style.opacity = '0';
+          li.style.transform = 'translateY(4px)';
+          li.style.transition = 'opacity var(--dur-normal) var(--ease-out-soft), transform var(--dur-normal) var(--ease-out-soft)';
+          li.innerHTML = `<span style="color: var(--ink); font-size: var(--text-xs);">${item.title}</span><span class="tabular" style="color: var(--ink-subtle); font-size: var(--text-2xs);">${item.meta}</span>`;
+          list.appendChild(li);
+          setTimeout(() => { li.style.opacity = '1'; li.style.transform = 'translateY(0)'; }, 80 + i * 90);
+        });
+      };
+
+      const empty = () => {
+        el.dataset.state = 'empty';
+        toggle.setAttribute('aria-pressed', 'false');
+        toggle.querySelector('.zdash__toggle-label')!.textContent = 'Anteprima con dati';
+        valueEls.forEach((node) => { node.textContent = '—'; });
+        ringEls.forEach((ring) => ring.style.setProperty('--p', '0'));
+        const emptyPoints = chartLine.dataset.emptyPoints;
+        if (emptyPoints) chartLine.setAttribute('points', emptyPoints);
+        const list = el.querySelector<HTMLElement>('.zdash__list')!;
+        list.querySelectorAll('[data-row="filled"]').forEach((n) => n.remove());
+      };
+
+      toggle.addEventListener('click', () => {
+        if (el.dataset.state === 'filled') empty();
+        else fill();
+      });
+
+      // unused listRows reference — silence TS
+      void listRows;
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

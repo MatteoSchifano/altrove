@@ -1,0 +1,108 @@
+---
+lang: "it"
+translationKey: "chapter-03"
+number: "03"
+title: "La voce del vuoto"
+excerpt: "Un'interfaccia che non ha niente da mostrare non è muta — è il momento in cui la sua voce si sente meglio. 404, liste vuote, ricerche senza risultati: piccoli vuoti che pesano molto, e che la cura distingue dall'abbandono."
+date: "maggio 2026"
+tags: ["editoriale", "voce", "stati-vuoti"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import Voice404 from '../../../components/emptiness/Voice404.astro';
+import EmptyList from '../../../components/emptiness/EmptyList.astro';
+import NoResults from '../../../components/emptiness/NoResults.astro';
+import KindError from '../../../components/emptiness/KindError.astro';
+import PermissionAsk from '../../../components/emptiness/PermissionAsk.astro';
+import ZeroDashboard from '../../../components/emptiness/ZeroDashboard.astro';
+
+La maggior parte delle interfacce è progettata per il caso felice: ci sono dati, l'utente li scorre, l'azione riesce. Ma fra una schermata piena e l'altra ci sono i momenti vuoti — quelli in cui la pagina non ha niente da mostrare. E proprio lì un'interfaccia parla di sé più che altrove: dice quanto rispetta chi la usa, quanto si fida del proprio futuro, quanto ha pensato al caso meno glorioso.
+
+Il vuoto non è un'assenza. È un **momento di parola**. Una pagina 404 può essere la peggiore o la più cordiale della casa; una lista senza elementi può sembrare un guasto o un invito. Cambia tutto la *voce* — non solo il testo, ma il tono, il ritmo, e il gesto successivo che viene offerto.
+
+In questo capitolo apriamo sei vuoti diversi, ognuno con la sua piccola voce: ironica, invitante, informativa, gentile, onesta, didattica.
+
+## 404 è una pagina come un'altra
+
+La 404 è il primo vuoto che chiunque incontra. Per molti siti è una scorciatoia: una scritta sterile, un numero gigante, un link "torna alla home". L'utente è già sospettoso — pensa di aver fatto qualcosa di sbagliato. Una 404 cordiale lo accoglie, gli dice cosa è successo in linguaggio umano, e gli propone una direzione *prima* di farsi giudicare.
+
+<Demo title="404 onesto · una pagina che non scappa" tag="03.a">
+  <Voice404 />
+  <div slot="note">
+    <p>La versione "cordiale" tratta la 404 come una conversazione: una frase che riconosce la situazione ("Questa pagina è andata altrove. Resto io a tenerti compagnia."), un'azione primaria onesta, una secondaria utile (suggerimenti vicini in fuzzy match sui titoli esistenti). Il toggle <em>"mostrami come non si fa"</em> alterna alla versione sterile — stessa pagina, voce diversa, e si sente la differenza nel petto, non solo negli occhi.</p>
+    <p>Il dettaglio onesto è la URL finta nella barra del browser: replicare un piccolo frammento del contesto che l'utente ha lasciato — non per nostalgia, ma perché conferma <em>cosa</em> non ha trovato. È un atto di trasparenza: "abbiamo capito cosa cercavi". Niente magie, niente schermate generiche. Solo onestà sull'errore.</p>
+  </div>
+</Demo>
+
+## La lista che non ha ancora visto niente
+
+Lo stato vuoto di prima volta è un momento delicato: non c'è ancora niente perché *non c'è ancora stato niente*, non perché qualcosa si è rotto. La differenza fra "comincia tu" e "sembra ci sia un guasto" è tutta nel tono. Le liste vuote che funzionano sono quelle che spiegano cosa metterai qui, perché serve, e dove cliccare per iniziare.
+
+<Demo title="Ancora niente qui · il primo gesto è tuo" tag="03.b">
+  <EmptyList />
+  <div slot="note">
+    <p>Un'illustrazione SVG minimale — una linea che traccia un segnaposto — si disegna solo alla prima apparizione in viewport, una volta, poi non rifà più la scena. È un piccolo segnale di vita: "questo stato è stato pensato, non dimenticato". Re-animarlo a ogni rilettura sarebbe nervosismo.</p>
+    <p>Il microcopy è il vero pezzo da bottega: <em>"Nessun segnalibro, per ora."</em> "Per ora" è la parolina che cambia tutto — promette un futuro, non lo impone. La CTA primaria usa lo stesso pattern dello stagger del capitolo precedente: l'item nuovo entra con un delay calibrato, gli esistenti restano fermi. La memoria visiva si costruisce, non si interrompe.</p>
+  </div>
+</Demo>
+
+## Quando la ricerca non trova, l'interfaccia propone
+
+Una ricerca senza risultati è un fallimento dell'interfaccia, non dell'utente. Eppure la maggior parte dei siti restituisce un freddo "Nessun risultato trovato" — come se la responsabilità fosse di chi cerca. Un vuoto onesto propone alternative: forse una parola scritta male, forse un sinonimo, forse un tag laterale che dirotta la ricerca su un binario adiacente.
+
+<Demo title="Forse intendevi… · un vuoto che propone" tag="03.c">
+  <NoResults />
+  <div slot="note">
+    <p>L'input è pre-popolato con <code>tipogrfia</code> — un errore di battitura plausibile. Sotto, lo stato vuoto è composto: titolo onesto ("Nessun risultato per <em>tipogrfia</em>"), un'unica proposta forte ("Forse intendevi: <strong>tipografia</strong>" — chip premibile che riscrive la query e mostra tre risultati), e tre vie laterali ("Prova senza accenti", "Sfoglia i tag", "Apri l'indice"). Tre azioni concrete, nessuna scusa.</p>
+    <p>Il "forse intendevi" non è magia — è una distanza di Levenshtein semplificata su un piccolo dizionario di parole probabili. Trenta righe di JavaScript. Il valore non sta nell'algoritmo, sta nell'<em>aspettativa di averne uno</em>. Un vuoto che propone fa risparmiare al lettore il passaggio "ricomincio da capo": è proprio quella frizione che la cura risparmia.</p>
+  </div>
+</Demo>
+
+## L'errore che spiega invece di gridare
+
+Gli errori bloccanti sono il vuoto più sconfortante: la pagina c'era, l'azione non riesce, e di solito ci viene urlato addosso con un'icona rossa e una frase tecnica. L'errore *gentile* fa l'opposto: spiega cosa è successo in linguaggio umano, dice se è temporaneo o permanente, e propone l'azione successiva — senza colpevolizzare il prossimo click.
+
+<Demo title="Errore senza panico · spiega, non urla" tag="03.d">
+  <KindError />
+  <div slot="note">
+    <p>Il pattern è "errore dentro la card, non sopra l'utente": niente toast distruttivo, niente modal di emergenza. La card "Sincronizzazione note" cambia stato visivo — bordo ambra discreto, icona piccola, titolo che riconosce il problema in linguaggio umano ("Non riesco a parlare con il server"), un timestamp, e due CTA: <em>Riprova</em> (primaria) e <em>Dettagli tecnici</em> (un <code>&lt;details&gt;</code> nativo che apre lo stack-trace solo per chi lo cerca davvero).</p>
+    <p>Il titolo va in <code>role="alert"</code> con <code>aria-live="assertive"</code> — chi usa uno screen reader sente l'errore subito, ma in una sola frase, non in un fiume. I dettagli tecnici sono in <code>aria-live="polite"</code>: arrivano quando l'utente li chiede, non prima. È la stessa differenza di registro fra urlare e spiegare.</p>
+  </div>
+</Demo>
+
+## Il permesso che si motiva prima di chiedere
+
+I prompt di sistema (posizione, notifiche, foto, microfono) sono dialog brutali per design: due bottoni, niente contesto, e una decisione che pesa. La differenza fra il 60% di "accetta" e il 90% non è nei pixel del dialog di sistema — è in quello che l'interfaccia dice *prima* di triggerare il prompt. Il *pre-prompt pattern*: spiegare il perché, poi chiedere.
+
+<Demo title="Posizione · prima il perché, poi la richiesta" tag="03.e">
+  <PermissionAsk />
+  <div slot="note">
+    <p>La card "Negozi vicini" non parte chiedendo. Parte motivando: <em>"Per mostrarti i negozi entro 2 km, ci serve la tua posizione approssimativa. Niente tracking, niente storia."</em> Due CTA — <em>"Va bene, mostra"</em> (primaria) e <em>"Non ora"</em> (secondaria, <strong>priva</strong> di tono colpevolizzante). Premendo la primaria parte un finto handshake (skeleton mappa per 1200 ms) e la card transita in uno stato finale — concedere, rifiutare, o errore. Ogni stato ha la sua voce, mai accusatoria.</p>
+    <p>Il "Non ora" è il vero segnale di rispetto: non è "Non voglio mai più sentirti", è "non in questo momento". L'utente sa che potrà tornare, e il rifiuto non gli costa nulla socialmente. La macchina che spiega prima di chiedere ottiene di più — non perché manipola, ma perché si dimostra collaborativa. È esattamente il rovescio del dark pattern.</p>
+  </div>
+</Demo>
+
+## Zero dati, mille direzioni
+
+La dashboard vuota è la più sottile delle prove. Quattro widget, tutti senza dati: facile fare un campo grigio con scritto "Connetti una sorgente". Difficile farlo diventare un *onboarding implicito*, in cui ogni widget mostra che forma avranno i tuoi dati una volta arrivati, e propone l'azione minima per cominciare. Un buon zero-data non sembra vuoto: sembra un futuro probabile.
+
+<Demo title="Zero data · una dashboard che insegna se stessa" tag="03.f">
+  <ZeroDashboard />
+  <div slot="note">
+    <p>Quattro widget — un grafico, un contatore, una lista attività, anelli di progresso. Ognuno mostra un'<em>impronta fantasma</em> della propria forma finale (grafico tratteggiato, numeri "—", lista con righe placeholder etichettate, anelli al 0%), accompagnata da una micro-azione contestuale ("Connetti una sorgente", "Importa CSV", "Aggiungi manualmente"). Il toggle in alto, <em>"Anteprima con dati di esempio"</em>, popola tutti i widget con dati finti — count-up tipografico, anelli che si riempiono, lista che fa stagger.</p>
+    <p>Il count-up dei numeri usa il preset spring <code>expressive</code> dalla nostra libreria di motion — leggero overshoot, perché un numero che si rivela è una piccola celebrazione. Niente Apple Watch ring, però: nessun anello si chiude oltre il 100%. La regola: anche le animazioni d'esempio dicono la verità. Se l'esempio mostra 84% di completamento, è 84%, non 99 per "fare scena".</p>
+  </div>
+</Demo>
+
+## Cosa portiamo via
+
+Il vuoto non è un buco da nascondere: è una **forma** che l'interfaccia disegna quando non ha niente da mostrare. E come ogni forma, ha una voce. Le sei dimostrazioni qui sopra esplorano sei voci possibili:
+
+1. **La 404** che accoglie, invece di accusare.
+2. **La lista** che invita al primo gesto, invece di sembrare rotta.
+3. **La ricerca senza risultati** che propone, invece di scusarsi.
+4. **L'errore** che spiega, invece di urlare.
+5. **Il permesso** che si motiva, invece di chiedere a freddo.
+6. **La dashboard zero** che insegna se stessa, invece di restare grigia.
+
+Sei vuoti, sei modi di dire qualcosa quando non c'è niente da mostrare. Il prossimo capitolo apre un dominio adiacente — *il dialogo silenzioso* — perché un'interfaccia, quando deve davvero parlare, deve farlo bene: con la tastiera in mano, il focus dove serve, e l'umiltà di sapere quando zittirsi.

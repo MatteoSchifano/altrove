@@ -1,0 +1,281 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   InlineConfirm — l'anti-dialog. Confermare senza interrompere.
+
+   Pattern: niente <dialog>. Il messaggio si trasforma nel suo
+   stesso "sei sicuro?" — expand-in-place senza spostare il
+   contesto, senza intrappolare il focus, senza disturbare lo
+   sfondo. Auto-timeout 5s ripristina lo stato originale.
+   Esc annulla.
+
+   Dimostra che NON sempre serve un dialog. Quando l'azione è
+   piccola e l'errore è reversibile, l'inline confirm è onesto.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="incf">
+  <ol class="incf__list" role="list">
+    <li class="incf__item" data-id="m1">
+      <div class="incf__msg">
+        <p class="incf__msg-text">«Ho letto il capitolo nuovo — la voce del vuoto è davvero un'idea felice.»</p>
+        <p class="incf__msg-meta tabular">Anna · 14:02</p>
+      </div>
+      <div class="incf__actions">
+        <button class="incf__trash" type="button" aria-label="Elimina messaggio di Anna" data-action="ask">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+          </svg>
+        </button>
+      </div>
+      <div class="incf__confirm" data-confirm aria-live="polite" hidden>
+        <span class="incf__c-text">Eliminare il messaggio?</span>
+        <button class="incf__c-cancel" type="button" data-action="cancel">Annulla</button>
+        <button class="incf__c-yes" type="button" data-action="yes">Sì</button>
+        <span class="incf__c-count tabular" aria-hidden="true">5</span>
+      </div>
+    </li>
+
+    <li class="incf__item" data-id="m2">
+      <div class="incf__msg">
+        <p class="incf__msg-text">«Domani ci vediamo per i bottoni del capitolo successivo?»</p>
+        <p class="incf__msg-meta tabular">Marco · 13:48</p>
+      </div>
+      <div class="incf__actions">
+        <button class="incf__trash" type="button" aria-label="Elimina messaggio di Marco" data-action="ask">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+          </svg>
+        </button>
+      </div>
+      <div class="incf__confirm" data-confirm aria-live="polite" hidden>
+        <span class="incf__c-text">Eliminare il messaggio?</span>
+        <button class="incf__c-cancel" type="button" data-action="cancel">Annulla</button>
+        <button class="incf__c-yes" type="button" data-action="yes">Sì</button>
+        <span class="incf__c-count tabular" aria-hidden="true">5</span>
+      </div>
+    </li>
+
+    <li class="incf__item" data-id="m3">
+      <div class="incf__msg">
+        <p class="incf__msg-text">«Ho fatto una piccola lista di skeleton da sperimentare 👇»</p>
+        <p class="incf__msg-meta tabular">Lorenzo · 11:25</p>
+      </div>
+      <div class="incf__actions">
+        <button class="incf__trash" type="button" aria-label="Elimina messaggio di Lorenzo" data-action="ask">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5l.8 8a1 1 0 0 0 1 1h3.4a1 1 0 0 0 1-1l.8-8"/>
+          </svg>
+        </button>
+      </div>
+      <div class="incf__confirm" data-confirm aria-live="polite" hidden>
+        <span class="incf__c-text">Eliminare il messaggio?</span>
+        <button class="incf__c-cancel" type="button" data-action="cancel">Annulla</button>
+        <button class="incf__c-yes" type="button" data-action="yes">Sì</button>
+        <span class="incf__c-count tabular" aria-hidden="true">5</span>
+      </div>
+    </li>
+  </ol>
+</div>
+
+<style>
+  .incf {
+    inline-size: min(30rem, 100%);
+  }
+  .incf__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .incf__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-sm);
+    align-items: center;
+    padding: 0.7rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+  .incf__item[data-removed='true'] {
+    opacity: 0;
+    transform: translateX(-6px);
+    pointer-events: none;
+  }
+  .incf__item[data-asking='true'] .incf__msg,
+  .incf__item[data-asking='true'] .incf__actions { opacity: 0; pointer-events: none; }
+  .incf__item[data-asking='true'] .incf__confirm { opacity: 1; }
+
+  .incf__msg,
+  .incf__actions {
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .incf__msg-text {
+    margin: 0 0 0.1rem;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+  .incf__msg-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .incf__trash {
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    color: var(--ink-subtle);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .incf__trash:hover { color: oklch(0.55 0.18 22); background-color: var(--surface-sunken); }
+  .incf__trash:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .incf__trash svg { inline-size: 0.95rem; block-size: 0.95rem; }
+
+  .incf__confirm {
+    grid-column: 1 / -1;
+    position: absolute;
+    inset: 0;
+    padding: 0 var(--space-sm);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .incf__confirm[hidden] { display: none; }
+
+  .incf__c-text {
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    margin-inline-end: auto;
+  }
+
+  .incf__c-cancel,
+  .incf__c-yes {
+    padding: 0.35rem 0.8rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .incf__c-cancel {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border-color: var(--ink-strong);
+  }
+  .incf__c-cancel:hover { opacity: 0.92; }
+  .incf__c-cancel:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .incf__c-yes {
+    background: transparent;
+    color: oklch(0.55 0.18 22);
+  }
+  .incf__c-yes:hover { border-color: oklch(0.55 0.18 22); background-color: color-mix(in oklab, oklch(0.55 0.18 22) 8%, transparent); }
+  .incf__c-yes:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .incf__c-count {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    min-inline-size: 1ch;
+    text-align: end;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .incf__item,
+    .incf__msg,
+    .incf__actions,
+    .incf__confirm { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.incf').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      root.querySelectorAll<HTMLElement>('.incf__item').forEach((item) => {
+        const trash = item.querySelector<HTMLButtonElement>('[data-action="ask"]')!;
+        const confirm = item.querySelector<HTMLElement>('[data-confirm]')!;
+        const cancelBtn = item.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+        const yesBtn = item.querySelector<HTMLButtonElement>('[data-action="yes"]')!;
+        const count = item.querySelector<HTMLElement>('.incf__c-count')!;
+
+        let timer: number | null = null;
+        let countdown: number | null = null;
+        let previouslyFocused: HTMLElement | null = null;
+        let escHandler: ((e: KeyboardEvent) => void) | null = null;
+
+        const ask = () => {
+          previouslyFocused = document.activeElement as HTMLElement | null;
+          item.dataset.asking = 'true';
+          confirm.removeAttribute('hidden');
+          // Focus su Annulla (default sicuro)
+          requestAnimationFrame(() => cancelBtn.focus());
+
+          let remaining = 5;
+          count.textContent = String(remaining);
+          countdown = window.setInterval(() => {
+            remaining--;
+            count.textContent = String(Math.max(0, remaining));
+          }, 1000);
+          timer = window.setTimeout(cancel, 5000);
+
+          escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              cancel();
+            }
+          };
+          document.addEventListener('keydown', escHandler);
+        };
+
+        const cleanup = () => {
+          if (timer) { clearTimeout(timer); timer = null; }
+          if (countdown) { clearInterval(countdown); countdown = null; }
+          if (escHandler) { document.removeEventListener('keydown', escHandler); escHandler = null; }
+          delete item.dataset.asking;
+          confirm.setAttribute('hidden', '');
+        };
+
+        const cancel = () => {
+          cleanup();
+          previouslyFocused?.focus();
+        };
+
+        const yes = () => {
+          cleanup();
+          item.dataset.removed = 'true';
+          setTimeout(() => item.remove(), 280);
+        };
+
+        trash.addEventListener('click', ask);
+        cancelBtn.addEventListener('click', cancel);
+        yesBtn.addEventListener('click', yes);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

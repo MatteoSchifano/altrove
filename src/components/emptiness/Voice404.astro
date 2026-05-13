@@ -1,0 +1,322 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   Voice404 — la pagina che non c'è, con due voci a confronto.
+
+   Pattern: due versioni della stessa 404 — quella cordiale e
+   quella sterile — affiancabili tramite toggle. La differenza
+   non è di pixel, è di registro: stesso layout, stesso utente,
+   stesse opzioni; cambia il modo in cui parlano.
+
+   La browser-frame finta serve solo a contestualizzare: ti
+   ricorda che è la fine di un percorso, non un blocco isolato.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="v404" data-mode="warm">
+  <div class="v404__frame">
+    <div class="v404__chrome">
+      <span class="v404__dot" data-tone="red" aria-hidden="true"></span>
+      <span class="v404__dot" data-tone="yellow" aria-hidden="true"></span>
+      <span class="v404__dot" data-tone="green" aria-hidden="true"></span>
+      <span class="v404__url tabular">altrove/finestra-che-non-c-era</span>
+    </div>
+
+    {/* Versione cordiale */}
+    <div class="v404__page" data-variant="warm">
+      <span class="v404__num tabular">404</span>
+      <h4 class="v404__title">Questa pagina è andata altrove</h4>
+      <p class="v404__lede">Resto io a tenerti compagnia mentre torniamo da qualche parte di sensato.</p>
+      <div class="v404__actions">
+        <button class="v404__cta v404__cta--primary" type="button">← Torna all'indice</button>
+        <button class="v404__cta v404__cta--secondary" type="button" aria-expanded="false" aria-controls="v404-suggest-warm">
+          Suggerimenti vicini
+        </button>
+      </div>
+      <div class="v404__suggest" id="v404-suggest-warm" hidden>
+        <p class="v404__suggest-label">Forse cercavi:</p>
+        <ul role="list" class="v404__suggest-list">
+          <li><a href="#" class="v404__suggest-link">Anatomia di un bottone</a></li>
+          <li><a href="#" class="v404__suggest-link">L'arte dell'attesa</a></li>
+          <li><a href="#" class="v404__suggest-link">La voce del vuoto</a></li>
+        </ul>
+      </div>
+    </div>
+
+    {/* Versione sterile */}
+    <div class="v404__page" data-variant="cold" aria-hidden="true">
+      <span class="v404__num v404__num--cold tabular">404</span>
+      <h4 class="v404__title v404__title--cold">Not Found</h4>
+      <p class="v404__lede v404__lede--cold">The requested URL was not found on this server.</p>
+      <div class="v404__actions">
+        <button class="v404__cta v404__cta--cold" type="button">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="v404__toggle" role="group" aria-label="Scegli la voce della pagina">
+    <button class="v404__toggle-btn" type="button" data-target="warm" aria-pressed="true">Cordiale</button>
+    <button class="v404__toggle-btn" type="button" data-target="cold" aria-pressed="false">Mostrami come non si fa</button>
+  </div>
+</div>
+
+<style>
+  .v404 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    inline-size: min(30rem, 100%);
+  }
+
+  /* ─── Browser frame finta ─── */
+  .v404__frame {
+    inline-size: 100%;
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    grid-template-areas: 'chrome' 'page';
+  }
+
+  .v404__chrome {
+    grid-area: chrome;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.55rem 0.75rem;
+    background-color: var(--surface-sunken);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .v404__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--border-strong);
+    opacity: 0.6;
+  }
+  .v404__dot[data-tone='red']    { background-color: oklch(0.7 0.18 25); }
+  .v404__dot[data-tone='yellow'] { background-color: oklch(0.84 0.15 90); }
+  .v404__dot[data-tone='green']  { background-color: oklch(0.74 0.14 145); }
+
+  .v404__url {
+    margin-inline-start: var(--space-2xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ─── Page area, due varianti sovrapposte ─── */
+  .v404__page {
+    grid-area: page;
+    padding: var(--space-lg) var(--space-md);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    transition: opacity var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .v404[data-mode='warm'] .v404__page[data-variant='warm'] { opacity: 1; }
+  .v404[data-mode='warm'] .v404__page[data-variant='cold'] { opacity: 0; pointer-events: none; }
+  .v404[data-mode='cold'] .v404__page[data-variant='warm'] { opacity: 0; pointer-events: none; }
+  .v404[data-mode='cold'] .v404__page[data-variant='cold'] { opacity: 1; }
+
+  .v404__num {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-medium);
+    color: var(--accent);
+    letter-spacing: var(--tracking-tighter);
+    line-height: 1;
+  }
+  .v404__num--cold {
+    color: var(--ink-subtle);
+  }
+
+  .v404__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .v404__title--cold { color: var(--ink-muted); font-weight: var(--weight-regular); }
+
+  .v404__lede {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    max-inline-size: 22rem;
+  }
+  .v404__lede--cold { color: var(--ink-subtle); }
+
+  .v404__actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-2xs);
+  }
+
+  .v404__cta {
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .v404__cta:hover { background-color: var(--surface-raised); border-color: var(--border-strong); }
+  .v404__cta:active { transform: scale(0.97); }
+  .v404__cta:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .v404__cta--primary {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border-color: var(--ink-strong);
+  }
+  .v404__cta--primary:hover {
+    background-color: var(--ink-strong);
+    border-color: var(--ink-strong);
+    opacity: 0.92;
+  }
+  .v404__cta--cold {
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+  }
+
+  /* Suggerimenti */
+  .v404__suggest {
+    margin-block-start: var(--space-sm);
+    padding-block-start: var(--space-sm);
+    border-block-start: 1px solid var(--border);
+    inline-size: 100%;
+    max-inline-size: 22rem;
+  }
+  .v404__suggest[hidden] { display: none; }
+
+  .v404__suggest-label {
+    margin: 0 0 0.35rem;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .v404__suggest-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    text-align: start;
+  }
+
+  .v404__suggest-link {
+    display: block;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .v404__suggest-link:hover { background-color: var(--surface-sunken); color: var(--ink-strong); }
+  .v404__suggest-link:focus-visible { outline: none; background-color: var(--surface-sunken); box-shadow: var(--halo-focus); }
+
+  /* ─── Toggle warm/cold ─── */
+  .v404__toggle {
+    display: inline-flex;
+    padding: 0.25rem;
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    gap: 0.1rem;
+  }
+
+  .v404__toggle-btn {
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .v404__toggle-btn[aria-pressed='true'] {
+    background-color: var(--surface-raised);
+    color: var(--ink-strong);
+    box-shadow: var(--shadow-xs);
+  }
+  .v404__toggle-btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .v404__page,
+    .v404__cta,
+    .v404__toggle-btn {
+      transition-duration: 1ms;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.v404').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const toggleBtns = el.querySelectorAll<HTMLButtonElement>('.v404__toggle-btn');
+      const suggestBtn = el.querySelector<HTMLButtonElement>('.v404__cta--secondary');
+      const suggestPanel = el.querySelector<HTMLElement>('.v404__suggest');
+      const warmPage = el.querySelector<HTMLElement>('.v404__page[data-variant="warm"]')!;
+      const coldPage = el.querySelector<HTMLElement>('.v404__page[data-variant="cold"]')!;
+
+      toggleBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.target as 'warm' | 'cold';
+          el.dataset.mode = target;
+          toggleBtns.forEach((b) => {
+            b.setAttribute('aria-pressed', String(b.dataset.target === target));
+          });
+          warmPage.setAttribute('aria-hidden', String(target !== 'warm'));
+          coldPage.setAttribute('aria-hidden', String(target !== 'cold'));
+        });
+      });
+
+      suggestBtn?.addEventListener('click', () => {
+        if (!suggestPanel) return;
+        const isOpen = !suggestPanel.hasAttribute('hidden');
+        if (isOpen) {
+          suggestPanel.setAttribute('hidden', '');
+          suggestBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          suggestPanel.removeAttribute('hidden');
+          suggestBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

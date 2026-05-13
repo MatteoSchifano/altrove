@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-03"
+number: "03"
+title: "The voice of emptiness"
+excerpt: "An interface with nothing to show isn't mute — it's the moment its voice is heard most clearly. 404s, empty lists, fruitless searches: small voids that weigh a lot, and that care distinguishes from abandonment."
+date: "May 2026"
+tags: ["editorial", "voice", "empty-states"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import Voice404 from '../../../components/emptiness/Voice404.astro';
+import EmptyList from '../../../components/emptiness/EmptyList.astro';
+import NoResults from '../../../components/emptiness/NoResults.astro';
+import KindError from '../../../components/emptiness/KindError.astro';
+import PermissionAsk from '../../../components/emptiness/PermissionAsk.astro';
+import ZeroDashboard from '../../../components/emptiness/ZeroDashboard.astro';
+
+Most interfaces are designed for the happy path: data is there, the user scrolls, the action succeeds. But between one full screen and the next there are the empty moments — when the page has nothing to show. And it's right there that an interface speaks about itself more than anywhere else: it tells you how much it respects the people using it, how much it trusts its own future, how much thought went into the less glorious case.
+
+Emptiness isn't absence. It's a **moment of speech**. A 404 page can be the worst or the most cordial corner of the house; a list with no items can look like a glitch or an invitation. What changes everything is the *voice* — not just the words, but the tone, the rhythm, and the next gesture offered.
+
+In this chapter we open six different voids, each with its own small voice: ironic, inviting, informative, gentle, honest, instructive.
+
+## A 404 is a page like any other
+
+The 404 is the first void anyone meets. For most sites it's a shortcut: a sterile line, a giant number, a "back to home" link. The user is already suspicious — they think they did something wrong. A cordial 404 receives them, explains what happened in plain language, and offers a direction *before* asking to be judged.
+
+<Demo title="Honest 404 · a page that doesn't run away" tag="03.a">
+  <Voice404 />
+  <div slot="note">
+    <p>The "warm" version treats the 404 as a conversation: a sentence that acknowledges the situation ("This page has gone elsewhere. I'll keep you company while we find our way back."), an honest primary action, and a useful secondary one (nearby suggestions via fuzzy match on existing titles). The toggle <em>"show me how not to do it"</em> flips to the sterile version — same page, different voice, and you feel the difference in your chest, not just your eyes.</p>
+    <p>The honest detail is the fake URL in the browser bar: replaying a small fragment of the context the user just left — not for nostalgia, but because it confirms <em>what</em> they didn't find. It's an act of transparency: "we understood what you were looking for." No magic, no generic screens. Just honesty about the error.</p>
+  </div>
+</Demo>
+
+## The list that hasn't seen anything yet
+
+The first-run empty state is a delicate moment: there's nothing yet because *nothing has happened yet*, not because something broke. The difference between "your move" and "looks like a glitch" is all in the tone. Empty lists that work are the ones that explain what will go here, why it matters, and where to click to begin.
+
+<Demo title="Nothing here yet · the first move is yours" tag="03.b">
+  <EmptyList />
+  <div slot="note">
+    <p>A minimal SVG illustration — a line tracing a bookmark — draws itself only on first appearance in the viewport, once, and then doesn't re-stage the scene. It's a small sign of life: "this state was thought about, not forgotten." Re-animating it on every revisit would be nervousness.</p>
+    <p>The microcopy is the real craftsman's piece: <em>"No bookmarks, for now."</em> "For now" is the little word that changes everything — it promises a future without imposing one. The primary CTA reuses the staggered pattern from the previous chapter: the new item enters with a calibrated delay, the existing ones stay put. Visual memory is built, not interrupted.</p>
+  </div>
+</Demo>
+
+## When the search finds nothing, the interface offers something
+
+A search with no results is an interface failure, not a user failure. Yet most sites return a cold "No results found" — as if the responsibility lay with whoever is searching. An honest void offers alternatives: maybe a misspelled word, maybe a synonym, maybe a lateral tag that redirects the search onto an adjacent track.
+
+<Demo title="Did you mean… · a void that proposes" tag="03.c">
+  <NoResults />
+  <div slot="note">
+    <p>The input is pre-filled with <code>typgraphy</code> — a plausible typo. Below, the empty state is composed: an honest title ("No results for <em>typgraphy</em>"), a single strong suggestion ("Did you mean: <strong>typography</strong>" — a pressable chip that rewrites the query and shows three results), and three lateral routes ("Try without accents", "Browse the tags", "Open the index"). Three concrete actions, no apologies.</p>
+    <p>The "did you mean" isn't magic — it's a simplified Levenshtein distance over a small dictionary of probable words. Thirty lines of JavaScript. The value isn't in the algorithm; it's in the <em>expectation that there is one</em>. A void that proposes spares the reader the "start over" step: that's exactly the friction care saves them.</p>
+  </div>
+</Demo>
+
+## The error that explains instead of shouting
+
+Blocking errors are the most uncomfortable void: the page was there, the action fails, and we're usually shouted at with a red icon and a technical phrase. The *kind* error does the opposite: it explains what happened in plain language, says whether it's temporary or permanent, and offers the next action — without blaming the next click.
+
+<Demo title="Error without panic · explain, don't shout" tag="03.d">
+  <KindError />
+  <div slot="note">
+    <p>The pattern is "error inside the card, not over the user": no destructive toast, no emergency modal. The "Notes sync" card changes its visual state — discreet amber border, small icon, a title that names the problem in plain language ("I can't reach the server right now"), a timestamp, and two CTAs: <em>Retry</em> (primary) and <em>Technical details</em> (a native <code>&lt;details&gt;</code> that opens the stack trace only for those who actually want it).</p>
+    <p>The title uses <code>role="alert"</code> with <code>aria-live="assertive"</code> — screen-reader users hear the error immediately, but in a single sentence, not a flood. The technical details live in <code>aria-live="polite"</code>: they arrive when the user asks for them, not before. It's the same register difference as shouting versus explaining.</p>
+  </div>
+</Demo>
+
+## The permission that explains itself before asking
+
+System prompts (location, notifications, photos, microphone) are dialogs that are brutal by design: two buttons, no context, a decision that weighs. The difference between 60% "accept" and 90% isn't in the pixels of the system dialog — it's in what the interface says *before* triggering the prompt. The *pre-prompt pattern*: explain the why, then ask.
+
+<Demo title="Location · the why first, the request second" tag="03.e">
+  <PermissionAsk />
+  <div slot="note">
+    <p>The "Nearby shops" card doesn't start by asking. It starts by motivating: <em>"To show you shops within 2 km, we need your approximate location. No tracking, no history."</em> Two CTAs — <em>"OK, show me"</em> (primary) and <em>"Not now"</em> (secondary, <strong>without</strong> a guilt-tripping tone). Press the primary and a fake handshake starts (a 1200 ms map skeleton) and the card transitions to a final state — granted, refused, or error. Each state has its own voice, never accusatory.</p>
+    <p>The "Not now" is the real signal of respect: it isn't "I never want to hear from you again," it's "not in this moment." The user knows they can come back, and the refusal costs them nothing socially. The machine that explains before asking gets more — not because it manipulates, but because it shows itself to be collaborative. It's the exact opposite of a dark pattern.</p>
+  </div>
+</Demo>
+
+## Zero data, a thousand directions
+
+The empty dashboard is the subtlest test. Four widgets, all without data: easy to make a grey field that reads "Connect a source." Hard to make it an *implicit onboarding*, in which each widget shows what shape your data will take once it arrives, and proposes the minimal action to begin. A good zero-data state doesn't look empty: it looks like a probable future.
+
+<Demo title="Zero data · a dashboard that teaches itself" tag="03.f">
+  <ZeroDashboard />
+  <div slot="note">
+    <p>Four widgets — a chart, a counter, an activity list, progress rings. Each one shows a <em>ghost imprint</em> of its final form (dashed chart, "—" numerals, list with labelled placeholder rows, rings at 0%), accompanied by a contextual micro-action ("Connect a source", "Import CSV", "Add manually"). The toggle at the top, <em>"Preview with sample data"</em>, populates every widget with fake numbers — typographic count-ups, rings that fill, the list staggers in.</p>
+    <p>The number count-up uses the <code>expressive</code> spring preset from our motion library — a small overshoot, because a number revealing itself is a tiny celebration. No Apple Watch ring, though: no ring closes beyond 100%. The rule: even sample animations tell the truth. If the example shows 84% completion, it's 84%, not 99 "for show".</p>
+  </div>
+</Demo>
+
+## What we take away
+
+Emptiness isn't a hole to hide: it's a **shape** the interface draws when it has nothing to show. And like every shape, it has a voice. The six demos above explore six possible voices:
+
+1. **The 404** that welcomes, instead of accusing.
+2. **The list** that invites the first move, instead of looking broken.
+3. **The empty search** that proposes, instead of apologising.
+4. **The error** that explains, instead of shouting.
+5. **The permission** that motivates itself, instead of asking cold.
+6. **The zero-data dashboard** that teaches itself, instead of staying grey.
+
+Six voids, six ways to say something when there's nothing to show. The next chapter opens an adjacent territory — *the silent dialogue* — because an interface, when it really must speak, has to do it well: with the keyboard in hand, focus where it belongs, and the humility to know when to be quiet.

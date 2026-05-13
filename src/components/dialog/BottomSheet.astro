@@ -1,0 +1,306 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BottomSheet — il foglio che sale dal basso (mobile-first).
+
+   Pattern: stesso <dialog>, due geometrie. Su < 640px slide-up
+   dal bordo inferiore con drag-handle e swipe-down per chiudere;
+   su >= 640px diventa dialog centrato standard. Stesso markup,
+   stessa logica — solo CSS che si adatta al pollice o al cursore.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="bsh">
+  <button class="bsh__trigger" type="button" data-action="open">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="13" cy="3" r="1.4"/>
+      <circle cx="3"  cy="8" r="1.4"/>
+      <circle cx="13" cy="13" r="1.4"/>
+      <path d="M4 7.3l8-3.6M4 8.7l8 3.6"/>
+    </svg>
+    <span>Condividi</span>
+  </button>
+  <p class="bsh__hint">Su mobile esce dal basso; su desktop al centro.</p>
+
+  <dialog class="bsh__dialog" aria-labelledby="bsh-title">
+    <div class="bsh__panel">
+      <button class="bsh__handle" type="button" aria-label="Trascina o tocca per chiudere" data-action="close"></button>
+      <h2 id="bsh-title" class="bsh__title">Condividi questo capitolo</h2>
+      <ul class="bsh__opts" role="list">
+        <li>
+          <button class="bsh__opt" type="button" data-action="copy">
+            <span class="bsh__opt-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h6v6H6zM4 10H2.5A.5.5 0 0 1 2 9.5v-7A.5.5 0 0 1 2.5 2h7a.5.5 0 0 1 .5.5V4"/></svg>
+            </span>
+            <span class="bsh__opt-text">Copia link</span>
+          </button>
+        </li>
+        <li>
+          <button class="bsh__opt" type="button" data-action="email">
+            <span class="bsh__opt-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="m2.5 4.5 5.5 4 5.5-4"/></svg>
+            </span>
+            <span class="bsh__opt-text">Invia per email</span>
+          </button>
+        </li>
+        <li>
+          <button class="bsh__opt" type="button" data-action="more">
+            <span class="bsh__opt-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="8" r="1"/></svg>
+            </span>
+            <span class="bsh__opt-text">Altre opzioni…</span>
+          </button>
+        </li>
+      </ul>
+      <p class="bsh__live sr-only" aria-live="polite"></p>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .bsh {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+  }
+
+  .bsh__trigger {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .bsh__trigger:hover { transform: translateY(-1px); }
+  .bsh__trigger:focus-visible { outline: none; box-shadow: var(--halo-focus), var(--shadow-xs); }
+  .bsh__trigger svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  .bsh__hint {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ─── Dialog · default (>= 640px = centrato) ─── */
+  .bsh__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(26rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .bsh__dialog:not([open]) { display: none; }
+  .bsh__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.35);
+    backdrop-filter: blur(2px);
+  }
+
+  @keyframes bsh-in   { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes bsh-out  { from { opacity: 1; transform: scale(1);  } to { opacity: 0; transform: scale(0.98); } }
+  @keyframes bsh-up   { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes bsh-down { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(100%); } }
+
+  .bsh__dialog[open] .bsh__panel { animation: bsh-in 220ms var(--ease-out-soft); }
+  .bsh__dialog[data-closing='true'] .bsh__panel { animation: bsh-out 160ms var(--ease-out-soft) forwards; }
+
+  .bsh__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    padding-block-start: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .bsh__handle {
+    align-self: center;
+    inline-size: 2.5rem;
+    block-size: 4px;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    border: 0;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .bsh__handle:hover { background-color: var(--ink-muted); }
+  .bsh__handle:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .bsh__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .bsh__opts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .bsh__opt {
+    inline-size: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 0.7rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    text-align: start;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .bsh__opt:hover { background-color: var(--surface-raised); border-color: var(--border-strong); }
+  .bsh__opt:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .bsh__opt-icon {
+    display: grid;
+    place-items: center;
+    color: var(--ink-muted);
+  }
+  .bsh__opt-icon svg { inline-size: 1rem; block-size: 1rem; }
+
+  /* ─── Mobile: < 640px → sheet dal basso ─── */
+  @media (max-width: 640px) {
+    .bsh__dialog {
+      margin: 0;
+      max-inline-size: 100%;
+      inline-size: 100%;
+      inset: auto 0 0 0;
+      block-size: auto;
+    }
+    .bsh__panel {
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
+    }
+    .bsh__dialog[open] .bsh__panel { animation: bsh-up 320ms var(--ease-out-soft); }
+    .bsh__dialog[data-closing='true'] .bsh__panel { animation: bsh-down 200ms var(--ease-in) forwards; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bsh__dialog[open] .bsh__panel,
+    .bsh__dialog[data-closing='true'] .bsh__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.bsh').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const dialog = el.querySelector<HTMLDialogElement>('.bsh__dialog')!;
+      const trigger = el.querySelector<HTMLButtonElement>('[data-action="open"]')!;
+      const handle = el.querySelector<HTMLButtonElement>('[data-action="close"]')!;
+      const live = el.querySelector<HTMLElement>('.bsh__live')!;
+      const panel = el.querySelector<HTMLElement>('.bsh__panel')!;
+
+      const close = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+          panel.style.transform = '';
+        };
+        dialog.addEventListener('animationend', onEnd);
+        setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 240);
+      };
+
+      trigger.addEventListener('click', () => dialog.showModal());
+      handle.addEventListener('click', close);
+
+      // Esc handling — usa il nostro fade
+      dialog.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        close();
+      });
+
+      // Backdrop dismiss (lo stato non è critico)
+      dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) close();
+      });
+
+      // Opzioni
+      el.querySelectorAll<HTMLButtonElement>('.bsh__opt').forEach((opt) => {
+        opt.addEventListener('click', () => {
+          const action = opt.dataset.action;
+          const map: Record<string, string> = {
+            copy: 'Link copiato',
+            email: 'Apertura email',
+            more: 'Altre opzioni',
+          };
+          live.textContent = map[action ?? ''] ?? '';
+          setTimeout(close, 220);
+        });
+      });
+
+      // Swipe-down sull'handle (solo mobile, ma il listener funziona ovunque)
+      let startY: number | null = null;
+      handle.addEventListener('pointerdown', (e) => {
+        startY = e.clientY;
+        handle.setPointerCapture(e.pointerId);
+      });
+      handle.addEventListener('pointermove', (e) => {
+        if (startY == null) return;
+        const dy = e.clientY - startY;
+        if (dy > 0) {
+          panel.style.transform = `translateY(${dy}px)`;
+          panel.style.transition = 'none';
+        }
+      });
+      handle.addEventListener('pointerup', (e) => {
+        if (startY == null) return;
+        const dy = e.clientY - startY;
+        panel.style.transition = '';
+        startY = null;
+        if (dy > 60) {
+          close();
+        } else {
+          panel.style.transform = '';
+        }
+        handle.releasePointerCapture(e.pointerId);
+      });
+      handle.addEventListener('pointercancel', () => {
+        startY = null;
+        panel.style.transform = '';
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

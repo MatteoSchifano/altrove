@@ -1,0 +1,321 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PermissionAsk — il pre-prompt pattern.
+
+   I prompt di sistema (posizione, notifiche, microfono) sono
+   dialog brutali: due bottoni, niente contesto. Il pattern
+   "pre-prompt" mette PRIMA un proprio dialog che motiva — e
+   solo se l'utente accetta, triggera il vero permesso di
+   sistema. In questa demo simuliamo l'intero flusso senza
+   chiamare l'API reale, per avere un caso deterministico e
+   reversibile.
+
+   Stati: idle → asking (skeleton mappa 1200ms) → denied |
+   granted | error. Ogni stato ha una sua voce, mai accusatoria.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="perm" data-state="idle" aria-busy="false">
+  <header class="perm__head">
+    <span class="perm__icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 14s5-4.5 5-8a5 5 0 1 0-10 0c0 3.5 5 8 5 8z" />
+        <circle cx="8" cy="6" r="1.6" />
+      </svg>
+    </span>
+    <h4 class="perm__title">Negozi vicini</h4>
+  </header>
+
+  {/* Stato idle — pre-prompt */}
+  <section class="perm__pre" aria-labelledby="perm-pre-title">
+    <p id="perm-pre-title" class="perm__pre-title">Vediamo dove siete tu e i negozi.</p>
+    <p class="perm__pre-body">
+      Per mostrarti le botteghe entro <strong>2&nbsp;km</strong>, ci serve la tua posizione approssimativa. Niente tracking, niente storia: la usiamo una volta sola.
+    </p>
+    <div class="perm__actions">
+      <button class="perm__cta perm__cta--primary" type="button" data-action="ask">Va bene, mostra</button>
+      <button class="perm__cta perm__cta--secondary" type="button" data-action="decline">Non ora</button>
+    </div>
+  </section>
+
+  {/* Stato asking — skeleton mappa */}
+  <section class="perm__asking" aria-hidden="true">
+    <div class="perm__map-skeleton">
+      <div class="perm__shimmer"></div>
+      <span class="perm__pin">
+        <span class="perm__pin-pulse" aria-hidden="true"></span>
+      </span>
+    </div>
+    <p class="perm__caption tabular">Cerco i negozi vicini…</p>
+  </section>
+
+  {/* Stato granted */}
+  <section class="perm__granted" role="status">
+    <div class="perm__map">
+      <span class="perm__pin perm__pin--here">
+        <span class="perm__pin-dot" aria-hidden="true"></span>
+      </span>
+      <span class="perm__pin perm__pin--shop" style="--x: 30%; --y: 40%;"><span aria-hidden="true">·</span></span>
+      <span class="perm__pin perm__pin--shop" style="--x: 70%; --y: 30%;"><span aria-hidden="true">·</span></span>
+      <span class="perm__pin perm__pin--shop" style="--x: 55%; --y: 70%;"><span aria-hidden="true">·</span></span>
+    </div>
+    <p class="perm__caption">Trovati <strong>3</strong> negozi entro 2&nbsp;km.</p>
+    <button class="perm__reset" type="button" data-action="reset">Ricominciamo</button>
+  </section>
+
+  {/* Stato denied */}
+  <section class="perm__denied" role="status">
+    <p class="perm__denied-title">D'accordo, niente posizione.</p>
+    <p class="perm__denied-body">Puoi sempre cercare per <strong>città</strong> o tornare quando vuoi. Niente offeso, promesso.</p>
+    <button class="perm__reset" type="button" data-action="reset">Ricominciamo</button>
+  </section>
+</div>
+
+<style>
+  .perm {
+    inline-size: min(28rem, 100%);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .perm__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-sm);
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--border);
+  }
+  .perm__icon {
+    display: grid;
+    place-items: center;
+    inline-size: 1.85rem;
+    block-size: 1.85rem;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .perm__icon svg { inline-size: 0.95rem; block-size: 0.95rem; }
+  .perm__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  /* Sections — uno alla volta */
+  .perm__pre,
+  .perm__asking,
+  .perm__granted,
+  .perm__denied { display: none; }
+  .perm[data-state='idle']    .perm__pre     { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .perm[data-state='asking']  .perm__asking  { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .perm[data-state='granted'] .perm__granted { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .perm[data-state='denied']  .perm__denied  { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+  /* Pre-prompt */
+  .perm__pre-title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .perm__pre-body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .perm__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+
+  .perm__cta {
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink);
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .perm__cta:hover { background-color: var(--surface-raised); border-color: var(--border-strong); }
+  .perm__cta:active { transform: scale(0.97); }
+  .perm__cta:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .perm__cta--primary {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border-color: var(--ink-strong);
+  }
+  .perm__cta--primary:hover { background-color: var(--ink-strong); opacity: 0.92; }
+
+  /* Skeleton mappa */
+  .perm__map-skeleton {
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 5 / 3;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    overflow: hidden;
+  }
+
+  .perm__shimmer {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        90deg,
+        var(--surface-sunken) 0%,
+        color-mix(in oklab, var(--surface-sunken) 65%, var(--ink-subtle)) 50%,
+        var(--surface-sunken) 100%
+      );
+    background-size: 200% 100%;
+    animation: perm-shimmer 1.6s linear infinite;
+  }
+  @keyframes perm-shimmer {
+    from { background-position: 100% 0; }
+    to   { background-position: -100% 0; }
+  }
+
+  .perm__pin {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin-block-start: -0.5rem;
+    margin-inline-start: -0.5rem;
+    border-radius: 50%;
+    background-color: var(--accent);
+  }
+  .perm__pin-pulse {
+    position: absolute;
+    inset: -0.4rem;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: perm-pulse 1.4s var(--ease-out-soft) infinite;
+  }
+  @keyframes perm-pulse {
+    from { transform: scale(0.6); opacity: 0.8; }
+    to   { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* Mappa "granted" — finta */
+  .perm__map {
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 5 / 3;
+    border-radius: var(--radius-md);
+    background:
+      radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--accent) 6%, transparent), transparent 60%),
+      var(--surface-sunken);
+    overflow: hidden;
+  }
+
+  .perm__pin--here {
+    background-color: var(--accent);
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .perm__pin-dot {
+    position: absolute;
+    inset: 0.2rem;
+    border-radius: 50%;
+    background-color: var(--bg);
+  }
+  .perm__pin--shop {
+    inline-size: 0.55rem;
+    block-size: 0.55rem;
+    background-color: var(--ink-strong);
+    inset-block-start: var(--y, 50%);
+    inset-inline-start: var(--x, 50%);
+    margin-block-start: -0.275rem;
+    margin-inline-start: -0.275rem;
+  }
+  .perm__pin--shop > span { display: none; }
+
+  .perm__caption {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+  }
+
+  .perm__reset {
+    align-self: flex-start;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .perm__reset:hover { color: var(--ink); border-color: var(--border-strong); }
+  .perm__reset:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Denied */
+  .perm__denied-title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .perm__denied-body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .perm__shimmer { animation: none; background: var(--surface-sunken); }
+    .perm__pin-pulse { animation: none; opacity: 0; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.perm').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      el.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement;
+        const action = target.closest<HTMLButtonElement>('[data-action]')?.dataset.action;
+        if (!action) return;
+
+        if (action === 'ask') {
+          el.dataset.state = 'asking';
+          el.setAttribute('aria-busy', 'true');
+          await new Promise((r) => setTimeout(r, 1200));
+          el.dataset.state = 'granted';
+          el.setAttribute('aria-busy', 'false');
+        } else if (action === 'decline') {
+          el.dataset.state = 'denied';
+        } else if (action === 'reset') {
+          el.dataset.state = 'idle';
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

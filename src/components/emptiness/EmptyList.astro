@@ -1,0 +1,292 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   EmptyList — la lista che non ha ancora visto niente.
+
+   Pattern: lo stato vuoto di prima volta non è un guasto, è un
+   invito. Spiega cosa metterai qui, perché serve, e dove
+   cliccare per cominciare. L'illustrazione SVG si disegna solo
+   la prima volta che entra in viewport, poi non rifà più la
+   scena — re-animare il già-visto sarebbe nervosismo.
+
+   Click su "Aggiungi il primo" inserisce un item con stagger
+   leggero. I successivi inserimenti seguono lo stesso pattern
+   di StaggerList del Cap. 02 — gli esistenti non si re-animano.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="elst" data-state="empty">
+  <header class="elst__head">
+    <h4 class="elst__heading">I miei segnalibri</h4>
+    <span class="elst__count tabular" aria-hidden="true">0</span>
+  </header>
+
+  {/* Stato vuoto */}
+  <div class="elst__empty">
+    <svg class="elst__illu" viewBox="0 0 80 64" aria-hidden="true">
+      <path
+        class="elst__path"
+        d="M20 8 L20 56 L40 44 L60 56 L60 8 Z"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+    <p class="elst__title">Nessun segnalibro, per ora</p>
+    <p class="elst__sub">Qui appariranno i capitoli che tieni a portata di mano. Comincia salvandone uno.</p>
+    <button class="elst__cta" type="button">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 3v10M3 8h10" />
+      </svg>
+      <span>Aggiungi il primo</span>
+    </button>
+  </div>
+
+  {/* Lista popolata */}
+  <ol class="elst__list" role="list"></ol>
+</div>
+
+<style>
+  .elst {
+    inline-size: min(28rem, 100%);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .elst__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .elst__heading {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .elst__count {
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider);
+  }
+
+  /* ─── Stato vuoto ─── */
+  .elst__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding-block: var(--space-md);
+    text-align: center;
+  }
+
+  .elst[data-state='filled'] .elst__empty { display: none; }
+
+  .elst__illu {
+    inline-size: 3.5rem;
+    block-size: 3rem;
+    color: var(--ink-subtle);
+    margin-block-end: var(--space-2xs);
+  }
+
+  .elst__path {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+  }
+
+  .elst__illu[data-drawn='true'] .elst__path {
+    animation: elst-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  }
+
+  @keyframes elst-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .elst__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .elst__sub {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 20rem;
+  }
+
+  .elst__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-2xs);
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition:
+      transform var(--dur-fast) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .elst__cta:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+  .elst__cta:active { transform: translateY(0); }
+  .elst__cta:focus-visible { outline: none; box-shadow: var(--halo-focus), var(--shadow-xs); }
+  .elst__cta svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  /* ─── Lista popolata ─── */
+  .elst__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .elst[data-state='empty'] .elst__list { display: none; }
+
+  .elst__item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0.55rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .elst__item[data-enter='true'] {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: elst-in var(--dur-slow) var(--ease-out-snug) forwards;
+    animation-delay: calc(var(--stagger-i, 0) * 80ms);
+  }
+
+  @keyframes elst-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .elst__item-title {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+
+  .elst__item-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .elst__more {
+    align-self: flex-start;
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft);
+  }
+  .elst__more:hover { border-color: var(--border-strong); color: var(--ink); }
+  .elst__more:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .elst__path { animation: none; stroke-dashoffset: 0; }
+    .elst__item[data-enter='true'] { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+
+<script>
+  const SAMPLES = [
+    { title: 'Anatomia di un bottone',  meta: 'cap. 01' },
+    { title: 'L’arte dell’attesa',  meta: 'cap. 02' },
+    { title: 'La voce del vuoto',       meta: 'cap. 03' },
+  ];
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.elst').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const illu = el.querySelector<SVGElement>('.elst__illu')!;
+      const cta = el.querySelector<HTMLButtonElement>('.elst__cta')!;
+      const list = el.querySelector<HTMLElement>('.elst__list')!;
+      const count = el.querySelector<HTMLElement>('.elst__count')!;
+
+      // Disegna l'illustrazione UNA volta sola, al primo viewport-enter
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            illu.setAttribute('data-drawn', 'true');
+            io.disconnect();
+          }
+        });
+      }, { threshold: 0.4 });
+      io.observe(el);
+
+      let added = 0;
+      const renderMoreButton = () => {
+        if (el.querySelector('.elst__more')) return;
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'elst__more';
+        more.textContent = 'Aggiungi un altro';
+        more.addEventListener('click', () => addItem());
+        list.after(more);
+      };
+
+      const addItem = () => {
+        const sample = SAMPLES[added % SAMPLES.length]!;
+        const li = document.createElement('li');
+        li.className = 'elst__item';
+        li.setAttribute('data-enter', 'true');
+        li.style.setProperty('--stagger-i', '0');
+        li.innerHTML = `
+          <h5 class="elst__item-title">${sample.title}</h5>
+          <p class="elst__item-meta tabular">${sample.meta}</p>
+        `;
+        let settled = false;
+        const settle = () => {
+          if (settled) return;
+          settled = true;
+          li.removeAttribute('data-enter');
+          li.style.removeProperty('--stagger-i');
+        };
+        li.addEventListener('animationend', settle, { once: true });
+        setTimeout(settle, 800);
+        list.appendChild(li);
+        added++;
+        count.textContent = String(added);
+        el.dataset.state = 'filled';
+        renderMoreButton();
+      };
+
+      cta.addEventListener('click', () => addItem());
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

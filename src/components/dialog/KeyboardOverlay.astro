@@ -1,0 +1,275 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   KeyboardOverlay — l'overlay che spiega il proprio linguaggio.
+
+   Pattern: `<dialog>.showModal()` HTML nativo. Ottieni in regalo:
+   focus trap, Escape close, top-layer rendering, ::backdrop,
+   focus restoration. Niente librerie, niente focus-trap manuale.
+
+   Trigger globale su `?` — solo se il focus NON è in un input,
+   perché chi sta scrivendo "perché" non vuole vedere le
+   scorciatoie.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="kbo">
+  <div class="kbo__hint">
+    <p>
+      Premi <kbd class="kbo__kbd">?</kbd> ovunque (fuori dai campi di testo) per aprire la legenda delle scorciatoie.
+    </p>
+    <button class="kbo__cta" type="button" data-action="open">Apri la legenda</button>
+    <input class="kbo__try" type="text" placeholder="Prova a digitare qui (in questo campo `?` digita ?, non apre)" aria-label="Campo di prova" />
+  </div>
+
+  <dialog class="kbo__dialog" aria-labelledby="kbo-title">
+    <div class="kbo__panel">
+      <header class="kbo__head">
+        <h2 id="kbo-title" class="kbo__title">Scorciatoie</h2>
+        <button class="kbo__close" type="button" aria-label="Chiudi" data-action="close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8"/>
+          </svg>
+        </button>
+      </header>
+      <dl class="kbo__list">
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>g</kbd><kbd>h</kbd></dt><dd>Vai alla home</dd></div>
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>g</kbd><kbd>i</kbd></dt><dd>Vai all'indice dei capitoli</dd></div>
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>t</kbd></dt><dd>Cambia tema chiaro/scuro</dd></div>
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>l</kbd></dt><dd>Cambia lingua IT / EN</dd></div>
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>?</kbd></dt><dd>Apri / chiudi questa legenda</dd></div>
+        <div class="kbo__row"><dt class="kbo__chord"><kbd>Esc</kbd></dt><dd>Chiudi qualsiasi dialog aperto</dd></div>
+      </dl>
+      <p class="kbo__footer tabular">Le scorciatoie sono dimostrative — non sono cablate al sito.</p>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .kbo {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  .kbo__hint {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .kbo__hint p { margin: 0; }
+
+  .kbo__cta {
+    align-self: flex-start;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .kbo__cta:hover { transform: translateY(-1px); }
+  .kbo__cta:active { transform: translateY(0); }
+  .kbo__cta:focus-visible { outline: none; box-shadow: var(--halo-focus), var(--shadow-xs); }
+
+  .kbo__try {
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+  }
+  .kbo__try:focus { outline: none; border-color: var(--border-strong); box-shadow: var(--halo-focus); }
+
+  .kbo__kbd, .kbo__list kbd {
+    display: inline-grid;
+    place-items: center;
+    min-inline-size: 1.4rem;
+    block-size: 1.4rem;
+    padding: 0 0.35rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 1px 0 var(--border-strong), inset 0 -1px 0 var(--border);
+    color: var(--ink-strong);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: 1;
+  }
+
+  /* ─── Dialog ─── */
+  .kbo__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(28rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .kbo__dialog:not([open]) { display: none; }
+
+  /* Animazione di apertura — entra 220ms, esce 160ms */
+  @keyframes kbo-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes kbo-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+
+  .kbo__dialog[open] .kbo__panel { animation: kbo-in 220ms var(--ease-out-soft); }
+  .kbo__dialog[data-closing='true'] .kbo__panel { animation: kbo-out 160ms var(--ease-out-soft) forwards; }
+
+  .kbo__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.35);
+    backdrop-filter: blur(2px);
+  }
+
+  .kbo__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .kbo__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .kbo__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .kbo__close {
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .kbo__close:hover { background-color: var(--surface-sunken); color: var(--ink); }
+  .kbo__close:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .kbo__close svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  .kbo__list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem var(--space-md);
+    margin: 0;
+  }
+  @media (max-width: 26rem) { .kbo__list { grid-template-columns: 1fr; } }
+
+  .kbo__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding-block: 0.25rem;
+  }
+  .kbo__row dt {
+    margin: 0;
+    display: inline-flex;
+    gap: 0.15rem;
+    flex: 0 0 auto;
+  }
+  .kbo__row dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+  }
+
+  .kbo__footer {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    padding-block-start: var(--space-2xs);
+    border-block-start: 1px solid var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kbo__dialog[open] .kbo__panel,
+    .kbo__dialog[data-closing='true'] .kbo__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  const isEditable = (el: EventTarget | null): boolean => {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.isContentEditable) return true;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  };
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.kbo').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const dialog = el.querySelector<HTMLDialogElement>('.kbo__dialog')!;
+      const openBtn = el.querySelector<HTMLButtonElement>('[data-action="open"]')!;
+      const closeBtn = el.querySelector<HTMLButtonElement>('[data-action="close"]')!;
+
+      const open = () => {
+        if (dialog.open) return;
+        dialog.showModal();
+      };
+
+      const close = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+        };
+        dialog.addEventListener('animationend', onEnd);
+        // safety
+        setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 240);
+      };
+
+      openBtn.addEventListener('click', open);
+      closeBtn.addEventListener('click', close);
+
+      // Light dismiss su click backdrop
+      dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) close();
+      });
+
+      // `?` globale (solo se non sto scrivendo)
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key !== '?') return;
+        if (isEditable(e.target)) return;
+        // Solo se questo specifico componente è in viewport (per evitare doppia apertura
+        // se in futuro ci fossero più overlay nella stessa pagina — qui ne abbiamo uno solo).
+        e.preventDefault();
+        if (dialog.open) close(); else open();
+      };
+
+      document.addEventListener('keydown', onKey);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

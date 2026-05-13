@@ -1,0 +1,387 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   NoResults — la ricerca senza risultati che propone.
+
+   Pattern: zero match non è un fallimento dell'utente, è un
+   fallimento dell'interfaccia. Un vuoto onesto offre:
+   1. il "forse intendevi" (typo-tolerance via Levenshtein
+      semplificato su un mini-dizionario)
+   2. una proposta forte ma non urlata
+   3. tre vie laterali (senza accenti, sfoglia tag, indice)
+
+   Premendo il chip "forse intendevi", l'input si riscrive e
+   compaiono tre risultati finti per chiudere il loop.
+   ───────────────────────────────────────────────────────────── */
+
+const dictionary = [
+  'tipografia',
+  'bottone',
+  'attesa',
+  'vuoto',
+  'dialogo',
+  'scroll',
+  'input',
+  'micro-tipografia',
+];
+---
+
+<div class="nores">
+  <form class="nores__form" autocomplete="off" onsubmit="return false;">
+    <label class="nores__label" for="nores-q">Cerca nei capitoli</label>
+    <div class="nores__field">
+      <svg class="nores__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.5" />
+        <path d="M10.5 10.5 14 14" />
+      </svg>
+      <input
+        class="nores__input"
+        id="nores-q"
+        type="search"
+        value="tipogrfia"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <button class="nores__clear" type="button" aria-label="Pulisci">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 4l8 8M12 4l-8 8" />
+        </svg>
+      </button>
+    </div>
+    <p class="nores__dict tabular" aria-hidden="true">
+      Dizionario: {dictionary.slice(0, 5).join(' · ')} …
+    </p>
+  </form>
+
+  <div class="nores__panel" role="status" aria-live="polite" data-state="zero">
+    {/* Zero risultati */}
+    <div class="nores__zero">
+      <p class="nores__zero-title">Nessun risultato per <em class="nores__q">tipogrfia</em></p>
+      <p class="nores__suggest-row" data-suggest-row hidden>
+        <span class="nores__suggest-label">Forse intendevi:</span>
+        <button class="nores__chip" type="button" data-suggestion>
+          tipografia
+        </button>
+      </p>
+      <ul class="nores__lateral" role="list">
+        <li><button type="button" class="nores__lat-btn" data-action="accents">Prova senza accenti</button></li>
+        <li><button type="button" class="nores__lat-btn" data-action="tags">Sfoglia i tag</button></li>
+        <li><button type="button" class="nores__lat-btn" data-action="index">Apri l'indice</button></li>
+      </ul>
+    </div>
+
+    {/* Risultati (dopo aver accettato il suggerimento) */}
+    <ul class="nores__results" role="list">
+      <li class="nores__result">
+        <h5 class="nores__r-title">La micro-tipografia</h5>
+        <p class="nores__r-meta tabular">cap. 08 · in roadmap</p>
+      </li>
+      <li class="nores__result">
+        <h5 class="nores__r-title">Anatomia di un bottone</h5>
+        <p class="nores__r-meta tabular">cap. 01 · tipografia inclusa</p>
+      </li>
+      <li class="nores__result">
+        <h5 class="nores__r-title">Le pause del lede</h5>
+        <p class="nores__r-meta tabular">appunto · tipografia editoriale</p>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<style>
+  .nores {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  /* ─── Form ─── */
+  .nores__form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .nores__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .nores__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-sm);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  /* Focus discreto — solo border, niente alone arancione esteso.
+     L'input è sempre raggiungibile a colpo d'occhio; il rumore
+     visivo è inutile. */
+  .nores__field:focus-within {
+    border-color: var(--ink-muted);
+  }
+
+  .nores__icon {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    color: var(--ink-subtle);
+    flex: 0 0 auto;
+  }
+
+  .nores__input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    padding: 0.65rem var(--space-2xs);
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    /* Il focus ring del browser è sul container .nores__field
+       (via border-color); l'input al suo interno non deve avere
+       outline propria, altrimenti si vede un rettangolo dentro il pill. */
+    outline: 0;
+  }
+  .nores__input:focus,
+  .nores__input:focus-visible { outline: 0; box-shadow: none; }
+  .nores__input::-webkit-search-decoration,
+  .nores__input::-webkit-search-cancel-button,
+  .nores__input::-webkit-search-results-button,
+  .nores__input::-webkit-search-results-decoration { display: none; appearance: none; }
+
+  .nores__clear {
+    flex: 0 0 auto;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: transparent;
+    border: 0;
+    color: var(--ink-subtle);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .nores__clear:hover { background-color: var(--surface-sunken); color: var(--ink); }
+  .nores__clear:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .nores__clear svg { inline-size: 0.75rem; block-size: 0.75rem; }
+
+  .nores__dict {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    margin: 0;
+  }
+
+  /* ─── Panel ─── */
+  .nores__panel {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    min-block-size: 8rem;
+  }
+
+  .nores__zero,
+  .nores__results {
+    display: none;
+  }
+  .nores[data-state='zero'] .nores__zero,
+  .nores__panel[data-state='zero'] .nores__zero { display: flex; }
+  .nores__panel[data-state='zero'] .nores__zero {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .nores__panel[data-state='hits'] .nores__results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .nores__zero-title {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+  .nores__q { color: var(--ink-strong); font-style: normal; font-weight: var(--weight-medium); }
+
+  .nores__suggest-row {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+  .nores__suggest-row[hidden] { display: none; }
+  .nores__suggest-label {
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+  }
+
+  .nores__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .nores__chip:hover { background-color: color-mix(in oklab, var(--accent) 18%, var(--surface)); }
+  .nores__chip:active { transform: scale(0.96); }
+  .nores__chip:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .nores__lateral {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .nores__lat-btn {
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .nores__lat-btn:hover { color: var(--ink-strong); background-color: var(--surface-raised); }
+  .nores__lat-btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .nores__result {
+    padding: 0.55rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+  .nores__r-title {
+    margin: 0 0 0.1rem;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .nores__r-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nores__chip,
+    .nores__lat-btn,
+    .nores__field { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  /* Distanza di Levenshtein (semplice, su stringhe corte). */
+  function levenshtein(a: string, b: string): number {
+    if (a === b) return 0;
+    const al = a.length, bl = b.length;
+    if (!al) return bl;
+    if (!bl) return al;
+    const prev: number[] = new Array(bl + 1);
+    for (let j = 0; j <= bl; j++) prev[j] = j;
+    for (let i = 1; i <= al; i++) {
+      let pdiag = prev[0]!;
+      prev[0] = i;
+      for (let j = 1; j <= bl; j++) {
+        const tmp = prev[j]!;
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        prev[j] = Math.min(
+          prev[j]! + 1,        // del
+          prev[j - 1]! + 1,    // ins
+          pdiag + cost,        // sub
+        );
+        pdiag = tmp;
+      }
+    }
+    return prev[bl]!;
+  }
+
+  const DICT = ['tipografia', 'bottone', 'attesa', 'vuoto', 'dialogo', 'scroll', 'input', 'micro-tipografia'];
+
+  function bestMatch(q: string): string | null {
+    const norm = q.toLowerCase().trim();
+    if (!norm) return null;
+    let best: { word: string; d: number } | null = null;
+    for (const word of DICT) {
+      const d = levenshtein(norm, word);
+      if (d === 0) return null;             // c'è match esatto
+      if (d > Math.max(2, Math.floor(word.length / 3))) continue;
+      if (!best || d < best.d) best = { word, d };
+    }
+    return best?.word ?? null;
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.nores').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const input = el.querySelector<HTMLInputElement>('.nores__input')!;
+      const clear = el.querySelector<HTMLButtonElement>('.nores__clear')!;
+      const panel = el.querySelector<HTMLElement>('.nores__panel')!;
+      const qOut = el.querySelector<HTMLElement>('.nores__q')!;
+      const suggestRow = el.querySelector<HTMLElement>('[data-suggest-row]')!;
+      const chip = el.querySelector<HTMLButtonElement>('[data-suggestion]')!;
+
+      const recompute = () => {
+        const q = input.value.trim();
+        qOut.textContent = q || '(vuoto)';
+        const match = bestMatch(q);
+        if (match) {
+          suggestRow.removeAttribute('hidden');
+          chip.textContent = match;
+          panel.setAttribute('data-state', 'zero');
+        } else if (q && DICT.includes(q.toLowerCase())) {
+          // c'è match esatto → mostra risultati finti
+          panel.setAttribute('data-state', 'hits');
+        } else {
+          suggestRow.setAttribute('hidden', '');
+          panel.setAttribute('data-state', 'zero');
+        }
+      };
+
+      input.addEventListener('input', recompute);
+
+      chip.addEventListener('click', () => {
+        input.value = chip.textContent ?? '';
+        recompute();
+        input.focus();
+      });
+
+      clear.addEventListener('click', () => {
+        input.value = '';
+        recompute();
+        input.focus();
+      });
+
+      // bootstrap
+      recompute();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
