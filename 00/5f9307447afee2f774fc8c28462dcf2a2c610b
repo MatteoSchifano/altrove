@@ -1,0 +1,23 @@
+CAPITOLI.md
+  s_dabebd3f41d15d::t_e0807e7104fcc3 20-21
+src/content/chapters/en/07-the-anatomy-of-an-input.mdx
+  s_dabebd3f41d15d::t_7078fb2b9e1b43 19-108
+src/content/chapters/it/07-anatomia-di-un-input.mdx
+  s_dabebd3f41d15d::t_589423d592bb30 19-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "005f9307447afee2f774fc8c28462dcf2a2c610b",
+  "prompts": {},
+  "sessions": {
+    "s_dabebd3f41d15d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "768a895f-52bc-4954-b62a-e3d3a3c2ec4f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "ReddoakMatteoSchifano <matteo.schifano@reddoak.com>"
+    }
+  }
+}
