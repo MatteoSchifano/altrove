@@ -1,0 +1,30 @@
+src/lib/i18n.ts
+  s_dabebd3f41d15d::t_ea47ba21c1add3 43-51
+  s_dabebd3f41d15d::t_6b2e901388f220 82-90
+src/lib/roadmap.ts
+  s_dabebd3f41d15d::t_43f3d6e1d18555 402-405
+  s_dabebd3f41d15d::t_2cdfa21f4e3155 1-24,26-401,406,410-411,413-417
+  s_dabebd3f41d15d::t_119653724ae110 25
+  s_dabebd3f41d15d::t_166508c6ea8315 407-409,412
+src/components/RoadmapSection.astro
+  s_dabebd3f41d15d::t_5c11cd9a9830be 1-545
+src/layouts/HomePage.astro
+  s_dabebd3f41d15d::t_1f5a6263fdfd6b 14
+  s_dabebd3f41d15d::t_9f8b912d8fa99b 101-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "8a1544ae1217fdfa4aeb1faf552c1c126db28334",
+  "prompts": {},
+  "sessions": {
+    "s_dabebd3f41d15d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "768a895f-52bc-4954-b62a-e3d3a3c2ec4f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
