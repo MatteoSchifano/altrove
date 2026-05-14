@@ -1,0 +1,100 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FloatingLabel — la label che fluttua quando il campo è vivo.
+
+   Pattern: la label è dentro il campo quando vuoto e non in focus,
+   sale e rimpicciolisce quando l'utente comincia a digitare o
+   semplicemente posa il cursore. Niente JS: lo trigger è il
+   pseudo-classe `:placeholder-shown`, che ribalta in modo
+   perfettamente sincrono lo stato del campo. Il placeholder vero
+   è uno spazio singolo " " — un trucco per usare
+   `:placeholder-shown` come proxy di "campo vuoto".
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="fla" autocomplete="off" onsubmit="return false;">
+  <div class="fla__field">
+    <input class="fla__input" id="fla-email" type="email" placeholder=" " required />
+    <label class="fla__label" for="fla-email">Email</label>
+  </div>
+  <div class="fla__field">
+    <input class="fla__input" id="fla-name" type="text" placeholder=" " value="Anna" />
+    <label class="fla__label" for="fla-name">Nome</label>
+  </div>
+  <div class="fla__field">
+    <input class="fla__input" id="fla-org" type="text" placeholder=" " />
+    <label class="fla__label" for="fla-org">Organizzazione <span class="fla__opt">(facoltativa)</span></label>
+  </div>
+</form>
+
+<style>
+  .fla {
+    inline-size: min(24rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .fla__field {
+    position: relative;
+  }
+
+  .fla__input {
+    inline-size: 100%;
+    padding: 1.25rem var(--space-md) 0.5rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    /* L'outline del browser sarebbe ridondante: il focus si vede
+       sul border-color del campo. Niente doppio anello, niente
+       rettangolo dentro il rettangolo. */
+    outline: 0;
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fla__input:focus,
+  .fla__input:focus-visible {
+    outline: 0;
+    box-shadow: none;
+    border-color: var(--ink-muted);
+  }
+
+  .fla__label {
+    position: absolute;
+    inset-block-start: 1rem;
+    inset-inline-start: var(--space-md);
+    color: var(--ink-subtle);
+    font-size: var(--text-sm);
+    pointer-events: none;
+    transform-origin: left top;
+    transition:
+      transform var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  /* La label sale quando il campo ha valore (placeholder " " non
+     mostrato) o quando è in focus. Due selettori, una sola regola. */
+  .fla__input:not(:placeholder-shown) ~ .fla__label,
+  .fla__input:focus ~ .fla__label {
+    transform: translateY(-0.75rem) scale(0.78);
+    color: var(--ink-muted);
+  }
+  .fla__input:focus ~ .fla__label {
+    color: var(--ink);
+  }
+
+  .fla__opt {
+    color: var(--ink-subtle);
+    font-style: italic;
+    margin-inline-start: var(--space-3xs);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fla__label,
+    .fla__input {
+      transition-duration: 1ms;
+    }
+  }
+</style>

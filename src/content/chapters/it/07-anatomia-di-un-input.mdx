@@ -1,0 +1,108 @@
+---
+lang: "it"
+translationKey: "chapter-07"
+number: "07"
+title: "Anatomia di un input"
+excerpt: "L'input è il momento in cui l'utente smette di leggere e comincia a scrivere. È il luogo più delicato dell'interfaccia: dove l'errore brucia, il suggerimento consola, e il cursore che lampeggia dice 'sono qui, ti sto ascoltando'."
+date: "maggio 2026"
+tags: ["input", "form", "feedback"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import FloatingLabel from '../../../components/inputs/FloatingLabel.astro';
+import ValidatedField from '../../../components/inputs/ValidatedField.astro';
+import PasswordField from '../../../components/inputs/PasswordField.astro';
+import CharacterCounter from '../../../components/inputs/CharacterCounter.astro';
+import InputGroup from '../../../components/inputs/InputGroup.astro';
+import ComboSearch from '../../../components/inputs/ComboSearch.astro';
+
+C'è un punto, in ogni interfaccia, in cui il dialogo cambia direzione. Fino a un secondo prima è l'app a parlare — testi, bottoni, immagini, scelte già pronte. Poi appare un campo, il cursore lampeggia, e all'improvviso la parola è dell'utente. Ogni input è una domanda; la differenza fra un'interfaccia che ascolta e una che interroga sta in come quella domanda viene posta, attesa, e accolta.
+
+L'input ha sei responsabilità che si attivano in momenti diversi: dire *cosa* chiede (la label), mostrare *che stato* si trova (vuoto, in scrittura, valido, sbagliato), validare con tatto, contenere senza opprimere, contestualizzare il valore (un'unità, un prefisso, un suffisso), e — quando le opzioni sono tante — assistere chi cerca. Sei responsabilità, sei componenti minimi, sei pattern in cui il dettaglio decide se l'utente arriverà in fondo al modulo o lo abbandonerà a metà.
+
+Apriamo sei campi diversi, ognuno con la sua piccola disciplina: una label che fluttua, una validazione che aspetta a parlare, una password che si lascia guardare, un counter che avverte senza sgridare, un addon che dà contesto, e una ricerca che ascolta stato per stato.
+
+## La label mobile · su quando parli, giù quando taci
+
+La label dovrebbe esserci sempre — è la prima informazione che orienta il lettore — ma quando il campo è vuoto un *placeholder a tutta forza* la duplica e ruba spazio. La soluzione storica era scegliere: o label sopra, o placeholder dentro. La label *fluttuante* fa entrambe le cose senza compromessi: vive dentro il campo quando è vuoto, sale e rimpicciolisce quando l'utente comincia a scrivere — restando sempre visibile, mai *quasi*-visibile.
+
+<Demo title="Label che fluttua · da placeholder a etichetta" tag="07.a">
+  <FloatingLabel />
+  <div slot="note">
+    <p>Zero JavaScript. Il trigger è la pseudo-classe CSS <code>:placeholder-shown</code>, abbinata al trucco di mettere uno *spazio singolo* come <code>placeholder=" "</code>: così "placeholder mostrato" diventa sinonimo di "campo vuoto", e il selettore <code>.input:not(:placeholder-shown) ~ .label</code> attiva lo stato "label sollevata" in modo perfettamente sincrono. Niente listener, niente race condition fra <code>input</code> e <code>change</code>: la geometria del campo è gestita dal CSS.</p>
+    <p>L'elemento è una <em>vera</em> <code>&lt;label for="…"&gt;</code> — non un <code>&lt;span&gt;</code> decorativo che imita il fluttuare. Screen reader e voce vocale leggono il campo correttamente, e cliccare sull'etichetta porta il focus dove deve. L'outline del browser è disattivato perché il focus si vede sul border-color del campo: niente doppio anello, niente rettangolo dentro il rettangolo. Reduced-motion riduce la transizione a 1 ms: la label appare già in posizione, l'informazione resta.</p>
+  </div>
+</Demo>
+
+## Il feedback live · l'errore che non urla
+
+La validazione di un campo email ha due cattivi estremi: parlare *troppo presto* (l'utente non ha ancora finito di scrivere `anna@` e già lo sgridi: "non è una mail valida") o *troppo tardi* (digita tutto, preme invio, scopre che manca un punto). Il compromesso onesto è una pausa: 400 ms di silenzio dopo l'ultima battuta, poi un piccolo spinner di 500 ms — la macchina che "sta verificando" — e infine la risposta. Non è solo timing: è una piccola coreografia che dice *"ti sto ascoltando, e ti rispondo quando hai finito di parlare"*.
+
+<Demo title="Validazione con debounce · 400 ms di silenzio prima di parlare" tag="07.b">
+  <ValidatedField />
+  <div slot="note">
+    <p>Cinque stati discreti: <code>idle</code> (vuoto), <code>typing</code> (sta scrivendo, nessun feedback), <code>loading</code> (spinner, dopo 400 ms di pausa), <code>valid</code> (segno di spunta verde desaturato + bordo), <code>invalid</code> (segno di croce rosso desaturato + bordo). Il messaggio sotto è in <code>role="status"</code> + <code>aria-live="polite"</code>: lo screen reader sente l'esito a tempo, non a ogni tasto. <code>aria-invalid</code> sull'input cambia in sincrono — i moduli che validano senza aggiornarlo sono validi solo per l'occhio.</p>
+    <p>I colori sono OKLCH desaturati (verde 0.55/0.16/145, rosso 0.55/0.18/22). Niente verde-fluo, niente rosso-arrabbiato: la validazione è un'informazione, non una sentenza. Il loading spinner gira a 1000 ms/giro — più lento dei classici 600 ms, perché *non* è un caricamento vero (è la finzione "sto controllando"); un giro più lento si percepisce come pensiero, un giro più veloce sembrerebbe ansia. Reduced-motion spegne la rotazione e abbatte tutte le transizioni a 1 ms: lo stato resta esatto, solo senza tragitto.</p>
+  </div>
+</Demo>
+
+## La password · visibile su richiesta, forte su misura
+
+Il campo password ha due piccole tensioni storiche, e una buona implementazione le risolve insieme. La prima è la cecità: non vedi mai cosa scrivi, e quando sbagli è un dramma (riscrivere dall'inizio, magari due volte). La seconda è la forza: il sistema *sa* quanto è robusta la password che stai scegliendo, ma di solito non lo dice — o lo dice male, con una scala "Debole/Media/Forte" che non aiuta a capire *perché*. Risposta: un toggle "occhio" per togliere la cecità su richiesta, e quattro barrette che mostrano in silenzio i quattro indizi della robustezza.
+
+<Demo title="Password · toggle visibilità e strength meter a quattro barre" tag="07.c">
+  <PasswordField />
+  <div slot="note">
+    <p>Il toggle è un <code>&lt;button type="button"&gt;</code> con <code>aria-pressed</code> sincronizzato: descrive lo stato del bottone, non del campo. Quando l'utente preme, l'<code>input</code> passa da <code>type="password"</code> a <code>type="text"</code> e l'icona scambia (occhio aperto / occhio sbarrato). L'<code>aria-label</code> aggiorna in coppia ("Mostra password" / "Nascondi password"), così chi usa lo screen reader sa cosa sta accadendo invece di sentire un click vuoto.</p>
+    <p>Le quattro barrette sono quattro indizi: lunghezza ≥ 8, presenza di maiuscole, presenza di numeri, presenza di simboli. Non è la verità scientifica — non si misura l'entropia reale, non si confronta con dizionari di password compromesse — è una *metafora onesta*. La regola del playground: anche un dispositivo dimostrativo dice la verità sul proprio dominio. Quattro barrette accese significano "rispetti le quattro abitudini base", non "sei al sicuro". Il colore non è un voto: è una scala di pienezza, neutra, perché la pressione celebrativa-o-punitiva (verde brillante / rosso allarme) educa peggio della descrizione.</p>
+  </div>
+</Demo>
+
+## Il limite · contare senza angosciare
+
+Un campo con `maxlength` blocca l'input alla quota — è una difesa lato client onesta. Ma se il blocco arriva *muto*, l'utente pensa di aver rotto la tastiera. Un counter visibile cambia il senso: non è un limite arbitrario imposto dalla macchina, è una *scelta editoriale* — "in 160 caratteri si dice meglio". Il counter passa per tre soglie: ok (silenzioso), warn a 80% (il giallo che avvisa che la fine si avvicina), max al 100% (il rosso che rende visibile il tetto). Tre stati, una sola voce: "ti accompagno, non ti sorveglio".
+
+<Demo title="Counter di caratteri · ok, warn, max" tag="07.d">
+  <CharacterCounter />
+  <div slot="note">
+    <p>Il counter è in <code>font-variant-numeric: tabular-nums</code>: cifre a larghezza fissa, così quando il valore passa da "39/160" a "40/160" la colonna a destra non sussulta. È un dettaglio invisibile finché non manca — e quando manca, il numero "vivo" diventa fastidio invece che informazione. Il blocco a quota lo fa l'<code>maxlength</code> nativo dell'<code>&lt;textarea&gt;</code>: non c'è JS che intercetta i tasti, niente race condition, niente IME (input method editor) rotto in lingue asiatiche.</p>
+    <p>Il messaggio del counter ha <code>aria-live="polite"</code>: chi usa uno screen reader sente "39 di 160", "40 di 160", senza interrompere ciò che sta scrivendo. Le soglie di colore — ok / warn / max — sono comunicate anche al di là del colore: il bordo del campo cambia tono, e a 100% un sottile shake (1 px, 2 pulsazioni, 120 ms) segnala il blocco al battitore distratto. Reduced-motion azzera lo shake: il blocco resta percepibile dal bordo, non dal movimento.</p>
+  </div>
+</Demo>
+
+## Il contesto · prefix, suffix, unità
+
+Certi campi vivono dentro un contesto fisso che *non* fa parte del valore: il simbolo della valuta accanto a un prezzo, l'unità di misura dopo un numero, il protocollo prima di un URL, il prefisso telefonico prima di un numero. Metterli *dentro* l'input come placeholder è ambiguo (sembra parte del valore che si scriverà); rimuoverli del tutto costringe l'utente a indovinare in che formato scrivere. La pillola con prefix/suffix risolve l'ambiguità senza spezzare l'unità visiva: una sola "scatola", focusabile come una, ma con il pezzo editabile chiaramente separato dal contesto.
+
+<Demo title="Input group · valuta, protocollo, prefisso" tag="07.e">
+  <InputGroup />
+  <div slot="note">
+    <p>Strutturalmente è una <code>&lt;label&gt;</code> che racchiude tutto: la stringa visibile in alto, e un <code>&lt;span&gt;</code> wrapper che contiene prefisso, <code>&lt;input&gt;</code>, suffisso. L'<code>&lt;input&gt;</code> ha sempre <code>border: 0</code> — la cornice visibile è del wrapper, non sua — e usa <code>:focus-within</code> sul genitore per accendere il bordo. Risultato: l'utente percepisce una pillola unica, lo screen reader trova un input puro associato alla sua label, e gli addon non finiscono mai nel valore.</p>
+    <p>Gli addon sono <code>aria-hidden</code> solo quando ridondanti con l'<code>inputmode</code> o la label (es. "Prezzo" + "€" — il simbolo non porta informazione che la label non abbia già). In altri casi — protocollo HTTPS, prefisso telefonico — l'addon è significativo e va esposto in pulito al lettore vocale. La <code>tabular-nums</code> sul valore monetario garantisce che gli zeri decimali ("49,00") restino allineati con altri prezzi nella stessa pagina — la stessa lezione del capitolo precedente: dove il numero è "vivo", la tipografia è informazione.</p>
+  </div>
+</Demo>
+
+## La ricerca che ascolta · stato per stato
+
+Il search-as-you-type è uno dei pattern più ricchi dell'interfaccia perché è una piccola macchina a stati visibile: vuoto, in scrittura, in caricamento, con risultati, senza risultati. Ognuno di questi stati merita una forma propria — non un "tutto risultati" che mostra una lista vuota, non un loading eterno che nasconde l'esito. Il pattern accessibile di riferimento è il *Combobox With List Autocomplete* del WAI-ARIA Authoring Practices: input con `role="combobox"`, listbox sotto, focus che *resta sempre sull'input*, frecce che muovono solo l'attivazione virtuale (`aria-activedescendant`). Niente magia, niente menu costretti dentro popover: una lista, navigabile da tastiera, annunciabile da screen reader.
+
+<Demo title="Combobox WAI-ARIA · idle, typing, loading, results, empty" tag="07.f">
+  <ComboSearch />
+  <div slot="note">
+    <p>Cinque stati. <strong>Idle</strong>: input vuoto, listbox chiusa, <code>aria-expanded="false"</code>. <strong>Typing</strong>: l'utente digita, debounce di 300 ms prima di filtrare — abbastanza breve da sembrare reattivo, abbastanza lungo da non scattare a ogni tasto. <strong>Loading</strong>: stato breve fra il debounce e il render dei risultati; serve perché senza questo flash l'utente non capisce se la macchina ha sentito. <strong>Results</strong>: listbox aperta, opzioni con <code>role="option"</code> e id univoco; la prima è "pre-evidenziata" via <code>aria-activedescendant</code>, ma il focus DOM resta sull'input. <strong>Empty</strong>: nessun match, messaggio onesto ("Niente che corrisponda a *…*") più due alternative ("Sfoglia tutti", "Cancella ricerca").</p>
+    <p>La regola d'oro della combobox accessibile: il focus DOM non si sposta mai durante la navigazione coi tasti. Freccia giù / Freccia su muovono <em>solo</em> <code>aria-activedescendant</code>, e l'opzione "virtualmente selezionata" è marcata visivamente con un highlight. Enter sceglie e chiude, Esc chiude senza scegliere (e svuota la selezione virtuale, non l'input). Tab esce dal combobox e va al successivo focusable della pagina, come da specifica WAI-ARIA — non intrappola. Il "non spostare il focus" è il punto su cui i pattern fai-da-te falliscono più spesso: chi usa uno screen reader sente la propria posizione "saltare" e perde il filo della query che sta digitando.</p>
+  </div>
+</Demo>
+
+## Cosa portiamo via
+
+Un input non è un rettangolo che raccoglie testo: è un dialogo. Le sei dimostrazioni qui sopra mostrano sei modi diversi di tenere quel dialogo aperto senza interromperlo:
+
+1. **La label mobile** — sempre presente, mai duplicata; CSS puro, niente JavaScript che imita il movimento.
+2. **Il feedback live** — debounced, polite, mai prima che l'utente abbia finito di parlare.
+3. **La password** — visibile su richiesta con `aria-pressed` sincronizzato, robustezza descritta in quattro indizi onesti.
+4. **Il limite** — counter tabulare e tre soglie che avvisano senza sgridare; il blocco lo fa `maxlength`, non il JavaScript.
+5. **Il contesto** — prefix e suffix come addon visivi che non finiscono mai nel valore; pillola unica, input puro.
+6. **La ricerca** — combobox WAI-ARIA con cinque stati discreti e una sola regola d'oro: il focus DOM non si sposta mai.
+
+Sei input, una stessa filosofia: ogni campo è un piccolo atto di ascolto, e l'interfaccia che lo rispetta è quella che parla al momento giusto, alla scala giusta, e mai più del necessario. Il prossimo capitolo cambia ancora scala — *la micro-tipografia* — perché dopo aver imparato a far parlare gli input, è tempo di guardare *la forma delle lettere* che riempiono quei campi: kerning, leading, OpenType features. Il dettaglio dentro il dettaglio.

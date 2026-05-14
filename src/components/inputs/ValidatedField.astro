@@ -1,0 +1,214 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ValidatedField — il feedback live che non urla.
+
+   Pattern: una mail è valida o no. Mostrarlo subito, a ogni
+   battuta, è invasivo (l'utente non ha ancora finito di scrivere
+   "anna@" e già lo sgridi). Aspettare il submit è troppo tardi
+   (digiti tutto, premi invio, scopri che ti manca il punto).
+   Il compromesso onesto: debounce. Aspetti 400 ms dopo l'ultima
+   battuta, mostri uno spinner per 500 ms (simulando una verifica),
+   poi rispondi. È il pattern di "qualcuno sta ascoltando".
+
+   Stati: idle | typing | loading | valid | invalid
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="vfd" autocomplete="off" onsubmit="return false;">
+  <label class="vfd__label" for="vfd-email">Email di lavoro</label>
+  <div class="vfd__field" data-state="idle">
+    <input
+      class="vfd__input"
+      id="vfd-email"
+      type="email"
+      placeholder="nome@azienda.it"
+      aria-invalid="false"
+      aria-describedby="vfd-msg"
+    />
+    <span class="vfd__icon vfd__icon--valid" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7" /></svg>
+    </span>
+    <span class="vfd__icon vfd__icon--invalid" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+    </span>
+    <span class="vfd__icon vfd__icon--loading" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="5.5" /></svg>
+    </span>
+  </div>
+  <p class="vfd__msg" id="vfd-msg" role="status" aria-live="polite"></p>
+</form>
+
+<style>
+  .vfd {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .vfd__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .vfd__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vfd__field:focus-within {
+    border-color: var(--ink-muted);
+  }
+  .vfd__field[data-state='valid'] {
+    border-color: oklch(0.55 0.16 145);
+  }
+  .vfd__field[data-state='invalid'] {
+    border-color: oklch(0.55 0.18 22);
+  }
+
+  .vfd__input {
+    flex: 1;
+    padding: 0.7rem 0;
+    padding-inline-end: 1.6rem; /* spazio per l'icona */
+    background: transparent;
+    border: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    outline: 0;
+  }
+  .vfd__input:focus,
+  .vfd__input:focus-visible {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .vfd__icon {
+    inline-size: 1rem;
+    block-size: 1rem;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+    position: absolute;
+    inset-inline-end: var(--space-md);
+    inset-block: 0;
+    margin: auto;
+    pointer-events: none;
+  }
+  .vfd__icon svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .vfd__field[data-state='valid'] .vfd__icon--valid {
+    opacity: 1;
+    color: oklch(0.55 0.16 145);
+  }
+  .vfd__field[data-state='invalid'] .vfd__icon--invalid {
+    opacity: 1;
+    color: oklch(0.55 0.18 22);
+  }
+  .vfd__field[data-state='loading'] .vfd__icon--loading {
+    opacity: 1;
+    color: var(--ink-subtle);
+    animation: vfd-spin 1000ms linear infinite;
+  }
+
+  @keyframes vfd-spin {
+    from { transform: rotate(0); }
+    to { transform: rotate(360deg); }
+  }
+
+  .vfd__msg {
+    min-block-size: 1.25rem;
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vfd__field[data-state='invalid'] ~ .vfd__msg {
+    color: oklch(0.55 0.18 22);
+  }
+  .vfd__field[data-state='valid'] ~ .vfd__msg {
+    color: oklch(0.55 0.16 145);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vfd__icon,
+    .vfd__field,
+    .vfd__msg { transition-duration: 1ms; }
+    .vfd__icon--loading svg { animation: none; }
+  }
+</style>
+
+<script>
+  type State = 'idle' | 'typing' | 'loading' | 'valid' | 'invalid';
+  const RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.vfd').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const input = el.querySelector<HTMLInputElement>('.vfd__input')!;
+      const field = el.querySelector<HTMLElement>('.vfd__field')!;
+      const msg = el.querySelector<HTMLElement>('.vfd__msg')!;
+
+      let typingTimer: number | undefined;
+      let loadingTimer: number | undefined;
+
+      const setState = (s: State) => {
+        field.setAttribute('data-state', s);
+      };
+
+      const setMsg = (text: string) => {
+        msg.textContent = text;
+      };
+
+      const clearTimers = () => {
+        if (typingTimer) window.clearTimeout(typingTimer);
+        if (loadingTimer) window.clearTimeout(loadingTimer);
+      };
+
+      input.addEventListener('input', () => {
+        clearTimers();
+        const v = input.value.trim();
+
+        if (!v) {
+          setState('idle');
+          setMsg('');
+          input.setAttribute('aria-invalid', 'false');
+          return;
+        }
+
+        setState('typing');
+        setMsg('');
+        input.setAttribute('aria-invalid', 'false');
+
+        typingTimer = window.setTimeout(() => {
+          setState('loading');
+          loadingTimer = window.setTimeout(() => {
+            const ok = RE.test(input.value.trim());
+            if (ok) {
+              setState('valid');
+              setMsg('Email valida.');
+              input.setAttribute('aria-invalid', 'false');
+            } else {
+              setState('invalid');
+              setMsg('Indirizzo non valido.');
+              input.setAttribute('aria-invalid', 'true');
+            }
+          }, 500);
+        }, 400);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

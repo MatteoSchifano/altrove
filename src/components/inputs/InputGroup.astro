@@ -1,0 +1,169 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   InputGroup — prefix, suffix, contesto.
+
+   Pattern: certi campi vivono dentro un contesto fisso — la
+   valuta, il protocollo, il prefisso telefonico. Metterli dentro
+   l'input come placeholder è ambiguo (sembra parte del valore
+   che si scriverà); metterli accanto, come addon, li separa
+   visivamente dal contenuto editabile. La pillola unica focusabile
+   tiene tutto insieme: l'utente vede il "campo" come un'unità,
+   ma capisce a colpo d'occhio cosa scrive e cosa è già scritto.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="igr" autocomplete="off" onsubmit="return false;">
+  <label class="igr__field">
+    <span class="igr__label">Prezzo</span>
+    <span class="igr__wrap">
+      <span class="igr__prefix">&euro;</span>
+      <input class="igr__input tabular" type="text" inputmode="decimal" value="49,00" />
+      <span class="igr__suffix">/mese</span>
+    </span>
+  </label>
+
+  <label class="igr__field">
+    <span class="igr__label">Sito web</span>
+    <span class="igr__wrap">
+      <span class="igr__prefix">https://</span>
+      <input class="igr__input" type="text" value="altrove.it" />
+      <button class="igr__suffix-btn" type="button" aria-label="Copia URL" data-copy="https://altrove.it">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="5" y="5" width="8" height="8" rx="1.5" />
+          <path d="M3 11V4a1 1 0 0 1 1-1h7" />
+        </svg>
+      </button>
+    </span>
+  </label>
+
+  <label class="igr__field">
+    <span class="igr__label">Telefono</span>
+    <span class="igr__wrap">
+      <span class="igr__prefix">+39</span>
+      <input class="igr__input tabular" type="tel" inputmode="numeric" value="333 12 34 567" />
+    </span>
+  </label>
+
+  <p class="igr__live sr-only" aria-live="polite"></p>
+</form>
+
+<style>
+  .igr {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .igr__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+  }
+
+  .igr__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .igr__wrap {
+    display: flex;
+    align-items: stretch;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0;
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+    overflow: hidden;
+  }
+  .igr__wrap:focus-within { border-color: var(--ink-muted); }
+
+  .igr__prefix,
+  .igr__suffix {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-sm);
+    color: var(--ink-subtle);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+  .igr__prefix { border-inline-end: 1px solid var(--border); }
+  .igr__suffix { border-inline-start: 1px solid var(--border); }
+
+  .igr__input {
+    flex: 1;
+    min-inline-size: 0;
+    padding: 0.7rem var(--space-sm);
+    background: transparent;
+    border: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    outline: 0;
+  }
+  .igr__input:focus,
+  .igr__input:focus-visible {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .igr__suffix-btn {
+    padding: 0 var(--space-sm);
+    background: transparent;
+    border: 0;
+    border-inline-start: 1px solid var(--border);
+    color: var(--ink-subtle);
+    cursor: pointer;
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .igr__suffix-btn:hover { color: var(--ink); }
+  .igr__suffix-btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .igr__suffix-btn svg { inline-size: 0.9rem; block-size: 0.9rem; }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .igr__wrap,
+    .igr__suffix-btn { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.igr').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const live = el.querySelector<HTMLElement>('.igr__live');
+      const buttons = el.querySelectorAll<HTMLButtonElement>('[data-copy]');
+
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const text = btn.dataset.copy ?? '';
+          try {
+            await navigator.clipboard.writeText(text);
+            if (live) live.textContent = 'URL copiato.';
+          } catch {
+            if (live) live.textContent = 'Copia non riuscita.';
+          }
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

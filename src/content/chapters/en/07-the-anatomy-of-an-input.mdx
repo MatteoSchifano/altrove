@@ -1,0 +1,108 @@
+---
+lang: "en"
+translationKey: "chapter-07"
+number: "07"
+title: "The anatomy of an input"
+excerpt: "The input is the moment when the user stops reading and starts writing. It's the most delicate place in the interface: where an error stings, a hint soothes, and the blinking cursor says 'I'm here, I'm listening'."
+date: "May 2026"
+tags: ["input", "form", "feedback"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import FloatingLabel from '../../../components/inputs/FloatingLabel.astro';
+import ValidatedField from '../../../components/inputs/ValidatedField.astro';
+import PasswordField from '../../../components/inputs/PasswordField.astro';
+import CharacterCounter from '../../../components/inputs/CharacterCounter.astro';
+import InputGroup from '../../../components/inputs/InputGroup.astro';
+import ComboSearch from '../../../components/inputs/ComboSearch.astro';
+
+There's a point, in every interface, where the dialogue switches direction. A second before, the app is doing the talking — copy, buttons, images, ready-made choices. Then a field appears, the cursor blinks, and suddenly the word belongs to the user. Every input is a question; the difference between an interface that listens and one that interrogates lies in how that question is asked, awaited, and received.
+
+The input has six responsibilities that activate at different moments: saying *what* it asks (the label), showing *what state* it's in (empty, being written, valid, wrong), validating with tact, containing without smothering, contextualising the value (a unit, a prefix, a suffix), and — when the options are many — assisting the search. Six responsibilities, six minimal components, six patterns in which the detail decides whether the user will reach the end of the form or abandon it halfway.
+
+We open six different fields, each with its own small discipline: a label that floats, a validation that waits before speaking, a password that lets itself be seen, a counter that warns without scolding, an addon that gives context, and a search that listens state by state.
+
+## The floating label · up when you speak, down when you're silent
+
+The label should always be there — it's the first piece of information that orients the reader — but when the field is empty, a *full-strength placeholder* duplicates it and steals space. The historical solution was to choose: label above, or placeholder inside. The *floating* label does both without compromise: it lives inside the field when empty, rises and shrinks when the user starts to write — staying always visible, never *almost*-visible.
+
+<Demo title="Floating label · from placeholder to caption" tag="07.a">
+  <FloatingLabel />
+  <div slot="note">
+    <p>Zero JavaScript. The trigger is the CSS pseudo-class <code>:placeholder-shown</code>, paired with the trick of putting a *single space* as <code>placeholder=" "</code>: this way "placeholder shown" becomes synonymous with "empty field", and the selector <code>.input:not(:placeholder-shown) ~ .label</code> activates the "lifted label" state in perfect sync. No listeners, no race condition between <code>input</code> and <code>change</code>: the field's geometry is handled by CSS.</p>
+    <p>The element is a <em>real</em> <code>&lt;label for="…"&gt;</code> — not a decorative <code>&lt;span&gt;</code> mimicking the float. Screen readers and voice control read the field correctly, and clicking the label moves focus where it belongs. The browser outline is disabled because focus is shown on the field's border-color: no double ring, no rectangle inside a rectangle. Reduced motion drops the transition to 1 ms: the label appears already in position, the information remains.</p>
+  </div>
+</Demo>
+
+## Live feedback · the error that doesn't shout
+
+The validation of an email field has two bad extremes: speaking *too early* (the user hasn't finished writing `anna@` and you already scold them: "not a valid email") or *too late* (they type everything, hit enter, discover a missing dot). The honest compromise is a pause: 400 ms of silence after the last keystroke, then a small 500 ms spinner — the machine "checking" — and only then the answer. It isn't just timing: it's a small choreography that says *"I'm listening, and I'll answer when you've finished speaking"*.
+
+<Demo title="Debounced validation · 400 ms of silence before speaking" tag="07.b">
+  <ValidatedField />
+  <div slot="note">
+    <p>Five discrete states: <code>idle</code> (empty), <code>typing</code> (writing, no feedback), <code>loading</code> (spinner, after 400 ms of pause), <code>valid</code> (desaturated green check + border), <code>invalid</code> (desaturated red cross + border). The message below uses <code>role="status"</code> + <code>aria-live="polite"</code>: the screen reader hears the outcome at the right time, not on every keystroke. <code>aria-invalid</code> on the input changes in sync — forms that validate without updating it are valid only to the eye.</p>
+    <p>The colors are desaturated OKLCH (green 0.55/0.16/145, red 0.55/0.18/22). No neon green, no angry red: validation is information, not a verdict. The loading spinner turns at 1000 ms/cycle — slower than the classic 600 ms, because it *isn't* a real load (it's the fiction "I'm checking"); a slower turn reads as thought, a faster one would feel like anxiety. Reduced motion stops the rotation and collapses every transition to 1 ms: the state stays exact, just without the journey.</p>
+  </div>
+</Demo>
+
+## The password · visible on request, strong by measure
+
+The password field has two small historical tensions, and a good implementation resolves them together. The first is blindness: you never see what you write, and when you mistype it's a drama (rewriting from scratch, sometimes twice). The second is strength: the system *knows* how robust the password you're choosing is, but it usually doesn't say — or says it badly, with a "Weak/Medium/Strong" scale that doesn't help you understand *why*. Answer: an "eye" toggle that removes the blindness on request, and four little bars that silently surface the four clues of robustness.
+
+<Demo title="Password · visibility toggle and four-bar strength meter" tag="07.c">
+  <PasswordField />
+  <div slot="note">
+    <p>The toggle is a <code>&lt;button type="button"&gt;</code> with <code>aria-pressed</code> synchronised: it describes the button's state, not the field's. When the user presses, the <code>input</code> switches from <code>type="password"</code> to <code>type="text"</code> and the icon swaps (open eye / crossed eye). The <code>aria-label</code> updates in pair ("Show password" / "Hide password"), so screen reader users know what's happening instead of hearing an empty click.</p>
+    <p>The four bars are four clues: length ≥ 8, presence of uppercase, presence of numbers, presence of symbols. It's not scientific truth — real entropy isn't measured, compromised-password dictionaries aren't checked — it's an *honest metaphor*. The playground's rule: even a demonstrative device tells the truth about its own domain. Four lit bars means "you respect the four basic habits", not "you're safe". The colour isn't a grade: it's a neutral scale of fullness, because the celebratory-or-punitive pressure (bright green / alarm red) educates worse than description.</p>
+  </div>
+</Demo>
+
+## The limit · counting without anxiety
+
+A field with `maxlength` blocks the input at the quota — it's an honest client-side defence. But if the block arrives *silent*, the user thinks they've broken the keyboard. A visible counter changes the meaning: it isn't an arbitrary machine limit, it's an *editorial choice* — "in 160 characters you say it better". The counter walks through three thresholds: ok (silent), warn at 80% (the yellow that warns the end is near), max at 100% (the red that makes the ceiling visible). Three states, one voice: "I'm with you, I'm not policing you".
+
+<Demo title="Character counter · ok, warn, max" tag="07.d">
+  <CharacterCounter />
+  <div slot="note">
+    <p>The counter uses <code>font-variant-numeric: tabular-nums</code>: fixed-width digits, so when the value goes from "39/160" to "40/160" the column on the right doesn't jitter. An invisible detail until it's missing — and when it's missing, the "live" number becomes annoyance instead of information. The quota is enforced by the native <code>maxlength</code> on the <code>&lt;textarea&gt;</code>: no JS intercepting keys, no race condition, no broken IME (input method editor) in Asian languages.</p>
+    <p>The counter message uses <code>aria-live="polite"</code>: screen reader users hear "39 of 160", "40 of 160", without interrupting what they're writing. The colour thresholds — ok / warn / max — are communicated beyond colour too: the field's border shifts tone, and at 100% a subtle shake (1 px, 2 pulses, 120 ms) signals the block to the distracted typist. Reduced motion zeroes out the shake: the block remains perceivable from the border, not from movement.</p>
+  </div>
+</Demo>
+
+## The context · prefix, suffix, unit
+
+Some fields live inside a fixed context that *isn't* part of the value: the currency symbol next to a price, the unit of measure after a number, the protocol before a URL, the country code before a phone number. Putting them *inside* the input as a placeholder is ambiguous (looks like part of what will be typed); removing them entirely forces the user to guess the format. The pill with prefix/suffix solves the ambiguity without breaking visual unity: a single "box", focusable as one, but with the editable piece clearly separated from the context.
+
+<Demo title="Input group · currency, protocol, dial code" tag="07.e">
+  <InputGroup />
+  <div slot="note">
+    <p>Structurally it's a <code>&lt;label&gt;</code> wrapping everything: the visible caption above, and a <code>&lt;span&gt;</code> wrapper holding prefix, <code>&lt;input&gt;</code>, suffix. The <code>&lt;input&gt;</code> always has <code>border: 0</code> — the visible frame belongs to the wrapper, not to the input — and uses <code>:focus-within</code> on the parent to light up the border. Result: the user perceives one pill, the screen reader finds a pure input associated to its label, and the addons never end up in the value.</p>
+    <p>Addons get <code>aria-hidden</code> only when redundant with the <code>inputmode</code> or the label (e.g. "Price" + "€" — the symbol carries no information the label doesn't already give). In other cases — HTTPS protocol, dial code — the addon is meaningful and gets exposed cleanly to the screen reader. <code>tabular-nums</code> on the monetary value guarantees that the decimal zeros ("49,00") stay aligned with other prices on the same page — the same lesson as the previous chapter: where a number is "live", typography is information.</p>
+  </div>
+</Demo>
+
+## The search that listens · state by state
+
+Search-as-you-type is one of the richest patterns in interface design because it's a visible little state machine: empty, typing, loading, with results, with no results. Each of these states deserves its own shape — not a "results-or-bust" that shows an empty list, not an eternal loader that hides the outcome. The accessible reference pattern is the *Combobox With List Autocomplete* from the WAI-ARIA Authoring Practices: input with `role="combobox"`, listbox below, focus that *always stays on the input*, arrows that only move the virtual activation (`aria-activedescendant`). No magic, no menus forced inside popovers: a list, keyboard-navigable, announceable by screen reader.
+
+<Demo title="WAI-ARIA combobox · idle, typing, loading, results, empty" tag="07.f">
+  <ComboSearch />
+  <div slot="note">
+    <p>Five states. <strong>Idle</strong>: empty input, closed listbox, <code>aria-expanded="false"</code>. <strong>Typing</strong>: the user types, 300 ms debounce before filtering — short enough to feel reactive, long enough not to fire on every key. <strong>Loading</strong>: a brief state between the debounce and the rendering of results; needed because without that flash the user can't tell if the machine heard. <strong>Results</strong>: open listbox, options with <code>role="option"</code> and unique id; the first is "pre-highlighted" via <code>aria-activedescendant</code>, but DOM focus stays on the input. <strong>Empty</strong>: no match, honest message ("Nothing matches *…*") plus two alternatives ("Browse all", "Clear search").</p>
+    <p>The golden rule of an accessible combobox: DOM focus never moves during keyboard navigation. ArrowDown / ArrowUp move <em>only</em> <code>aria-activedescendant</code>, and the "virtually selected" option is marked visually with a highlight. Enter selects and closes, Esc closes without selecting (and clears the virtual selection, not the input). Tab leaves the combobox to the next focusable on the page, as per WAI-ARIA spec — it doesn't trap. The "never move focus" rule is where home-made patterns most often fail: screen reader users hear their position "jump" and lose the thread of the query they're typing.</p>
+  </div>
+</Demo>
+
+## What we take away
+
+An input isn't a rectangle that collects text: it's a dialogue. The six demos above show six different ways to keep that dialogue open without interrupting it:
+
+1. **The floating label** — always present, never duplicated; pure CSS, no JavaScript mimicking the motion.
+2. **The live feedback** — debounced, polite, never before the user has finished speaking.
+3. **The password** — visible on request with synchronised `aria-pressed`, robustness described in four honest clues.
+4. **The limit** — tabular counter and three thresholds that warn without scolding; the block is done by `maxlength`, not by JavaScript.
+5. **The context** — prefix and suffix as visual addons that never end up in the value; one pill, pure input.
+6. **The search** — WAI-ARIA combobox with five discrete states and one golden rule: DOM focus never moves.
+
+Six inputs, one philosophy: every field is a small act of listening, and the interface that respects it is the one that speaks at the right moment, at the right scale, and never more than necessary. The next chapter changes scale once more — *micro-typography* — because after teaching inputs to speak, it's time to look at *the shape of the letters* filling those fields: kerning, leading, OpenType features. The detail inside the detail.
