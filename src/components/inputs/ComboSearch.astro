@@ -1,0 +1,405 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ComboSearch — combobox WAI-ARIA 1.2 con list autocomplete.
+
+   Pattern: il search "che ascolta" è una piccola macchina a stati.
+   L'utente digita → aspettiamo (debounce 300 ms) → filtriamo →
+   mostriamo una listbox sotto l'input. Niente menu, niente
+   "popover": una lista, navigabile da tastiera, annunciabile da
+   screen reader. Il pattern di riferimento è "Editable Combobox
+   With List Autocomplete" (WAI-ARIA Authoring Practices 1.2):
+
+   - L'input ha role="combobox", aria-expanded, aria-controls verso
+     la listbox, aria-autocomplete="list", aria-activedescendant
+     verso l'opzione "virtualmente" selezionata.
+   - La listbox è un <ul role="listbox">; le opzioni hanno role="option",
+     id univoco, aria-selected per quella corrente.
+   - Il focus resta SEMPRE sull'input. Le frecce non spostano focus;
+     spostano solo aria-activedescendant. Enter sceglie, Esc chiude.
+
+   Stati: idle | typing | loading | results | empty
+   ───────────────────────────────────────────────────────────── */
+
+const items = [
+  { id: 1, title: 'Anatomia di un bottone', meta: 'cap. 01 · interazione' },
+  { id: 2, title: "L'arte dell'attesa", meta: 'cap. 02 · motion' },
+  { id: 3, title: 'La voce del vuoto', meta: 'cap. 03 · editoriale' },
+  { id: 4, title: 'Il dialogo silenzioso', meta: 'cap. 04 · accessibilità' },
+  { id: 5, title: 'Lo scroll che racconta', meta: 'cap. 05 · scroll' },
+  { id: 6, title: 'Numeri che hanno peso', meta: 'cap. 06 · dati' },
+  { id: 7, title: 'Anatomia di un input', meta: 'cap. 07 · form' },
+];
+---
+
+<div class="csch" data-state="idle" data-items={JSON.stringify(items)}>
+  <label class="csch__label" for="csch-q">Cerca un capitolo</label>
+  <div class="csch__wrap">
+    <svg class="csch__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.5 10.5 14 14" />
+    </svg>
+    <input
+      class="csch__input"
+      id="csch-q"
+      type="text"
+      role="combobox"
+      aria-expanded="false"
+      aria-controls="csch-list"
+      aria-autocomplete="list"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="bottone, attesa, dialogo…"
+    />
+    <span class="csch__state" data-state-icon aria-hidden="true">
+      <svg class="csch__spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="5.5" stroke-dasharray="14 24" />
+      </svg>
+    </span>
+  </div>
+  <ul class="csch__list" id="csch-list" role="listbox" aria-label="Risultati ricerca" hidden></ul>
+  <p class="csch__empty" data-empty hidden>Nessun capitolo trovato. Prova "bottone" o "vuoto".</p>
+  <p class="csch__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .csch {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    position: relative;
+  }
+
+  .csch__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .csch__wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-md);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .csch__wrap:focus-within { border-color: var(--ink-muted); }
+
+  .csch__icon {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    color: var(--ink-subtle);
+    flex: 0 0 auto;
+  }
+
+  .csch__input {
+    flex: 1;
+    padding: 0.7rem var(--space-2xs);
+    background: transparent;
+    border: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    outline: 0;
+  }
+  .csch__input:focus,
+  .csch__input:focus-visible {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .csch__state { display: none; }
+  .csch[data-state='loading'] .csch__state {
+    display: grid;
+    place-items: center;
+    inline-size: 1rem;
+    block-size: 1rem;
+    color: var(--ink-subtle);
+  }
+  .csch__spinner {
+    inline-size: 100%;
+    block-size: 100%;
+    animation: csch-spin 1s linear infinite;
+  }
+  @keyframes csch-spin { to { transform: rotate(360deg); } }
+
+  .csch__list {
+    list-style: none;
+    padding: var(--space-2xs);
+    margin: 0;
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    max-block-size: 14rem;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .csch__list[hidden] { display: none; }
+
+  .csch__opt {
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .csch__opt:hover,
+  .csch__opt[aria-selected='true'] {
+    background: var(--accent-soft);
+  }
+  .csch__opt[aria-selected='true'] .csch__opt-title {
+    color: var(--accent-ink);
+  }
+  .csch__opt-title {
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+  }
+  .csch__opt-meta {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .csch__empty {
+    margin: 0;
+    padding: var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+  }
+  .csch__empty[hidden] { display: none; }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .csch__spinner { animation: none; }
+    .csch__wrap,
+    .csch__opt { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  type Item = { id: number; title: string; meta: string };
+  type State = 'idle' | 'typing' | 'loading' | 'results' | 'empty';
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.csch').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      let items: Item[] = [];
+      try {
+        items = JSON.parse(el.dataset.items ?? '[]');
+      } catch {
+        items = [];
+      }
+
+      const input = el.querySelector<HTMLInputElement>('.csch__input')!;
+      const list = el.querySelector<HTMLUListElement>('.csch__list')!;
+      const empty = el.querySelector<HTMLElement>('[data-empty]')!;
+      const live = el.querySelector<HTMLElement>('.csch__live')!;
+
+      let timer: number | undefined;
+      let activeIndex = -1;
+      let currentResults: Item[] = [];
+
+      const setState = (s: State) => {
+        el.setAttribute('data-state', s);
+      };
+
+      const closeList = () => {
+        list.setAttribute('hidden', '');
+        empty.setAttribute('hidden', '');
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        activeIndex = -1;
+        list.innerHTML = '';
+        currentResults = [];
+      };
+
+      const optId = (i: number) => `csch-opt-${i}`;
+
+      const renderResults = (results: Item[]) => {
+        currentResults = results;
+        list.innerHTML = '';
+        results.forEach((it, i) => {
+          const li = document.createElement('li');
+          li.className = 'csch__opt';
+          li.setAttribute('role', 'option');
+          li.id = optId(i);
+          li.setAttribute('aria-selected', 'false');
+          li.innerHTML = `
+            <span class="csch__opt-title"></span>
+            <span class="csch__opt-meta tabular"></span>
+          `;
+          (li.querySelector('.csch__opt-title') as HTMLElement).textContent = it.title;
+          (li.querySelector('.csch__opt-meta') as HTMLElement).textContent = it.meta;
+          li.addEventListener('mousedown', (ev) => {
+            // mousedown invece di click per anticipare il blur
+            ev.preventDefault();
+            select(i);
+          });
+          list.appendChild(li);
+        });
+        list.removeAttribute('hidden');
+        empty.setAttribute('hidden', '');
+        input.setAttribute('aria-expanded', 'true');
+        activeIndex = -1;
+        input.removeAttribute('aria-activedescendant');
+      };
+
+      const showEmpty = () => {
+        list.innerHTML = '';
+        list.setAttribute('hidden', '');
+        empty.removeAttribute('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        currentResults = [];
+        activeIndex = -1;
+      };
+
+      const setActive = (i: number) => {
+        const opts = list.querySelectorAll<HTMLElement>('.csch__opt');
+        if (!opts.length) return;
+        opts.forEach((o) => o.setAttribute('aria-selected', 'false'));
+        const wrapped = ((i % opts.length) + opts.length) % opts.length;
+        const opt = opts[wrapped]!;
+        opt.setAttribute('aria-selected', 'true');
+        input.setAttribute('aria-activedescendant', opt.id);
+        activeIndex = wrapped;
+        // Scroll into view se serve
+        const optRect = opt.getBoundingClientRect();
+        const listRect = list.getBoundingClientRect();
+        if (optRect.bottom > listRect.bottom) {
+          opt.scrollIntoView({ block: 'end' });
+        } else if (optRect.top < listRect.top) {
+          opt.scrollIntoView({ block: 'start' });
+        }
+      };
+
+      const select = (i: number) => {
+        const it = currentResults[i];
+        if (!it) return;
+        input.value = it.title;
+        live.textContent = `Selezionato: ${it.title}.`;
+        closeList();
+        setState('idle');
+        input.focus();
+      };
+
+      const search = (q: string) => {
+        const norm = q.trim().toLowerCase();
+        if (!norm) {
+          closeList();
+          setState('idle');
+          return;
+        }
+        const results = items.filter((it) => it.title.toLowerCase().includes(norm));
+        if (results.length === 0) {
+          showEmpty();
+          setState('empty');
+          live.textContent = 'Nessun risultato.';
+        } else {
+          renderResults(results);
+          setState('results');
+          live.textContent = `${results.length} risultat${results.length === 1 ? 'o' : 'i'}.`;
+        }
+      };
+
+      input.addEventListener('input', () => {
+        if (timer) window.clearTimeout(timer);
+        const q = input.value;
+        if (!q.trim()) {
+          closeList();
+          setState('idle');
+          return;
+        }
+        setState('typing');
+        // breve "loading" simulato per dare materia allo stato
+        timer = window.setTimeout(() => {
+          setState('loading');
+          window.setTimeout(() => search(q), 250);
+        }, 300);
+      });
+
+      input.addEventListener('keydown', (ev) => {
+        const open = input.getAttribute('aria-expanded') === 'true';
+        switch (ev.key) {
+          case 'ArrowDown':
+            ev.preventDefault();
+            if (!open && currentResults.length === 0 && input.value.trim()) {
+              search(input.value);
+              return;
+            }
+            if (currentResults.length) setActive(activeIndex + 1);
+            break;
+          case 'ArrowUp':
+            ev.preventDefault();
+            if (currentResults.length) setActive(activeIndex - 1);
+            break;
+          case 'Enter':
+            if (open && activeIndex >= 0) {
+              ev.preventDefault();
+              select(activeIndex);
+            }
+            break;
+          case 'Escape':
+            if (open) {
+              ev.preventDefault();
+              closeList();
+              setState('idle');
+            } else if (input.value) {
+              ev.preventDefault();
+              input.value = '';
+              closeList();
+              setState('idle');
+            }
+            break;
+          case 'Home':
+            if (open && currentResults.length) {
+              ev.preventDefault();
+              setActive(0);
+            }
+            break;
+          case 'End':
+            if (open && currentResults.length) {
+              ev.preventDefault();
+              setActive(currentResults.length - 1);
+            }
+            break;
+        }
+      });
+
+      // Chiudi al click fuori
+      document.addEventListener('click', (ev) => {
+        const t = ev.target as Node | null;
+        if (!t) return;
+        if (!el.contains(t)) {
+          closeList();
+          if (el.getAttribute('data-state') !== 'idle') setState('idle');
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

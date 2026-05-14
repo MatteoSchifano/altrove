@@ -1,0 +1,139 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   CharacterCounter — il limite che educa senza punire.
+
+   Pattern: il counter è un dispositivo onesto. Mostra "quanto
+   hai usato / quanto puoi usare", e cambia tono in due soglie:
+   80% (warn) → giallo, non angoscia ma avvisa che la fine si
+   avvicina; 100% (max) → rosso, non sgrida ma rende visibile il
+   tetto. L'`maxlength` nativo blocca l'input alla quota; il
+   feedback visivo serve a far capire che non è un errore di
+   tastiera, è una scelta editoriale.
+
+   Soglie: ok | warn (>= 80%) | max (>= 100%)
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="cct" autocomplete="off" onsubmit="return false;">
+  <label class="cct__label" for="cct-area">Messaggio</label>
+  <div class="cct__field" data-state="ok">
+    <textarea class="cct__area" id="cct-area" rows="3" maxlength="160" placeholder="Scrivi qualcosa, ma non troppo. Hai 160 caratteri.">Quel che si scrive in 160 caratteri pesa.</textarea>
+  </div>
+  <div class="cct__row">
+    <p class="cct__hint">Massimo 160 caratteri. Lo spazio costringe a scegliere le parole.</p>
+    <p class="cct__count tabular" aria-live="polite"><span data-used>40</span><span class="cct__sep">/</span><span data-max>160</span></p>
+  </div>
+</form>
+
+<style>
+  .cct {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .cct__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .cct__field {
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .cct__field:focus-within { border-color: var(--ink-muted); }
+  .cct__field[data-state='warn'] { border-color: oklch(0.75 0.16 80); }
+  .cct__field[data-state='max']  { border-color: oklch(0.55 0.18 22); }
+
+  .cct__area {
+    inline-size: 100%;
+    min-block-size: 4rem;
+    resize: vertical;
+    background: transparent;
+    border: 0;
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    outline: 0;
+    padding: var(--space-2xs) 0;
+  }
+  .cct__area:focus,
+  .cct__area:focus-visible {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .cct__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .cct__hint {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    flex: 1;
+  }
+
+  .cct__count {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+    white-space: nowrap;
+  }
+  .cct__field[data-state='warn'] ~ .cct__row .cct__count {
+    color: oklch(0.65 0.16 80);
+  }
+  .cct__field[data-state='max'] ~ .cct__row .cct__count {
+    color: oklch(0.55 0.18 22);
+    font-weight: var(--weight-medium);
+  }
+
+  .cct__sep {
+    padding-inline: 0.15rem;
+    opacity: 0.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cct__count,
+    .cct__field { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.cct').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const area = el.querySelector<HTMLTextAreaElement>('.cct__area')!;
+      const field = el.querySelector<HTMLElement>('.cct__field')!;
+      const used = el.querySelector<HTMLElement>('[data-used]')!;
+      const maxEl = el.querySelector<HTMLElement>('[data-max]')!;
+      const max = Number(maxEl.textContent) || area.maxLength || 160;
+
+      const update = () => {
+        const n = area.value.length;
+        used.textContent = String(n);
+        const pct = n / max;
+        const state = pct >= 1 ? 'max' : pct >= 0.8 ? 'warn' : 'ok';
+        field.setAttribute('data-state', state);
+      };
+
+      area.addEventListener('input', update);
+      update(); // bootstrap
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
