@@ -1,31 +1,26 @@
 ---
 /* ─────────────────────────────────────────────────────────────
-   RoadmapSection — il cammino del libro, a serpentina.
+   RoadmapSection — il cammino del libro.
 
-   Cosa cambia rispetto a una timeline dritta: il "filo" diventa
-   un percorso SVG che zigzaga fra due colonne. I capitoli si
-   alternano a sinistra e a destra del percorso, come fermate
-   lungo una strada che curva. Le fasi (A · B · C · D) sono
+   Una linea verticale centrale che cresce con lo scroll. I capitoli
+   si alternano a sinistra e a destra della linea, come fermate
+   lungo una strada dritta. I nodi (cerchi piccoli) sono posizionati
+   sulla linea, uno per capitolo. Le fasi (A · B · C · D) sono
    "tappe" del viaggio — header full-width che spezzano il ritmo.
 
-   Tre meccanismi di scroll, tutti dal vocabolario del cap. 05:
-   1. Drawing del percorso (stroke-dashoffset via animation-
-      timeline: view() + fallback JS in passive scroll).
+   Tre meccanismi di scroll:
+   1. Crescita della linea attiva (transform: scaleY via animation-
+      timeline: view() con `entry 50% exit 50%` → sync 1:1 col centro
+      della viewport. Fallback JS in passive scroll calcola lo stesso
+      ratio.).
    2. Reveal a passo singolo di ogni capitolo (IntersectionObserver,
-      unobserve dopo trigger). L'apparizione è sincronizzata col
-      passaggio del filo: il capitolo entra quando il filo "tocca"
-      il suo nodo.
-   3. Nodo che si "accende" quando il filo lo raggiunge (CSS
-      transition triggered dal data-revealed).
+      unobserve dopo trigger).
+   3. Nodo che si "accende" quando entry corrispondente è rivelata
+      (CSS transition triggered dal data-revealed).
 
-   Allineamento HTML/SVG: il container ha grid-template-rows con
-   altezze fisse (entry = 9rem, phase header = 5rem), così le
-   coordinate Y dei nodi SVG corrispondono esattamente alle Y
-   delle entry HTML.
-
-   Su mobile (<= 39rem) il layout collassa a una colonna; il
-   percorso serpentino non avrebbe spazio per respirare, quindi
-   diventa una linea verticale semplice a sinistra.
+   Su mobile (<= 39rem) il layout collassa a una colonna; la linea
+   centrale e i nodi vengono nascosti, le entries diventano lista
+   semplice con un border-left sottile come traccia visiva.
    ───────────────────────────────────────────────────────────── */
 
 import {
@@ -47,26 +42,21 @@ const { locale, publishedChapters } = Astro.props;
 const entries = mergeWithCollection(publishedChapters, locale);
 
 /* ── Geometria ────────────────────────────────────────────── */
-/* Tutte in `rem` × 16 (= px), così combaciano col CSS sotto. */
+/* Tutte in `rem` × 16 (= px), così combaciano col CSS sotto.
+   Linea retta centrale: tutti i nodi stanno a left:50%, l'unica
+   coordinata che varia per nodo è la Y. */
 const REM = 16;
 const ENTRY_H = 9 * REM;   // 144 — block-size di ogni entry
 const PHASE_H = 5 * REM;   // 80  — block-size di ogni phase header
-const W = 400;              // larghezza nominale del viewBox
-const X_LEFT = 64;
-const X_RIGHT = W - X_LEFT;
 
-/* Costruisco i nodi (uno per capitolo) con la loro coordinata Y
-   calcolata sommando phase header e entry precedenti. */
 interface PathNode {
   globalIndex: number;
   entry: MergedRoadmapEntry;
-  side: 'L' | 'R';
-  x: number;
+  side: 'L' | 'R';  // serve solo al layout zigzag delle entries (left/right)
   y: number;
 }
 
 const PHASES: readonly Phase[] = ['A', 'B', 'C', 'D'] as const;
-const phaseStartIndex: Record<Phase, number> = { A: -1, B: -1, C: -1, D: -1 };
 
 let cursorY = 0;
 let currentPhase: Phase | null = null;
@@ -75,38 +65,15 @@ const nodes: PathNode[] = [];
 entries.forEach((e, i) => {
   if (e.phase !== currentPhase) {
     cursorY += PHASE_H;
-    phaseStartIndex[e.phase] = nodes.length;
     currentPhase = e.phase;
   }
   const side: 'L' | 'R' = i % 2 === 0 ? 'L' : 'R';
-  const x = side === 'L' ? X_LEFT : X_RIGHT;
   const y = cursorY + ENTRY_H / 2;
-  nodes.push({ globalIndex: i, entry: e, side, x, y });
+  nodes.push({ globalIndex: i, entry: e, side, y });
   cursorY += ENTRY_H;
 });
 
 const TOTAL_H = cursorY;
-
-/* Path SVG: M sul primo nodo, poi una cubica per ogni segmento.
-   I control point sono sopra/sotto il punto, allineati X, così
-   la curva è una S morbida senza picchi.
-
-   Esempio segmento i-1 → i:
-     prev = (x0, y0), curr = (x1, y1), midY = (y0+y1)/2
-     C x0 midY, x1 midY, x1 y1
-*/
-function buildPath(ns: PathNode[]): string {
-  if (ns.length === 0) return '';
-  let d = `M ${ns[0]!.x} ${ns[0]!.y}`;
-  for (let i = 1; i < ns.length; i++) {
-    const prev = ns[i - 1]!;
-    const curr = ns[i]!;
-    const midY = (prev.y + curr.y) / 2;
-    d += ` C ${prev.x} ${midY}, ${curr.x} ${midY}, ${curr.x} ${curr.y}`;
-  }
-  return d;
-}
-const pathD = buildPath(nodes);
 
 /* Raggruppo le entry per fase, mantenendo l'indice globale. */
 const byPhase = new Map<Phase, PathNode[]>();
@@ -122,43 +89,20 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     </header>
 
     <div class="roadmap__body" data-roadmap style={`--total-h: ${TOTAL_H}px;`}>
-      <!-- Percorso serpentino (decorazione di fondo) -->
-      <svg
-        class="roadmap__svg"
-        viewBox={`0 0 ${W} ${TOTAL_H}`}
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <!-- Linea base (sempre visibile, ink-subtle) -->
-        <path
-          class="roadmap__line roadmap__line--base"
-          d={pathD}
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          vector-effect="non-scaling-stroke"
+      <!-- Linea verticale centrale (decorazione di fondo). Due div sovrapposti:
+           base sempre visibile, attiva che cresce con lo scroll. -->
+      <div class="roadmap__line roadmap__line--base" aria-hidden="true" />
+      <div class="roadmap__line roadmap__line--active" aria-hidden="true" data-line />
+
+      <!-- Nodi (HTML, posizionati assolutamente sulla linea centrale). -->
+      {nodes.map((n) => (
+        <span
+          class={`roadmap__node roadmap__node--${n.entry.status}`}
+          data-node-index={n.globalIndex}
+          aria-hidden="true"
+          style={`top: ${n.y}px;`}
         />
-        <!-- Linea attiva (si disegna con lo scroll) -->
-        <path
-          class="roadmap__line roadmap__line--active"
-          d={pathD}
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          pathLength="1000"
-          vector-effect="non-scaling-stroke"
-          data-line
-        />
-        <!-- Nodi -->
-        {nodes.map((n) => (
-          <g class={`roadmap__node roadmap__node--${n.entry.status}`} data-node-index={n.globalIndex}>
-            <circle class="roadmap__node-outer" cx={n.x} cy={n.y} r="9" vector-effect="non-scaling-stroke" />
-            <circle class="roadmap__node-inner" cx={n.x} cy={n.y} r="4" />
-          </g>
-        ))}
-      </svg>
+      ))}
 
       <!-- Lista capitoli alternati intorno al percorso -->
       <ol class="roadmap__list">
@@ -181,7 +125,7 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
                       class={`entry entry--${n.side.toLowerCase()}`}
                       data-status={e.status}
                       data-index={n.globalIndex}
-                      style={`--i:${localI}`}
+                      style={`--i:${localI}; grid-row: ${localI + 1};`}
                       aria-current={ariaCurrent}
                     >
                       <span class="entry__num tabular" aria-hidden="true">{e.number}</span>
@@ -259,74 +203,101 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     /* L'altezza è imposta dalla geometria HTML; il SVG si adatta. */
   }
 
-  .roadmap__svg {
+  /* ─── Linea centrale ────────────────────────────────────── */
+  /* Una linea verticale al centro: due div sovrapposti, animati via
+     transform: scaleY (più performante di stroke-dashoffset). */
+  .roadmap__line {
     position: absolute;
-    inset: 0;
-    inline-size: 100%;
-    block-size: 100%;
+    inset-block: 0;
+    inset-inline-start: 50%;
+    inline-size: 1.75px;
+    transform: translateX(-50%);
     pointer-events: none;
     z-index: 0;
-    overflow: visible; /* nodi a r=9 possono sporgere dal viewBox */
+    border-radius: 1px;
   }
-
-  /* Linea base — sempre visibile, in ink-subtle */
   .roadmap__line--base {
-    color: var(--border);
+    background-color: color-mix(in oklab, var(--border) 70%, transparent);
   }
-  /* Linea attiva — si disegna con lo scroll, in accent */
   .roadmap__line--active {
-    color: var(--accent);
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
+    background-color: var(--accent);
+    inline-size: 2px;
+    transform: translateX(-50%) scaleY(0);
+    transform-origin: center top;
+    will-change: transform;
   }
 
   @supports (animation-timeline: view()) {
     .roadmap__body { view-timeline-name: --roadmap-progress; }
     .roadmap__line--active {
-      animation: roadmap-draw linear forwards;
+      animation: roadmap-fill linear forwards;
       animation-timeline: --roadmap-progress;
-      animation-range: cover 0% cover 95%;
+      /* `entry 50% exit 0%` = inizia quando il top della sezione tocca
+         il centro della viewport, finisce quando il bottom della sezione
+         tocca il top della viewport. Più tollerante al footer corto:
+         così la linea raggiunge il 100% quando l'utente vede l'ultimo
+         capitolo allineato al top, anche se sotto c'è poco contenuto. */
+      animation-range: entry 50% exit 0%;
     }
-    @keyframes roadmap-draw {
-      to { stroke-dashoffset: 0; }
+    @keyframes roadmap-fill {
+      to { transform: translateX(-50%) scaleY(1); }
     }
   }
 
-  /* ─── Nodi del percorso ────────────────────────────────── */
-  .roadmap__node-outer {
-    fill: var(--bg);
-    stroke: currentColor;
-    stroke-width: 1.5;
+  /* ─── Nodi sulla linea centrale ─────────────────────────── */
+  .roadmap__node {
+    position: absolute;
+    inset-inline-start: 50%; /* sempre sulla linea centrale */
+    inline-size: 18px;
+    block-size: 18px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 1; /* sopra le linee */
+    border: 1.5px solid currentColor;
+    background-color: var(--bg);
     transition:
-      stroke-width var(--dur-normal) var(--ease-out-snug),
-      transform var(--dur-normal) var(--ease-out-snug);
-    transform-origin: center;
-    transform-box: fill-box;
+      transform var(--dur-normal) var(--ease-out-snug),
+      border-width var(--dur-normal) var(--ease-out-snug);
   }
-  .roadmap__node-inner {
-    fill: transparent;
-    transition: fill var(--dur-normal) var(--ease-out-snug),
-                transform var(--dur-normal) var(--ease-out-snug);
-    transform-origin: center;
-    transform-box: fill-box;
+  .roadmap__node::after {
+    /* "Pallino" interno (raggio 4 nel SVG ⇒ 8px). */
+    content: '';
+    position: absolute;
+    inset: 50%;
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    background-color: transparent;
+    transition: background-color var(--dur-normal) var(--ease-out-snug);
   }
 
   .roadmap__node--published { color: var(--accent); }
-  .roadmap__node--published .roadmap__node-inner { fill: var(--accent); }
+  .roadmap__node--published::after { background-color: var(--accent); }
 
-  .roadmap__node--next { color: var(--accent); }
-  .roadmap__node--next .roadmap__node-outer {
-    stroke-width: 2;
-    /* anello pulsante: opacità ciclica per richiamare attenzione */
-    animation: node-pulse 2400ms var(--ease-in-out) infinite;
+  .roadmap__node--next {
+    color: var(--accent);
+    border-width: 2px;
+    /* halo pulsante: percepibile ma silenzioso, niente scale/opacity sul nodo
+       (sostituisce il vecchio scale 1.15 + opacity drop). */
+    animation: node-halo-pulse 2400ms var(--ease-in-out) infinite;
   }
-  @keyframes node-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.55; transform: scale(1.15); }
+  @keyframes node-halo-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 40%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 0%, transparent); }
   }
 
-  .roadmap__node--planned { color: var(--border-strong); }
-  .roadmap__node--planned .roadmap__node-outer { stroke-dasharray: 2 2; }
+  .roadmap__node--planned {
+    color: var(--border-strong);
+    border-style: dashed;
+    opacity: 0.55;
+  }
+
+  /* Hover entry → nodo si ingrandisce sottilmente (relazione visiva). */
+  .roadmap__node[data-hover='true'] {
+    transform: translate(-50%, -50%) scale(1.18);
+  }
 
   /* ─── Lista capitoli ────────────────────────────────────── */
   .roadmap__list {
@@ -356,14 +327,10 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     justify-content: center;
     gap: var(--space-sm);
     color: var(--ink-muted);
-    /* sfondo che "spezza" visivamente il path che vi passa dietro */
-    background:
-      radial-gradient(
-        ellipse at center,
-        var(--bg) 0%,
-        var(--bg) 60%,
-        transparent 100%
-      );
+    /* bg opaco che "spezza" il path che vi passa dietro: il phase__head è
+       a z-index: 1 (su .roadmap__list), il path SVG è a z-index: 0,
+       quindi il bg solido lo copre naturalmente senza bisogno di mask. */
+    background-color: var(--bg);
     text-align: center;
   }
   .phase__letter {
@@ -399,10 +366,9 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
 
   .entry {
     block-size: 9rem; /* deve combaciare con ENTRY_H sopra */
-    display: grid;
-    grid-template-columns: auto 1fr;
+    display: flex;
     align-items: center;
-    gap: var(--space-2xs);
+    gap: var(--space-md);
     padding-inline: var(--space-md);
 
     opacity: 0;
@@ -413,12 +379,13 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     grid-column: 1;
     justify-self: end;
     text-align: end;
-    grid-template-columns: 1fr auto;
+    flex-direction: row-reverse; /* body sx, numero dx (vicino alla linea) */
     transform: translate(-8px, 8px);
   }
   .entry--r {
     grid-column: 2;
     justify-self: start;
+    flex-direction: row; /* numero sx (vicino alla linea), body dx */
     transform: translate(8px, 8px);
   }
 
@@ -430,17 +397,22 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
       transform 560ms var(--ease-out-snug) calc(var(--i, 0) * 30ms);
   }
 
-  /* Numero capitolo — sempre verso il percorso (lato interno) */
+  /* Numero capitolo — flex item, allineamento verticale gestito da `.entry`.
+     Si "accende" quando la linea attiva passa il nodo (data-passed='true')
+     e SOLO se il capitolo è pubblicato — i numeri di next/planned restano
+     spenti perché non c'è ancora un capitolo da raggiungere. */
   .entry__num {
+    flex-shrink: 0;
     font-family: var(--font-mono);
     font-size: var(--text-md);
     color: var(--ink-subtle);
     letter-spacing: var(--tracking-wide);
     line-height: 1;
-    align-self: center;
+    transition: color var(--dur-normal) var(--ease-out-snug);
   }
-  .entry--l .entry__num { grid-column: 2; }
-  .entry--r .entry__num { grid-column: 1; }
+  .entry[data-status='published'][data-passed='true'] .entry__num {
+    color: var(--accent);
+  }
 
   /* Body */
   .entry__body {
@@ -457,8 +429,6 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
       border-color var(--dur-fast) var(--ease-out-soft),
       background-color var(--dur-fast) var(--ease-out-soft);
   }
-  .entry--l .entry__body { grid-column: 1; }
-  .entry--r .entry__body { grid-column: 2; }
 
   a.entry__body:hover {
     border-color: var(--border);
@@ -534,9 +504,10 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     border: 0;
   }
 
-  /* ─── Mobile fallback: una colonna, niente serpentina ─── */
+  /* ─── Mobile fallback: una colonna, niente linea centrale ─── */
   @media (max-width: 39rem) {
-    .roadmap__svg { display: none; }
+    .roadmap__line,
+    .roadmap__node { display: none; }
 
     .phase {
       grid-template-columns: 1fr;
@@ -554,15 +525,11 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     }
     .entry--l, .entry--r {
       grid-column: 1;
-      grid-template-columns: auto 1fr;
+      flex-direction: row; /* su mobile sempre numero a sx, body a dx */
       justify-self: stretch;
       text-align: start;
       transform: translateY(8px); /* per il reveal */
     }
-    .entry--l .entry__num,
-    .entry--r .entry__num { grid-column: 1; }
-    .entry--l .entry__body,
-    .entry--r .entry__body { grid-column: 2; }
     .entry--l .entry__title { justify-content: flex-start; }
     .entry--l .entry__question { margin-inline-start: 0; }
     .entry--l .entry__effort { text-align: start; }
@@ -585,11 +552,14 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     }
     .roadmap__line--active {
       animation: none !important;
-      stroke-dashoffset: 0;
+      transform: translateX(-50%) scaleY(1); /* linea piena, niente disegno */
     }
-    .roadmap__node--next .roadmap__node-outer { animation: none; }
-    .roadmap__node-outer,
-    .roadmap__node-inner,
+    .roadmap__node--next { animation: none; box-shadow: none; }
+    .roadmap__node,
+    .roadmap__node[data-hover='true'] {
+      transition: none;
+      transform: translate(-50%, -50%); /* niente scale al hover */
+    }
     a.entry__body,
     .entry__title { transition: none; }
   }
@@ -621,7 +591,10 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
       });
 
       if (reduced) {
-        entries.forEach((el) => (el.dataset.revealed = 'true'));
+        entries.forEach((el) => {
+          el.dataset.revealed = 'true';
+          if (el.dataset.status === 'published') el.dataset.passed = 'true';
+        });
         nodeByIndex.forEach((n) => (n.dataset.revealed = 'true'));
       } else {
         const obs = new IntersectionObserver(
@@ -640,24 +613,70 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
           { threshold: 0.35 },
         );
         entries.forEach((el) => obs.observe(el));
+
+        /* ── "Accensione" del numero quando la linea attiva passa il nodo ──
+           Solo per i capitoli pubblicati: trigger esattamente al centro
+           viewport (rootMargin -50% top/bottom = fascia attiva ridotta a
+           una linea orizzontale al centro), così il numero si accende
+           proprio quando la linea raggiunge il suo nodo. */
+        const obsPassed = new IntersectionObserver(
+          (records) => {
+            records.forEach((rec) => {
+              if (rec.isIntersecting && rec.target instanceof HTMLElement) {
+                rec.target.dataset.passed = 'true';
+                obsPassed.unobserve(rec.target);
+              }
+            });
+          },
+          { rootMargin: '-50% 0px -50% 0px', threshold: 0 },
+        );
+        entries.forEach((el) => {
+          if (el.dataset.status === 'published') obsPassed.observe(el);
+        });
+
+        /* ── Hover entry → nodo si illumina (delegated, idempotente) ── */
+        const list = root.querySelector<HTMLElement>('.roadmap__list');
+        if (list) {
+          const setHover = (e: Event, on: boolean) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            const entry = target.closest('.entry') as HTMLElement | null;
+            if (!entry) return;
+            const idx = Number(entry.dataset.index);
+            const node = nodeByIndex.get(idx);
+            if (!node) return;
+            if (on) node.dataset.hover = 'true';
+            else delete node.dataset.hover;
+          };
+          list.addEventListener('mouseover', (e) => setHover(e, true));
+          list.addEventListener('mouseout', (e) => setHover(e, false));
+        }
       }
 
-      /* ── Fallback drawing del percorso ── */
+      /* ── Fallback drawing della linea ──
+         Sync col centro della viewport, normalizzato in modo che la linea
+         raggiunga il 100% quando il bottom della sezione tocca il top
+         viewport (equivalente a `animation-range: entry 50% exit 0%`).
+         Tollerante al fondo pagina corto: l'utente non deve scrollare
+         oltre il footer per completare l'animazione. */
       const supportsTL =
         CSS.supports?.('animation-timeline: view()') ?? false;
       if (!supportsTL && !reduced) {
         const body = root.querySelector<HTMLElement>('[data-roadmap]');
-        const line = root.querySelector<SVGPathElement>('[data-line]');
+        const line = root.querySelector<HTMLElement>('[data-line]');
         if (body && line) {
           let ticking = false;
           const update = () => {
             const rect = body.getBoundingClientRect();
             const vh = window.innerHeight || document.documentElement.clientHeight;
-            const total = rect.height + vh;
-            const progressed = vh - rect.top;
-            const ratio = Math.min(1, Math.max(0, progressed / total));
-            const offset = 1000 * (1 - ratio);
-            line.style.strokeDashoffset = String(offset);
+            const cursorY = vh / 2; // centro viewport in coordinate viewport
+            // Distanza del centro viewport dal top della sezione, normalizzata
+            // su (rect.height - vh/2) così che ratio=1 quando il bottom della
+            // sezione tocca il top viewport.
+            const range = Math.max(1, rect.height - vh / 2);
+            const filled = Math.min(range, Math.max(0, cursorY - rect.top));
+            const ratio = filled / range;
+            line.style.transform = `translateX(-50%) scaleY(${ratio})`;
             ticking = false;
           };
           const onScroll = () => {
