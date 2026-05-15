@@ -1,0 +1,40 @@
+src/components/RoadmapSection.astro
+  s_dcaed593eb6d69::t_e6601c660f800c 330-333
+  s_dcaed593eb6d69::t_73b750f07df128 557-561
+  s_dcaed593eb6d69::t_393ba992ee82d5 507,509
+  s_dcaed593eb6d69::t_3b2dfdda4f6852 128
+  s_dcaed593eb6d69::t_4e46f2dd88f9ec 45-47,55,72
+  s_dcaed593eb6d69::t_14623952e0ac31 594-597,616-635
+  s_dcaed593eb6d69::t_7086da8f18c5aa 3,5-8,11-15,17-23
+  s_dcaed593eb6d69::t_63f4747e011e77 247,250,256
+  s_dcaed593eb6d69::t_2347e73f205352 528
+  s_dcaed593eb6d69::t_8b1a7e85260735 92-95,97,103
+  s_dcaed593eb6d69::t_4ecaaf51f18aaf 401-403,411-414
+  s_dcaed593eb6d69::t_159aca5710d8d7 206-209,211-214,217,220,223-227,233,242-243
+  s_dcaed593eb6d69::t_e275a33a680739 657-661,673-678
+  s_dcaed593eb6d69::t_e8d1110748cb47 636-653
+  s_dcaed593eb6d69::t_f770bdd39a8aa4 656,666,672,679
+  s_dcaed593eb6d69::t_d49c3cd87f0ccb 248-249,251-255,257-258,260-261,263-273,277,279-284,286-294,297-300
+  s_dcaed593eb6d69::t_8b6e9311089ea4 555
+  s_dcaed593eb6d69::t_406b3d55821f9c 400,405
+  s_dcaed593eb6d69::t_728c29b4c3831d 510
+  s_dcaed593eb6d69::t_71dde4f12ab561 369,371,382,388
+  s_dcaed593eb6d69::t_c23e0d11e224b4 235-240
+  s_dcaed593eb6d69::t_e54ece2326d1e9 96,98-102,105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "6b145baa67c54e1fd6ff3c573019ffc8732d4ebb",
+  "prompts": {},
+  "sessions": {
+    "s_dcaed593eb6d69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae2428f8-d332-4fe1-8a3d-5194981b29b8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
