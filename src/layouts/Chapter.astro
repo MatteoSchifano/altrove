@@ -22,6 +22,7 @@ interface Props {
   date?: string;
   readMinutes?: number;
   slug: string;
+  tags?: readonly string[];
 }
 
 const {
@@ -34,12 +35,22 @@ const {
   date,
   readMinutes,
   slug,
+  tags,
 } = Astro.props;
 
 const homeHref = localizedPath('/', locale);
 ---
 
-<Base locale={locale} title={`${title} · Altrove`} description={excerpt}>
+<Base
+  locale={locale}
+  title={`${title} · Altrove`}
+  description={excerpt}
+  type="article"
+  pubDate={date}
+  alternateLocale={alternateLocale}
+  alternateHref={alternateHref}
+  tags={tags}
+>
   <div class="page">
     <header class="site-header">
       <div class="container site-header__row">

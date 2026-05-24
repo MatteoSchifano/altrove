@@ -1,0 +1,16 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   JsonLd.astro — emette uno script JSON-LD Schema.org.
+
+   Tenuto generico: riceve un oggetto schema arbitrario.
+   La validazione semantica vive nei chiamanti (Base, Chapter, ecc.).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  schema: Record<string, unknown>;
+}
+
+const { schema } = Astro.props;
+const json = JSON.stringify(schema);
+---
+<script type="application/ld+json" set:html={json}></script>

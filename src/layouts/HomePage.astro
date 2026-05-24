@@ -35,7 +35,11 @@ const chapters = (await getCollection('chapters', ({ data }) => data.lang === lo
   .sort((a, b) => Number(a.data.number) - Number(b.data.number));
 ---
 
-<Base locale={locale}>
+<Base
+  locale={locale}
+  alternateLocale={alternateLocale}
+  alternateHref={alternateHref}
+>
   <div class="page">
     <header class="site-header">
       <div class="container site-header__row">

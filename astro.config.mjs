@@ -2,12 +2,13 @@
 import { defineConfig } from 'astro/config';
 
 import mdx from '@astrojs/mdx';
+import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
-  // Placeholder finché non c'è un dominio reale. Serve a RSS,
-  // sitemap, e qualsiasi link assoluto. Aggiornare al deploy.
-  site: 'https://altrove.example',
+  // Dominio canonico di Altrove. Usato per RSS, sitemap,
+  // canonical link e qualsiasi URL assoluto.
+  site: 'https://altrove.dev',
 
   // Italian default at /, English at /en/.
   // prefixDefaultLocale: false → l'italiano vive sulla root,
@@ -20,5 +21,16 @@ export default defineConfig({
       prefixDefaultLocale: false,
     },
   },
-  integrations: [mdx()],
+  integrations: [
+    mdx(),
+    sitemap({
+      i18n: {
+        defaultLocale: 'it',
+        locales: {
+          it: 'it-IT',
+          en: 'en-US',
+        },
+      },
+    }),
+  ],
 });

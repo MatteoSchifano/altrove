@@ -8,6 +8,7 @@
    - Inizializza il tema senza flash (FART: flash of incorrect theme)
    - Abilita le View Transitions
    - Esegue il bind dei pattern di motion ad ogni navigazione
+   - Emette il livello SEO completo (OG, Twitter, canonical, hreflang, JSON-LD)
    ───────────────────────────────────────────────────────────── */
 
 import '@fontsource-variable/geist/index.css';
@@ -15,17 +16,55 @@ import '@fontsource-variable/geist-mono/index.css';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 import { t, DEFAULT_LOCALE, type Locale } from '../lib/i18n';
+import { AUTHOR, SITE } from '../data/author';
+import JsonLd from '../components/seo/JsonLd.astro';
 
 interface Props {
   title?: string;
   description?: string;
   locale?: Locale;
+  /** "website" per pagine generiche, "article" per i capitoli. */
+  type?: 'website' | 'article';
+  /** Path assoluto rispetto alla root del sito (es. "/og-default.png").
+      Se omesso, fallback su /og-default.png. */
+  image?: string;
+  /** ISO date o stringa human — usata in og:article + JSON-LD BlogPosting. */
+  pubDate?: string;
+  /** Locale dell'eventuale traduzione (per hreflang alternate). */
+  alternateLocale?: Locale;
+  /** Path assoluto-relativo della traduzione (es. "/en/chapters/anatomy-of-a-button"). */
+  alternateHref?: string;
+  /** Tag tematici — popolano keywords nel JSON-LD BlogPosting. */
+  tags?: readonly string[];
 }
 
-const { locale = DEFAULT_LOCALE, title, description } = Astro.props;
+const {
+  locale = DEFAULT_LOCALE,
+  title,
+  description,
+  type = 'website',
+  image = '/og-default.png',
+  pubDate,
+  alternateLocale,
+  alternateHref,
+  tags,
+} = Astro.props;
+
 const finalTitle = title ?? t('site.title', locale);
 const finalDescription = description ?? t('site.description', locale);
+
+/* URL assoluti: derivati da Astro.site (configurato in astro.config). */
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
+const ogImageURL = new URL(image, Astro.site).href;
+const ogLocale = locale === 'en' ? 'en_US' : 'it_IT';
+const ogLocaleAlternate = locale === 'en' ? 'it_IT' : 'en_US';
+
+/* hreflang: emetti self-link sempre, alternate solo se fornito,
+   x-default punta alla versione italiana canonica (root). */
+const alternateURL = alternateHref ? new URL(alternateHref, Astro.site).href : null;
+const xDefaultURL = locale === DEFAULT_LOCALE ? canonicalURL : alternateURL;
 
 /* L'autodiscovery RSS preferisce il feed nella stessa lingua della
    pagina. L'altro feed va comunque dichiarato (alternate). */
@@ -33,6 +72,47 @@ const rssIt = { href: '/rss.xml', title: t('site.title', 'it') };
 const rssEn = { href: '/en/rss.xml', title: t('site.title', 'en') };
 const primaryRss = locale === 'en' ? rssEn : rssIt;
 const secondaryRss = locale === 'en' ? rssIt : rssEn;
+
+/* ─── JSON-LD: WebSite sempre, BlogPosting se type === 'article'. ─ */
+const personSchema = {
+  '@type': 'Person',
+  name: AUTHOR.name,
+  url: AUTHOR.url,
+  jobTitle: AUTHOR.jobTitle,
+  knowsAbout: [...AUTHOR.knowsAbout],
+  sameAs: [...AUTHOR.sameAs],
+};
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  url: SITE.url,
+  description: finalDescription,
+  inLanguage: ogLocale.replace('_', '-'),
+  publisher: personSchema,
+};
+
+const articleSchema =
+  type === 'article'
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: title ?? SITE.name,
+        description: finalDescription,
+        url: canonicalURL,
+        image: ogImageURL,
+        inLanguage: ogLocale.replace('_', '-'),
+        author: personSchema,
+        publisher: {
+          '@type': 'Organization',
+          name: SITE.name,
+          url: SITE.url,
+        },
+        ...(pubDate ? { datePublished: pubDate } : {}),
+        ...(tags && tags.length > 0 ? { keywords: [...tags].join(', ') } : {}),
+      }
+    : null;
 ---
 
 <!doctype html>
@@ -43,12 +123,60 @@ const secondaryRss = locale === 'en' ? rssIt : rssEn;
     <meta name="description" content={finalDescription} />
     <meta name="generator" content={Astro.generator} />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d0d0c" media="(prefers-color-scheme: dark)" />
+    <meta name="author" content={AUTHOR.name} />
+
+    <link rel="canonical" href={canonicalURL} />
+
+    {/* hreflang — self + altra lingua + x-default canonica IT. */}
+    <link rel="alternate" hreflang={locale} href={canonicalURL} />
+    {alternateURL && alternateLocale && (
+      <link rel="alternate" hreflang={alternateLocale} href={alternateURL} />
+    )}
+    {xDefaultURL && (
+      <link rel="alternate" hreflang="x-default" href={xDefaultURL} />
+    )}
+
+    {/* Open Graph */}
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={finalTitle} />
+    <meta property="og:description" content={finalDescription} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={ogLocaleAlternate} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={finalTitle} />
+    {type === 'article' && pubDate && (
+      <meta property="article:published_time" content={pubDate} />
+    )}
+    {type === 'article' && (
+      <meta property="article:author" content={AUTHOR.name} />
+    )}
+    {type === 'article' && tags && tags.map((tag) => (
+      <meta property="article:tag" content={tag} />
+    ))}
+
+    {/* Twitter Card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={finalTitle} />
+    <meta name="twitter:description" content={finalDescription} />
+    <meta name="twitter:image" content={ogImageURL} />
+    <meta name="twitter:image:alt" content={finalTitle} />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="alternate" type="application/rss+xml" title={primaryRss.title} href={primaryRss.href} />
     <link rel="alternate" type="application/rss+xml" title={secondaryRss.title} href={secondaryRss.href} />
 
     <title>{finalTitle}</title>
+
+    {/* JSON-LD Schema.org */}
+    <JsonLd schema={websiteSchema} />
+    {articleSchema && <JsonLd schema={articleSchema} />}
 
     {/* Theme bootstrap — eseguito INLINE prima del paint per evitare flash.
         Legge la preferenza salvata, fallback al sistema. */}
@@ -88,5 +216,6 @@ const secondaryRss = locale === 'en' ? rssIt : rssEn;
     </script>
 
     <Analytics />
+    <SpeedInsights />
   </body>
 </html>

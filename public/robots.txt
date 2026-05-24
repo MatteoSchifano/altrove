@@ -1,0 +1,62 @@
+# Altrove · robots.txt
+# Strategia 2026: permetti retrieval/search agent (vogliamo essere
+# citati dalle AI search), blocca gli agent di training (non vogliamo
+# essere materia prima senza consenso). Avvertenza realistica:
+# molti bot ignorano robots.txt — questo è un segnale, non un firewall.
+
+User-agent: *
+Allow: /
+
+# ─── Bot di training (block) ─────────────────────────────────
+# Crawler che alimentano i dataset di addestramento dei modelli.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+# ─── Bot di retrieval / AI search (allow esplicito) ──────────
+# Servono le AI search per "trovare" e citare il sito.
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Google-CloudVertexBot
+Allow: /
+
+Sitemap: https://altrove.dev/sitemap-index.xml

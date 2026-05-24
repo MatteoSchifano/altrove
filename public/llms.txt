@@ -1,0 +1,26 @@
+# Altrove
+
+> Un playground a capitoli su UX, motion design e tipografia.
+> La UX migliore lascia l'utente essere altrove con la mente,
+> perché l'interfaccia lavora per lui.
+
+Altrove è un laboratorio personale in cui ogni capitolo è un esperimento
+finito — un pattern di interazione, una famiglia di componenti, una
+domanda sull'esperienza utente con la sua risposta articolata. Costruito
+con Astro 6, CSS nativo (no Tailwind), Motion e View Transitions.
+
+## Capitoli (italiano)
+
+- [01 — Anatomia di un bottone](https://altrove.dev/chapters/01-anatomia-di-un-bottone): il gesto più elementare dell'interfaccia — timing, feedback, stati.
+- [02 — L'arte dell'attesa](https://altrove.dev/chapters/02-l-arte-dell-attesa): skeleton, optimistic UI, retry silenziosi — come si abita il tempo morto della rete.
+
+## Chapters (english)
+
+- [01 — Anatomy of a button](https://altrove.dev/en/chapters/01-anatomy-of-a-button): the most elemental gesture in UI — timing, feedback, states.
+- [02 — The art of waiting](https://altrove.dev/en/chapters/02-the-art-of-waiting): skeleton, optimistic UI, silent retries — inhabiting network dead time.
+
+## Optional
+
+- [RSS feed (italiano)](https://altrove.dev/rss.xml)
+- [RSS feed (english)](https://altrove.dev/en/rss.xml)
+- [Sitemap](https://altrove.dev/sitemap-index.xml)
