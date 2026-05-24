@@ -1,0 +1,89 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SoftInputField — il campo che si apre.
+
+   La fondamenta. Tre cose in ordine d'importanza:
+     1. La label è sempre visibile e leggibile (non un placeholder
+        travestito): l'utente non perde mai il contesto del campo
+        mentre lo compila.
+     2. Il focus produce un halo morbido e un bordo più deciso —
+        l'attenzione del sistema è esplicita, non implicita.
+     3. Il placeholder è un esempio, non un'istruzione: appare
+        in grigio chiaro e sparisce appena si scrive.
+
+   Reduced motion: l'halo appare istantaneo, niente transizione.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<div class="field">
+  <label class="field__label" for="soft-name">Nome completo</label>
+  <input
+    id="soft-name"
+    class="field__input"
+    type="text"
+    name="name"
+    autocomplete="name"
+    placeholder="es. Anna Bianchi"
+    aria-describedby="soft-name-hint"
+  />
+  <p class="field__hint" id="soft-name-hint">
+    Come preferisci che ti chiamiamo.
+  </p>
+</div>
+
+<style>
+  .field {
+    inline-size: min(22rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .field__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    line-height: var(--leading-snug);
+  }
+
+  .field__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .field__input::placeholder {
+    color: var(--ink-subtle);
+    opacity: 1;
+  }
+
+  .field__input:hover {
+    border-color: var(--border-strong);
+  }
+
+  .field__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    background-color: var(--surface-raised);
+    box-shadow: var(--halo-focus);
+  }
+
+  .field__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+</style>

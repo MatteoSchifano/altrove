@@ -1,0 +1,181 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   GentleValidation — la validazione che ascolta.
+
+   Il punto è: non sgridare l'utente mentre sta ancora scrivendo.
+   :user-invalid è la pseudo-classe nativa che si attiva solo
+   dopo che l'utente ha interagito col campo (blur o submit). A
+   differenza di :invalid, che è "vera" appena la pagina carica
+   se il campo è required ma vuoto.
+
+   Tre invarianti:
+     • Niente errore prima che il campo sia stato lasciato.
+     • L'errore appare con calma sotto il campo, non da popup.
+     • aria-describedby collega errore e input perché lo screen
+       reader li senta come una cosa sola.
+
+   Reduced motion: l'errore appare istantaneo, senza slide.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="vform" novalidate>
+  <div class="vfield">
+    <label class="vfield__label" for="gv-email">Email di lavoro</label>
+    <input
+      id="gv-email"
+      class="vfield__input"
+      type="email"
+      name="email"
+      autocomplete="email"
+      required
+      placeholder="nome@studio.it"
+      aria-describedby="gv-email-error"
+    />
+    <p class="vfield__error" id="gv-email-error" role="status">
+      <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="8" cy="8" r="6.5" />
+        <path d="M8 5v3.5M8 11h.01" />
+      </svg>
+      <span class="vfield__error-text">Serve un indirizzo email valido — come <code>nome@studio.it</code>.</span>
+    </p>
+  </div>
+
+  <button class="vform__submit" type="submit">Invia</button>
+</form>
+
+<style>
+  .vform {
+    inline-size: min(24rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .vfield {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .vfield__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .vfield__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .vfield__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+
+  .vfield__input:hover { border-color: var(--border-strong); }
+
+  .vfield__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  /* Errore: appare SOLO dopo il primo blur (o submit) grazie a :user-invalid */
+  .vfield__input:user-invalid {
+    border-color: oklch(0.62 0.18 28);
+    background-color: color-mix(in oklab, oklch(0.62 0.18 28) 5%, var(--surface-raised));
+  }
+
+  .vfield__input:user-invalid:focus-visible {
+    box-shadow: 0 0 0 3px oklch(0.62 0.18 28 / 0.25);
+  }
+
+  .vfield__error {
+    margin: 0;
+    display: none;
+    align-items: flex-start;
+    gap: 0.4375rem;
+    font-size: var(--text-xs);
+    color: oklch(0.55 0.16 28);
+    line-height: var(--leading-snug);
+    opacity: 0;
+    transform: translateY(-2px);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .vfield__input:user-invalid ~ .vfield__error {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .vfield__error svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    flex-shrink: 0;
+    margin-block-start: 0.0625rem;
+  }
+
+  .vfield__error code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: oklch(0.45 0.16 28);
+  }
+
+  .vform__submit {
+    align-self: flex-start;
+    padding: 0.625rem 1.125rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-on);
+    border: 0;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snappy);
+  }
+
+  .vform__submit:hover { transform: translateY(-1px); }
+  .vform__submit:active { transform: translateY(1px); }
+  .vform__submit:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+</style>
+
+<script>
+  // Submit handler: se non valido, focus al primo campo invalido.
+  // Lasciare gestire al browser la pseudo-classe :user-invalid:
+  // chiamando reportValidity() o lasciando il submit, lo stato si attiva.
+  function bind() {
+    document.querySelectorAll<HTMLFormElement>('.vform').forEach((form) => {
+      if (form.dataset.bound === 'true') return;
+      form.dataset.bound = 'true';
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!form.checkValidity()) {
+          const first = form.querySelector<HTMLInputElement>(':invalid');
+          first?.focus();
+          // Trigger esplicito di :user-invalid anche se l'utente non ha mai sfocato
+          form.querySelectorAll<HTMLInputElement>('input').forEach((i) => i.dispatchEvent(new Event('blur')));
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

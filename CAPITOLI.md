@@ -17,7 +17,7 @@
 | 04 | Il dialogo silenzioso | ✅ pubblicato |
 | 05 | Lo scroll che racconta | ✅ pubblicato |
 | 06 | Numeri che hanno peso | ✅ pubblicato |
-| 07 | Anatomia di un input | 📋 in roadmap |
+| 07 | Anatomia di un input | ✅ pubblicato |
 | 08 | La micro-tipografia | 📋 in roadmap |
 | 09–26 | *(vedi sotto)* | 💭 ipotizzati |
 

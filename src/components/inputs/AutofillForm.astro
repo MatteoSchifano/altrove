@@ -1,0 +1,205 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   AutofillForm — l'autofill rispettato.
+
+   Un mini-form di indirizzo di spedizione. Niente di vistoso —
+   il "punto" sono gli attributi che non si vedono: autocomplete
+   con i token corretti, name semantici, type appropriati,
+   inputmode per la tastiera giusta su mobile.
+
+   Quando i token sono giusti, il password manager / il browser
+   riempiono tutto con una sola pressione. Quando sono sbagliati
+   (o mancano), l'utente digita ogni campo. Differenza fra trenta
+   secondi e tre minuti, per la stessa identica UI.
+
+   Token usati:
+     • given-name, family-name → autofill nome/cognome
+     • email
+     • tel
+     • street-address, address-level2 (città), postal-code,
+       country-name → autofill indirizzo completo
+
+   Il fieldset raggruppa semanticamente l'indirizzo con una
+   <legend> visivamente sussidiaria ma presente per gli screen
+   reader: "Indirizzo di spedizione" precede ogni campo.
+   ───────────────────────────────────────────────────────────── */
+---
+
+<form class="af" autocomplete="on">
+  <fieldset class="af__set">
+    <legend class="af__legend">Indirizzo di spedizione</legend>
+
+    <div class="af__grid">
+      <div class="af__field af__field--half">
+        <label class="af__label" for="af-first">Nome</label>
+        <input
+          id="af-first"
+          class="af__input"
+          type="text"
+          name="given-name"
+          autocomplete="given-name"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--half">
+        <label class="af__label" for="af-last">Cognome</label>
+        <input
+          id="af-last"
+          class="af__input"
+          type="text"
+          name="family-name"
+          autocomplete="family-name"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--full">
+        <label class="af__label" for="af-street">Via e numero</label>
+        <input
+          id="af-street"
+          class="af__input"
+          type="text"
+          name="street-address"
+          autocomplete="street-address"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--two-thirds">
+        <label class="af__label" for="af-city">Città</label>
+        <input
+          id="af-city"
+          class="af__input"
+          type="text"
+          name="address-level2"
+          autocomplete="address-level2"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--third">
+        <label class="af__label" for="af-zip">CAP</label>
+        <input
+          id="af-zip"
+          class="af__input tabular"
+          type="text"
+          name="postal-code"
+          autocomplete="postal-code"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--half">
+        <label class="af__label" for="af-email">Email</label>
+        <input
+          id="af-email"
+          class="af__input"
+          type="email"
+          name="email"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="af__field af__field--half">
+        <label class="af__label" for="af-tel">Telefono</label>
+        <input
+          id="af-tel"
+          class="af__input tabular"
+          type="tel"
+          name="tel"
+          autocomplete="tel"
+          inputmode="tel"
+          required
+        />
+      </div>
+    </div>
+  </fieldset>
+</form>
+
+<style>
+  .af {
+    inline-size: min(32rem, 100%);
+  }
+
+  .af__set {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-md) var(--space-lg);
+    background-color: var(--surface-raised);
+    margin: 0;
+  }
+
+  .af__legend {
+    padding-inline: 0.5rem;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .af__grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xs);
+  }
+
+  .af__field { display: flex; flex-direction: column; gap: 0.3125rem; }
+  .af__field--half       { grid-column: span 3; }
+  .af__field--third      { grid-column: span 2; }
+  .af__field--two-thirds { grid-column: span 4; }
+  .af__field--full       { grid-column: span 6; }
+
+  @container (max-width: 28rem) {
+    .af__field { grid-column: span 6; }
+  }
+
+  /* fallback senza container */
+  @media (max-width: 480px) {
+    .af__grid > .af__field { grid-column: span 6; }
+  }
+
+  .af__label {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .af__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .af__input:hover { border-color: var(--border-strong); }
+
+  .af__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  /* Stato "appena autofillato" — sfumatura tenue dell'accent
+     così l'utente vede cosa è stato compilato dal browser */
+  .af__input:autofill,
+  .af__input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px color-mix(in oklab, var(--accent) 8%, var(--bg)) inset;
+    box-shadow: 0 0 0 1000px color-mix(in oklab, var(--accent) 8%, var(--bg)) inset;
+    -webkit-text-fill-color: var(--ink-strong);
+  }
+</style>

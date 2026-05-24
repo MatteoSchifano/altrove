@@ -1,0 +1,102 @@
+---
+lang: "en"
+translationKey: "chapter-07"
+number: "07"
+title: "Anatomy of an input"
+excerpt: "A field to fill in is the moment a website asks the user for something — and that's when its voice shows. We open it up here, from the label that doesn't lie to the validation that listens."
+date: "May 2026"
+readMinutes: 11
+tags: ["components", "forms", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SoftInputField from '../../../components/inputs/SoftInputField.astro';
+import GentleValidation from '../../../components/inputs/GentleValidation.astro';
+import QuantityStepper from '../../../components/inputs/QuantityStepper.astro';
+import PasswordReveal from '../../../components/inputs/PasswordReveal.astro';
+import AutofillForm from '../../../components/inputs/AutofillForm.astro';
+import GrowingTextarea from '../../../components/inputs/GrowingTextarea.astro';
+
+There's a moment, in every product, when a website stops talking *at* the user and starts asking *something of* them. A name, an email, a password, an address. It is the first true bi-directional exchange — until that moment, the page had been speaking about itself. And as in any conversation, the difference between a gentle question and a clumsy one is felt immediately: you hear it in the first three lines.
+
+The input is where UX becomes physical. There is nothing left to hide behind a polished landing page: a digit is asked for, a digit is expected. If the label lies, if the error scolds, if the mobile keyboard is the wrong one, the interface starts to chafe. And every bit of friction on forms has a measurable cost — abandonment, error rates, support tickets. But above all it has an unmeasurable cost: the user stops feeling like a *guest* and starts feeling *interrogated*.
+
+Six demonstrations, each on a decision that changes the quality of the moment in which a field is filled in. From the shape of the field at rest, to the validation that waits, to the textarea that grows on its own. No form libraries, no complex schemas — native HTML, when you know it, does almost everything. The rest is a handful of lines of JS you could almost not write.
+
+## The field that opens up
+
+The first thing an input has to do is *make itself recognisable as an input*. Not as a placeholder floating amid the prose, not as a clickable region that could be a button. Three elements make a field readable at a glance: a label above, a border that frames it, a focus state that says "I'm listening".
+
+<Demo title="Field at rest · label, border, halo" tag="07.a">
+  <SoftInputField />
+  <div slot="note">
+    <p>The label is a real <code>&lt;label&gt;</code> bound to the input via <code>for</code>/<code>id</code> — clicking it focuses the field, an accessibility win that costs nothing. It sits above, not inside: a *placeholder* doubling as a label vanishes exactly when the user starts typing, dropping the context of the question. The placeholder here stays an example (<em>"e.g. Anna Bianchi"</em>), not an instruction.</p>
+    <p>Focus produces two things at once: the border turns accent, and a 3-px <code>box-shadow</code> in the accent colour at 40% opacity appears around it — the halo. Either one alone wouldn't be enough: the border on its own blurs with the hover state, the halo on its own looks like an error. Together, the system's attention is explicit. The hint below is wired up via <code>aria-describedby</code>: the screen reader announces it right after the field name, like a quiet remark.</p>
+  </div>
+</Demo>
+
+## The validation that listens
+
+The most common defect in forms isn't missing validation: it's *impatient* validation. The user clicks into the field, starts typing "a", and an angry red message already pops up saying "invalid email". The message is technically right, but the timing is offensive — the user *is still typing*, of course they're not done. CSS has the right pseudo-class: `:user-invalid` only activates after the user has interacted with the field. It was designed for exactly this.
+
+<Demo title="Inline error · only after the first blur" tag="07.b">
+  <GentleValidation />
+  <div slot="note">
+    <p>Try typing "hi" and tabbing out: the error slides in below, the border turns red, and an icon leads it in reading order. Now try typing without ever leaving the field: no error appears, because <code>:user-invalid</code> waits for the interaction to be "complete" (blur or submit). It's the CSS-only version of what we used to do with a pile of JS listening to every keystroke to decide when "the moment was right" to show the error. The browser already knows.</p>
+    <p>The error is connected to the input via <code>aria-describedby</code> and uses <code>role="status"</code> with a polite announcement — screen readers pick it up after, they don't interrupt. On submit, if there are invalid fields, focus goes to the first problematic one and a synthetic blur event is fired so <code>:user-invalid</code> also activates on fields the user never visited. The button doesn't scold — it simply doesn't send. Gentle validation isn't permissive: it's just on time.</p>
+  </div>
+</Demo>
+
+## The number as quantity
+
+A "quantity" field — number of guests at the table, items in the cart, servings in a recipe — isn't an ordinary text field. It has a finite domain (a minimum, a maximum, a step) and three natural ways of being adjusted: typing, clicking the ± buttons, using keyboard arrows. A good stepper offers all three, without forcing the user to pick one.
+
+<Demo title="Stepper · type, click, arrow" tag="07.c">
+  <QuantityStepper label="Quantity · guests at the table" />
+  <div slot="note">
+    <p>The − and + buttons are <code>&lt;button type="button"&gt;</code> with explicit <code>aria-label</code> — the icon alone isn't enough, the screen reader must hear "Increase by one". When the value hits the minimum, the "−" button disables; same for the maximum. The central digit uses <code>tabular-nums</code> so it doesn't jitter when "9" rolls to "10" (the lesson of ch. 06). The input has <code>inputmode="numeric"</code> to summon the numeric keyboard on mobile, but stays <code>type="text"</code> with <code>pattern="[0-9]*"</code>: <code>type="number"</code> has too many quirky cross-browser behaviours to be reliable in production.</p>
+    <p>From the keyboard, ArrowUp and ArrowDown adjust the value without moving focus. While the user types, non-digits are filtered out but <em>the value is not clamped</em>: if I'm typing "10", the intermediate step "1" should not be forced up to the minimum. Clamping happens on blur. It's the difference between a system that corrects you while you speak and a system that lets you finish the sentence.</p>
+  </div>
+</Demo>
+
+## The password and its veil
+
+When a user fills in a password field, a single mistyped key means starting over. We've all done it: you type carefully, you submit, "wrong password", and after five tries you discover Caps Lock was on. A tiny eye next to the field — a reveal toggle — solves 90% of those errors. It's counter-intuitive (showing the password seems less secure) but it's actually the opposite: fewer failed attempts, fewer resets, fewer traces in mistakenly remembered passwords.
+
+<Demo title="Password with reveal and honest strength" tag="07.d">
+  <PasswordReveal />
+  <div slot="note">
+    <p>The toggle is a <code>&lt;button type="button"&gt;</code> with <code>aria-pressed</code> alternating between <em>false</em> and <em>true</em>; the <code>aria-label</code> changes accordingly ("Show the password" / "Hide the password"). The input's <code>type</code> also flips between "password" and "text". Four bars below form a strength indicator with four states: weak (red), medium (amber), good (yellow-green), strong (green) — colours in OKLCH to stay perceptually balanced.</p>
+    <p>The heuristic is simple and honest: it combines length and the classes of characters used (lower, upper, digits, symbols). It doesn't want to be zxcvbn — it wants to be readable in thirty lines and give a reasonable signal. The text "Strength: <em>good</em>" uses <code>aria-live="polite"</code>, so it's announced without interrupting typing. The <code>autocomplete="new-password"</code> attribute tells the password manager: <em>generate a new one</em>, don't fill with an existing one — it's the correct token for sign-up or password change.</p>
+  </div>
+</Demo>
+
+## Respected autofill
+
+The modern password manager (1Password, the system keychain, the browser's autofill) already knows first name, last name, address, email, phone. If the `autocomplete` attributes are right, a shipping form fills in with a single tap. If they're wrong or missing, the user types every field by hand. Same interface, two radically different experiences — and the whole difference is made by a dozen words inside `name` and `autocomplete`.
+
+<Demo title="Address form · full autocomplete" tag="07.e">
+  <AutofillForm />
+  <div slot="note">
+    <p>Every field carries the exact <code>autocomplete</code> token: <code>given-name</code>, <code>family-name</code>, <code>street-address</code>, <code>address-level2</code> (the city in many countries), <code>postal-code</code>, <code>email</code>, <code>tel</code>. On phone and postal code, <code>inputmode="numeric"</code> and <code>"tel"</code> call up the right mobile keyboard. The <code>&lt;fieldset&gt;</code> with <code>&lt;legend&gt;</code> groups the address: for a screen reader, the first thing heard on entering the first field is "Shipping address, First name".</p>
+    <p>When a field is filled by autofill, the <code>:autofill</code> rule applies an inner shadow of accent at 8%: a faint hue that whispers <em>this was filled by the browser, double-check if you like</em>. It's the same care you'd take reading a printed page before signing. To see the effect, enable autofill in the browser, reload, and click on First name.</p>
+  </div>
+</Demo>
+
+## The textarea that grows with you
+
+The last detail is the youngest. For years, the only way to grow a textarea with its content was to measure `scrollHeight` in JavaScript, copy it onto the height, sync on `input`, and put up with the flicker on the first character. Today there's a one-line CSS property: `field-sizing: content`. The field adapts on its own, inside a range set by `min-height` and `max-height`. It ships in every evergreen browser now — finally.
+
+<Demo title="Auto-resize textarea · field-sizing: content" tag="07.f">
+  <GrowingTextarea />
+  <div slot="note">
+    <p>Type two lines, then twenty. The field grows up to 14rem, then stops and switches to inner scroll — the limit is there, but it doesn't feel like a wall. The counter at the top-right shifts colour at two thresholds: at 192 characters (80% of 240) it turns amber as a pre-warning, at 240 it turns red and bold. <code>maxlength</code> blocks at the browser level, so you can't go past it; the counter is only visual feedback, not a guard.</p>
+    <p>The JS fallback for the few browsers that still don't support <code>field-sizing</code> is light (eight lines) and runs only if <code>CSS.supports('field-sizing', 'content')</code> returns false — no penalty for users on a modern browser. <code>aria-live="polite"</code> on the counter lets screen readers pick it up in the pauses of typing, without interrupting. It's an example of how the platform is reclaiming, one property at a time, patterns that until yesterday required a library.</p>
+  </div>
+</Demo>
+
+---
+
+Six small interventions, each on a decision that on its own feels negligible and together change the character of an entire product. The label that doesn't lie, the error that waits, the number you can adjust three different ways, the password that lets itself be reread, the address that fills in with a tap, the textarea that grows without obstacles. None of these things is noticed when it's done well. What gets noticed is *the absence of friction* — and that is exactly the principle of Altrove: everything that happens without the user noticing is the true power of UX, while they get on with whatever they were actually doing.
+
+The next chapter returns to typography: *micro-typography*. Because everything we've built here — the numbers, the names, the passwords, the addresses — is also, and first of all, text. And text has a thousand small decisions that decide whether the page breathes or holds its breath.

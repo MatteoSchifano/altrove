@@ -1,0 +1,172 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   GrowingTextarea — la textarea che cresce con te.
+
+   Per anni l'unico modo di far crescere una textarea col testo
+   era misurare lo scrollHeight in JS e copiare quella misura
+   sull'altezza. Oggi c'è una riga CSS:
+
+     field-sizing: content;
+
+   La textarea adatta la propria altezza al contenuto, restando
+   tra min-height e max-height. Niente JS, niente sincronizzazione
+   doppia, niente sfarfallio al primo carattere. Per i browser
+   che ancora non la supportano, il fallback JS è leggero.
+
+   Il contatore caratteri ha due soglie:
+     • soft (80% del max): warning visivo, non bloccante
+     • hard (100%): il browser blocca con maxlength
+
+   aria-live="polite" sul contatore lo rende leggibile senza
+   spaventare — viene annunciato solo nelle pause del typing.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  max?: number;
+}
+const { max = 240 } = Astro.props;
+---
+
+<div class="gta">
+  <div class="gta__head">
+    <label class="gta__label" for="gta-input">Messaggio per l'autore</label>
+    <span class="gta__count tabular" aria-live="polite">
+      <span class="gta__count-now">0</span>
+      <span class="gta__count-sep">/</span>
+      <span class="gta__count-max">{max}</span>
+    </span>
+  </div>
+  <textarea
+    id="gta-input"
+    class="gta__input"
+    name="message"
+    rows="2"
+    maxlength={max}
+    placeholder="Scrivi due righe — o venti. Il campo cresce con te."
+  ></textarea>
+  <p class="gta__hint">
+    <code>field-sizing: content</code> — il campo si adatta al testo, da min a max.
+  </p>
+</div>
+
+<style>
+  .gta {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+  }
+
+  .gta__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  .gta__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .gta__count {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .gta__count[data-soft='true']  { color: oklch(0.62 0.14 60); }
+  .gta__count[data-hard='true']  { color: oklch(0.55 0.16 28); font-weight: var(--weight-medium); }
+
+  .gta__count-sep { color: var(--ink-subtle); margin-inline: 0.125rem; }
+
+  .gta__input {
+    appearance: none;
+    inline-size: 100%;
+    min-block-size: 4rem;
+    max-block-size: 14rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    resize: none;
+    field-sizing: content;
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .gta__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+
+  .gta__input:hover { border-color: var(--border-strong); }
+
+  .gta__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .gta__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .gta__hint code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: var(--ink);
+    background-color: var(--surface);
+    padding: 0.0625rem 0.3125rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+  }
+</style>
+
+<script>
+  function supportsFieldSizing() {
+    return CSS.supports('field-sizing', 'content');
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.gta').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLTextAreaElement>('.gta__input')!;
+      const count = root.querySelector<HTMLElement>('.gta__count')!;
+      const now = root.querySelector<HTMLElement>('.gta__count-now')!;
+      const max = Number(input.getAttribute('maxlength') ?? 240);
+      const softAt = Math.round(max * 0.8);
+
+      const fallback = !supportsFieldSizing();
+
+      const fitHeight = () => {
+        // Fallback JS per i browser senza field-sizing
+        if (!fallback) return;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 14 * 16) + 'px';
+      };
+
+      const refresh = () => {
+        const len = input.value.length;
+        now.textContent = String(len);
+        count.dataset.soft = String(len >= softAt && len < max);
+        count.dataset.hard = String(len >= max);
+        fitHeight();
+      };
+
+      input.addEventListener('input', refresh);
+      refresh();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
