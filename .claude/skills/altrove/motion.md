@@ -1,77 +1,59 @@
-# Altrove · Motion system
+# Altrove · Motion as a craft
 
-Motion lives in `src/lib/motion.ts`, a minimal wrapper over `motion` (motion.dev). **Absolute rule: never build an inline spring.** Import a preset. If you need a new feel, add a preset to `motion.ts` with a rationale — don't invent it in the component.
+Motion is measured in **milliseconds with a rationale**, never "by feel". A handful of named curves and durations, used consistently, beat curves invented in the moment.
 
-## The 4 spring presets
+## The laws
 
-```ts
-import { spring } from '../lib/motion';
+1. **Things leave faster than they enter.** Entrance ≈ **220ms**, exit ≈ **160ms**. This is physical coherence — an object settling vs. an object getting out of the way. Follow it everywhere.
+2. **Animate once; never re-animate.** Animate an element when it first appears, then leave it alone. *"Le pagine che ri-animano sembrano nervose; quelle che animano una volta sembrano abitate."* Use `IntersectionObserver` + `unobserve`, not a re-firing trigger.
+3. **Out, never in-out, for arrivals.** Entrances and count-ups start fast and arrive calm (`ease-out`). In-out reads as mechanical for something that should feel like it's settling.
+4. **Stagger is meaning.** ~40–90ms between items reads as "these arrived together"; longer reads as a **celebration**. Pick the length on purpose.
+5. **Reveal the new, not the seen.** When data updates, stagger only the *new* items — re-animating already-seen content is nervousness.
 
-spring.subtle      // stiffness 220, damping 28, mass 0.8 — micro-feedback (hover, press), almost no overshoot
-spring.gentle      // stiffness 170, damping 22, mass 0.9 — DEFAULT, natural and calm
-spring.snappy      // stiffness 380, damping 28, mass 0.7 — UI controls that "snap" then settle
-spring.expressive  // stiffness 260, damping 18, mass 0.8 — micro-celebration, slight overshoot
+## The four "feels" (a reusable taxonomy)
+
+Name your motion by intent, not by raw spring numbers. One stable feel per intent:
+
+| Feel | Use for | Character |
+|---|---|---|
+| **subtle** | micro-feedback (hover, press) | almost no overshoot |
+| **gentle** | the default for most transitions | natural, calm |
+| **snappy** | UI controls that act | snaps, then settles |
+| **expressive** | micro-celebrations | slight, earned overshoot |
+
+Concrete spring values that embody these (tune to taste, but keep them named and few — don't build a spring inline per component):
+`subtle` stiffness 220 / damping 28 · `gentle` 170 / 22 · `snappy` 380 / 28 · `expressive` 260 / 18.
+
+## Easing & duration vocabulary
+
+Name your curves; never scatter `cubic-bezier(...)` literals across components.
+
+```
+out-soft    cubic-bezier(0.22, 1, 0.36, 1)     default for every transition
+out-snug    cubic-bezier(0.34, 1.06, 0.64, 1)  slight overshoot
+out-snappy  cubic-bezier(0.16, 1.3, 0.4, 1)    decisive overshoot
+in-out      cubic-bezier(0.65, 0, 0.35, 1)     symmetric
+in          cubic-bezier(0.55, 0, 1, 0.45)     exit / off-screen
 ```
 
-Type: `SpringName = 'subtle' | 'gentle' | 'snappy' | 'expressive'`.
+Durations: instant 100ms · fast 180ms · normal 280ms · slow 480ms · slower 720ms.
 
-## Reduced-motion guard (mandatory)
+## `prefers-reduced-motion` is binary
 
-Every JS effect must bail out immediately if the user prefers reduced motion. `motion.ts` exposes the guard internally; the `magnetic`/`lift` helpers already respect it (they return a no-op cleanup). When you write a new effect, replicate the same pattern:
+Not a "softer" or "slower" version — **off**. The discipline:
 
-```ts
-const prefersReducedMotion = (): boolean =>
-  typeof window !== 'undefined' &&
-  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+- Deliver **the same final state without the journey**. Reducing motion never hides state or removes the end result; it removes the *path* to it.
+- In practice, collapse animation durations to **1ms** (where a non-zero value is structurally required) or skip the tween entirely. *"Non si rallenta un'animazione, la si toglie."*
+- Overlays, dialogs, reveals must all still work and reach their resolved state.
+- For JS-driven effects, guard at the top and bail to the static fallback:
 
-export function myEffect(el: HTMLElement): () => void {
-  if (prefersReducedMotion()) return () => {};   // dignified static fallback
-  // …animate(el, …, spring.gentle)…
-  return () => { /* cleanup listeners */ };
-}
+```js
+const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+if (reduce) return; // static, dignified fallback — same end state, no motion
 ```
 
-Every helper **returns a cleanup function** — needed for teardown on View Transitions / unmount. Always honor it.
+## CSS vs JS
 
-## Reusable helpers
-
-### `magnetic(el, opts)`
-The element moves toward the cursor when it enters the area, returns to zero on leave.
-- `strength` (0–1): fraction of displacement toward the cursor. **Default `0.25`.** Components tune it: the home card uses `0.18`, the `MagneticButton` uses `0.4` (small element, must be felt immediately).
-- `radius`: radius beyond which the effect cancels (default: bounding box).
-- `preset`: spring (default `gentle`).
-- Works well **only on isolated elements**. In a grid of magnetic elements the effect becomes noise.
-
-### `lift(el, opts)`
-Lifts the element on hover/focus.
-- `distance`: Y translation in px (default `-4`).
-- `scale`: scale on hover (default `1.012`).
-- `preset`: spring (default `subtle`).
-- Also binds `focus`/`blur`, not just pointer — keyboard accessibility for free.
-
-## Auto-binding via `data-motion`
-
-The idiomatic way to apply an effect from markup, without writing JS in the component:
-
-```html
-<button data-motion="magnetic" data-strength="0.4" data-preset="snappy">…</button>
-<a data-motion="lift" data-distance="-6" data-scale="1.02">…</a>
-```
-
-`bindMotionAttributes(root?)` scans `[data-motion="magnetic"]` and `[data-motion="lift"]`, reads the `data-*` and wires up the helpers. Call it on load **and after every `astro:page-load`** (View Transitions recreate the DOM):
-
-```ts
-import { bindMotionAttributes } from '../lib/motion';
-
-let cleanup = bindMotionAttributes();
-document.addEventListener('astro:page-load', () => {
-  cleanup?.();
-  cleanup = bindMotionAttributes();
-});
-```
-
-## When CSS, when JS
-
-- **Simple states** (hover, press, focus, enter/leave on 1–2 properties) → CSS transition with `--ease-*` and `--dur-*`. Lighter, no JS.
-- **Physics, gestures, values tied to cursor/scroll, sequences** → `motion` via the `motion.ts` helpers.
-- In both cases: reduced-motion fallback is not optional.
+- **Simple states** (hover, press, focus, enter/leave on 1–2 properties) → CSS transition with a named curve + duration. Lighter, no JS.
+- **Physics, gestures, cursor/scroll-linked values, sequences** → a real animation engine (spring physics). Prefer `animation-timeline: scroll()` for scroll-linked work — it runs on the compositor with zero JS.
+- Either way, the reduced-motion fallback is mandatory, and every effect cleans up its listeners on teardown (View Transitions and SPAs recreate the DOM).

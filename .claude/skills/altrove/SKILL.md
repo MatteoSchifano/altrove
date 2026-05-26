@@ -1,81 +1,46 @@
 ---
 name: altrove
-description: Use when working in the altrove repo (MatteoSchifano/altrove) — adding or editing chapters under src/content/chapters/, building Demo/Astro island components, or touching its native-CSS design tokens, Motion spring presets, or bilingual IT/EN content. Altrove is a personal Astro 6 + MDX laboratory on UX, motion design and typography, deliberately library-free.
+description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want them honest, restrained and invisible: motion timed in milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns avoided. Distilled UX, motion-design and typography principles.
 ---
 
-# Altrove
+# Altrove · UX principles
 
-## What it is
+A distilled body of UX, motion-design and typography principles. Apply them when designing or critiquing any interface — the framework, language or repo is irrelevant. They come from a chapter-by-chapter study of what makes an interface *quietly* good.
 
-**Altrove** is a personal, chapter-based laboratory on **UX, motion design and typography** (`github.com/MatteoSchifano/altrove`). Each chapter is a finished study — a pattern, a family of components, a question with an articulated answer — written in MDX with real interactive Demos inside, annotated with the *why* behind every choice.
+## The founding principle: invisible UX
 
-**It is NOT** a design system to ship, a framework, a starter kit, or a collection of universal best practices. It is built **to understand**, not to impress. Keep this in mind: here, polish and craft beat speed and feature count.
+> *"Tutto quello che succede senza che l'utente se ne accorga è la vera potenza della UX."*
+> Everything that happens without the user noticing is the real power of UX.
 
-**Founding principle:** the best UX is invisible. It works silently while the user's mind is *elsewhere* (*altrove*). Instant skeletons, buttons that respond before the network, images that already have shape — acts of respect for the user's time and attention.
+The best interface works in silence while the user's mind is **elsewhere** (*altrove*). Craft is felt only in the negative — *"si nota l'assenza dell'attrito"* (you notice the absence of friction). An instant skeleton, a button that answers before the network, an image that already has shape — acts of respect for the user's time and attention. The interface *"lavora in silenzio, e disturba solo quando vale"* (works silently, and interrupts only when it's worth it).
 
-## The 5 working principles (non-negotiable)
+## The 9 meta-principles
 
-1. **One chapter at a time, finished 100% before the next.** Never leave half-done implementations.
-2. **Write the rationale before the code.** For each interaction, articulate *why* before implementing. The `slot="note"` notes inside each Demo are part of the product, not a comment.
-3. **`prefers-reduced-motion` is not optional.** Every animation has a dignified static fallback. It is part of the design, not a layer added afterward.
-4. **Resist libraries.** No Tailwind, shadcn, Radix. The gym is native CSS: `@layer`, `clamp()`, custom properties, container queries, OKLCH, `light-dark()`. The only runtime dependency for motion is `motion` (motion.dev), used in vanilla JS.
-5. **Motion is measured in milliseconds, not by feel.** Four spring presets and five named easing curves. **Never** invent an inline `cubic-bezier` or an inline spring.
+1. **Honesty over effect.** When forced to choose, tell the truth rather than impress. *"Se è 84%, è 84%, non 99 per fare scena"* — even sample animations must not lie. A dashboard *"non celebra, riferisce"* (doesn't celebrate, reports). → `honesty.md`
+2. **`prefers-reduced-motion` is binary, not a "soft" version.** Don't slow the animation — remove it. Deliver **the same final state without the journey**. Reducing motion never hides state. → `motion.md`
+3. **Animate once; never re-animate.** Reveal new items, leave seen ones alone. *"Le pagine che ri-animano sembrano nervose; quelle che animano una volta sembrano abitate."*
+4. **Things leave faster than they enter.** Entrance ≈ 220ms, exit ≈ 160ms — physical coherence. Motion is measured in **precise milliseconds with a rationale**, never "by feel". → `motion.md`
+5. **Digits must not flinch.** Use `tabular-nums` wherever a number changes or is compared in a column — *"così quando passa da 9 a 10 non sussulta"*. A jumping column is noise. → `patterns.md`
+6. **Native platform beats libraries.** `<dialog>`, Popover API, CSS Anchor Positioning, `:user-invalid`, `:autofill`, `field-sizing: content`, `animation-timeline: scroll()`, `Intl.NumberFormat`, `autocomplete` tokens. Known well, native HTML does almost everything.
+7. **Rationale before code.** Articulate *why* an interaction exists before building it. If you can't explain it, you haven't understood it yet.
+8. **Accessibility is not negotiable.** Color is never the only channel (sign + arrow + color, in that order). Keep the constant ARIA pairing: `assertive`/`role=alert` for the headline, `polite`/`role=status` for details — *"la differenza fra urlare e spiegare"*. Every gesture stays reachable by keyboard and screen reader.
+9. **Restraint with attention.** Attention is dosed, never an orchestra. The accent color is the brand's voice — use it sparingly. The real button emerges *"ma non grida"* (without shouting).
 
-## Stack
+## Quick reference (the recurring numbers)
 
-| Technology | Role |
-|---|---|
-| **Astro 6** | Content Collections for chapters, native View Transitions, Islands for interactions |
-| **Native CSS** | `@layer base/components/utilities`, OKLCH, `light-dark()`, `clamp()`, container queries — no CSS framework |
-| **Motion** (motion.dev) | Spring physics and gestures in vanilla JS, via the `src/lib/motion.ts` wrapper |
-| **MDX** | Chapters are editorial documents with components inside |
-| **Geist Variable** | Variable Sans + Mono |
+| Rule | Value | Why |
+|---|---|---|
+| Button press scale | **0.97** (not 0.95) | 0.97 feels "pressed", 0.95 feels "broken" |
+| Don't show a loader below | **400ms** ("soglia di pudore") | A spinner for 200ms is *"cattiveria gratuita"* |
+| Optimistic rollback | **~500ms** | <200ms = unreadable, >1s = looks broken |
+| Dialog enter / exit | **220ms / 160ms** | Things leave faster than they enter |
+| Confirm / inline-confirm auto-cancel | **4s / 5s** | A window of intent, not a modal menu |
+| Reveal stagger | **40–90ms** | Longer reads as "celebration" |
+| Count-up | **900ms, ease-out** | Out, never in-out: start fast, arrive calm |
+| Reduced-motion durations | **→ 1ms** | Same final state, no journey |
 
-Node ≥ 22.12 · dev on `http://localhost:4321` · `npm run dev` / `build` / `preview`.
+## Where to look
 
-## Project map
-
-```
-src/
-├── content/chapters/{it,en}/<slug>.mdx   # the chapters, mirrored per language
-├── content.config.ts                     # Zod schema for a chapter
-├── components/
-│   ├── Demo.astro                        # editorial wrapper (stage + note)
-│   ├── ChapterCard.astro                 # the "magnetic" card on the home
-│   └── <theme>/                          # demos per chapter (buttons/, waiting/, dialog/, …)
-├── layouts/{Base,Chapter,HomePage}.astro
-├── lib/{motion,i18n,readingTime,roadmap}.ts
-├── pages/                                # index.astro (IT) + en/ mirror + rss
-└── styles/{tokens,reset,typography,global}.css
-```
-
-## Quick reference
-
-**Spring presets** (never inline — import from `lib/motion.ts`): `subtle` (micro-feedback), `gentle` (default), `snappy` (UI controls), `expressive` (micro-celebration).
-
-**CSS easing curves** (tokens, never a custom bezier): `--ease-out-soft` (default), `--ease-out-snug`, `--ease-out-snappy`, `--ease-in-out`, `--ease-in`.
-
-**Durations:** `--dur-instant` 100ms · `--dur-fast` 180ms · `--dur-normal` 280ms · `--dur-slow` 480ms · `--dur-slower` 720ms (all collapse to 1ms under `prefers-reduced-motion`).
-
-For the full token catalog (OKLCH colors, type scale, spacing, radii, shadows, layout) → read `design-tokens.md`.
-For the motion system (presets, magnetic/lift helpers, `data-motion`, reduced-motion) → read `motion.md`.
-For adding a chapter or a Demo component (schema, bilingual, template) → read `authoring-chapters.md`.
-
-## Bilingual (IT default, EN mirror)
-
-- Italian is the **canonical language** (`DEFAULT_LOCALE = 'it'`), served at the root; English lives under `/en/`.
-- Every chapter exists in **both** languages with the same structure and the same number of Demos, tied by the same `translationKey`.
-- UI strings live in `lib/i18n.ts` (dotted keys, typed — adding one forces you to add it to every locale). *Content* translations live in the MDX files, not in `i18n.ts`.
-- RSS: `/rss.xml` and `/en/rss.xml`.
-
-## Common mistakes to avoid
-
-| Mistake | Correct |
-|---|---|
-| Magic values (`#hex`, `0.5rem`, `cubic-bezier(...)`) | Use tokens: `var(--accent)`, `var(--space-2xs)`, `var(--ease-out-soft)` |
-| Inline spring in JS | Import a preset from `lib/motion.ts`; if you need a new feel, add a preset there with a rationale |
-| Animation without a reduced-motion fallback | `prefersReducedMotion()` guard in JS / duration token that collapses to 1ms in CSS |
-| Adding Tailwind or a UI lib | Forbidden. Write native CSS inside `@layer` |
-| Chapter only in IT (or only EN) | Always mirror in the other language, same `translationKey` |
-| Spinner inside the button as the default for async | Prefer the morph (the button *becomes* the action) — see chapter 01 |
-| Accent color everywhere | The accent is "the brand's voice"; use it sparingly |
+- **`patterns.md`** — concrete, per-interaction heuristics: buttons, waiting/loading, empty & error states, dialogs & confirmations, scroll, numbers, inputs.
+- **`motion.md`** — motion as a craft: the timing laws, the four "feels", easing, and reduced-motion done right.
+- **`honesty.md`** — the honest-vs-deceptive throughline: a catalogue of patterns that respect the user vs dark patterns that lie.
