@@ -1,0 +1,19 @@
+.claude/skills/altrove/SKILL.md
+  s_9741fca9d58056::t_ae618c54920781 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3b505354ecc9bd789ba8ae94e33e618f089efe49",
+  "prompts": {},
+  "sessions": {
+    "s_9741fca9d58056": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc72d372-ad6e-4a64-b584-05bdac30a772",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
