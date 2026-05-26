@@ -1,6 +1,6 @@
 ---
 name: altrove
-description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want an opinionated, honesty-first take: motion timed in named milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns named and avoided, sample data that tells the truth. Distilled, restrained UX and motion-design principles.
+description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want an opinionated, honesty-first take — motion timed in named milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns named and avoided, sample data that tells the truth. Distilled, restrained UX and motion-design principles.
 ---
 
 # Altrove · UX principles
