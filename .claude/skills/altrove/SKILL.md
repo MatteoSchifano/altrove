@@ -1,11 +1,11 @@
 ---
 name: altrove
-description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want them honest, restrained and invisible: motion timed in milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns avoided. Distilled UX, motion-design and typography principles.
+description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want an opinionated, honesty-first take: motion timed in named milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns named and avoided, sample data that tells the truth. Distilled, restrained UX and motion-design principles.
 ---
 
 # Altrove · UX principles
 
-A distilled body of UX, motion-design and typography principles. Apply them when designing or critiquing any interface — the framework, language or repo is irrelevant. They come from a chapter-by-chapter study of what makes an interface *quietly* good.
+A distilled, opinionated body of UX and motion-design principles. Apply them when designing or critiquing any interface — the framework, language or repo is irrelevant. They come from a chapter-by-chapter study of what makes an interface *quietly* good.
 
 ## The founding principle: invisible UX
 
