@@ -1,0 +1,102 @@
+---
+lang: "it"
+translationKey: "chapter-08"
+number: "08"
+title: "La micro-tipografia"
+excerpt: "Quasi tutto, in un'interfaccia, è testo. E il testo ha mille piccole decisioni — la virgoletta che si curva, il titolo che non lascia parole sole, la riga che dura quanto basta — che decidono se la pagina respira o trattiene il fiato."
+date: "maggio 2026"
+readMinutes: 12
+tags: ["tipografia", "editoriale", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SmartPunctuation from '../../../components/typography/SmartPunctuation.astro';
+import BalancedHeadings from '../../../components/typography/BalancedHeadings.astro';
+import FontVoice from '../../../components/typography/FontVoice.astro';
+import WeightForSize from '../../../components/typography/WeightForSize.astro';
+import TheMeasure from '../../../components/typography/TheMeasure.astro';
+import HonestHyphenation from '../../../components/typography/HonestHyphenation.astro';
+
+Se guardi un prodotto qualsiasi e togli mentalmente le immagini, i bottoni, i bordi — resta il testo. È quasi tutto testo: i nomi dei campi, i messaggi di errore, i numeri, le etichette, i titoli, la riga di copyright in fondo. La tipografia non è il vestito buono che si mette la pagina nelle occasioni importanti: è il materiale di cui è fatta quasi ogni cosa che l'utente legge. E proprio perché è ovunque, i suoi difetti si distribuiscono ovunque — invisibili uno per uno, pesanti tutti insieme.
+
+La micro-tipografia è il livello più fine di questa cura: non la scelta del carattere o della scala, ma quei segni piccolissimi che separano un testo "battuto a macchina" da un testo *composto*. La virgoletta dritta che dovrebbe curvarsi. Il titolo che lascia una parola orfana sull'ultima riga. La riga di testo lunga il doppio di quanto l'occhio regga. Sono dettagli che nessuno saprebbe nominare, ma che tutti *sentono*: una pagina con la micro-tipografia curata sembra semplicemente più seria, senza che si capisca perché.
+
+Sei dimostrazioni, ognuna su una decisione che da sola sembra trascurabile. E come sempre qui, niente librerie: il browser moderno ha imparato a fare quasi tutto da solo — `text-wrap: balance`, le feature OpenType, gli assi dei font variabili, l'unità `ch`, `hyphens: auto`. La piattaforma ha recuperato in pochi anni quello che per decenni è stato il mestiere esclusivo del tipografo.
+
+## I segni che si curvano
+
+La tastiera è bugiarda: ti dà un solo segno per fare cose diverse. La virgoletta dritta (`"`) finge di essere due virgolette tipografiche, l'apostrofo dritto (`'`) finge di essere un apostrofo vero, il trattino (`-`) finge di essere tre trattini diversi. La tipografia li distingue perché hanno mestieri diversi: il trattino medio (–) lega gli intervalli, il trattino lungo (—) apre un inciso, e i puntini di sospensione (…) sono *un* glifo, non tre punti appiccicati.
+
+<Demo title="Punteggiatura tipografica · consapevole della lingua" tag="08.a">
+  <SmartPunctuation locale="it" />
+  <div slot="note">
+    <p>Scrivi a sinistra "alla buona" — con le virgolette dritte, i trattini doppi, i tre puntini — e a destra leggi la versione composta. Le regole sono poche e oneste: <code>...</code> diventa <code>…</code>, <code>--</code> diventa un trattino medio e <code>---</code> uno lungo, l'apostrofo fra due lettere si curva in <code>’</code>. Le virgolette doppie si alternano apertura/chiusura, e qui sta la parte bilingue: in italiano diventano caporali (<em>«»</em>), in inglese le double curly (<em>"​"</em>) — perché la convenzione cambia con la lingua, e fingere che sia universale è il primo errore.</p>
+    <p>Sul campione composto c'è <code>hanging-punctuation: first last</code>: la virgoletta d'apertura "sporge" oltre il margine, così il bordo sinistro del testo resta otticamente dritto invece di sembrare rientrato. Ha supporto reale solo su Safari — e va benissimo così: dove non è supportata, il testo resta composto, semplicemente non sporge. È la differenza fra un miglioramento progressivo e una promessa che il browser non può mantenere.</p>
+  </div>
+</Demo>
+
+## Il titolo che non si spezza male
+
+Il modo in cui il browser manda a capo il testo è "ingordo": riempie ogni riga fino all'orlo e scarica gli avanzi sull'ultima. Per un paragrafo lungo va benissimo. Per un titolo di due righe è un disastro: l'ultima riga finisce con una parola sola, sospesa, e il titolo sembra rotto. La parola sola in fondo si chiama *orfana* (in un titolo) o *vedova* (in fondo a un paragrafo), e per anni la si combatteva a mano, infilando `<br>` o spazi unificatori dove servivano.
+
+<Demo title="text-wrap · balance per i titoli, pretty per il corpo" tag="08.b">
+  <BalancedHeadings locale="it" />
+  <div slot="note">
+    <p>Due proprietà, due mestieri. <code>text-wrap: balance</code> distribuisce le parole di un titolo su righe di lunghezza simile: niente più orfane. Il browser lo applica solo a blocchi corti (tipicamente fino a sei righe) perché è un calcolo costoso — ed è la scelta giusta, un titolo lo è quasi sempre. <code>text-wrap: pretty</code> invece lavora sul corpo: guarda le ultime righe del paragrafo ed evita la vedova, ricomponendo appena quel tanto che basta.</p>
+    <p>Spegni l'interruttore e torna il wrapping ingordo: guarda l'ultima riga del titolo accorciarsi a una parola. Il re-wrapping non si anima — un testo che scivola fra una disposizione e l'altra sembrerebbe uno scatto, non una transizione. Si commuta, e basta. È una delle conquiste recenti del CSS che fa risparmiare più markup manuale: zero `<br>` infilati a mano, zero spazi unificatori, zero correzioni che si rompono al primo cambio di copy.</p>
+  </div>
+</Demo>
+
+## La voce nascosta del font
+
+Un font variabile come Geist non porta solo dei pesi: porta delle *varianti stilistiche* che restano spente finché non le si chiama per nome. Sono il modo in cui un carattere acquista personalità senza cambiare famiglia: la 'a' a un solo piano invece che a due, lo zero con la sbarra che non si confonde con la 'o', le legature che fondono `fi` e `fl` in un glifo unico. Il design system di Altrove ne tiene accese alcune di default — qui le mettiamo a nudo per vedere cosa cambia.
+
+<Demo title="Feature OpenType · cv11, ss03, ss04, legature" tag="08.c">
+  <FontVoice locale="it" />
+  <div slot="note">
+    <p>Il campione parte "nudo", con tutte le feature spente, così si vede il font di base. Accendi i chip e osserva: <code>cv11</code> trasforma la 'a' in quella a un piano, più calma; <code>ss03</code> sbarra lo zero (provalo su "1080" — utile ovunque uno zero possa confondersi con la lettera); <code>ss04</code> attiva legature stilistiche tenui; le legature comuni fondono <code>ffi</code> di "ufficiali" in un disegno unico. Sono feature <em>documentate</em> di Geist, attivate via <code>font-feature-settings</code>.</p>
+    <p>La distinzione onesta è importante: queste sono feature reali incise nel font, non sintesi del browser. Se chiedessi un maiuscoletto a un font che non ce l'ha, il browser lo "fabbricherebbe" rimpicciolendo le maiuscole — un falso che si vede, perché i tratti restano spessi come quelli grandi. Qui no: ogni glifo che vedi cambiare è disegnato apposta dal type designer. La regola è la stessa di tutto il playground — non promettere quello che il materiale sottostante non può davvero dare.</p>
+  </div>
+</Demo>
+
+## Il peso che segue la dimensione
+
+Un font variabile ha un asse di peso continuo — Geist va da 100 a 900 — e questo abilita una regola di ottica che gli asset statici non sanno applicare. Più un testo è grande, più vuole essere *leggero*: alle grandi dimensioni un peso medio sembra goffo, gonfio. Più un testo è piccolo, più vuole un filo di peso in più, altrimenti i tratti sottili si chiudono e la riga sbiadisce. Lo stesso "peso percepito" si ottiene con numeri diversi a seconda della taglia.
+
+<Demo title="Peso variabile compensato per taglia" tag="08.d">
+  <WeightForSize locale="it" />
+  <div slot="note">
+    <p>Con l'interruttore spento, titolo, corpo e didascalia usano tutti lo stesso peso (500): guarda il titolo sembrare pesante e un po' grezzo, e la didascalia sottile, quasi smunta. Accendilo e ogni taglia prende il suo peso compensato — titolo a 380, corpo a 460, didascalia a 540 — via <code>font-variation-settings: 'wght'</code>. Il "colore tipografico", cioè il grigio medio che il testo lascia sulla pagina, torna uniforme fra le tre taglie. È una cosa che si sente prima di vederla.</p>
+    <p>È il tipo di rifinitura che separa una tipografia "messa lì" da una tipografia *accordata*. Un tempo richiedeva tre tagli diversi dello stesso carattere (display, text, caption): pesi disegnati apposta per ogni dimensione. Oggi l'asse variabile lo dà gratis, a patto di ricordarsi che il peso non è un valore assoluto ma una funzione della taglia. La transizione fra i due stati usa le durate-token, quindi con <code>prefers-reduced-motion</code> commuta secca, senza morphing.</p>
+  </div>
+</Demo>
+
+## La misura giusta
+
+La tipografia comincia molto prima della scelta del carattere: comincia da quanto è lunga una riga. La "misura" — il numero di caratteri per riga — è forse la decisione che più influenza la leggibilità di un testo lungo, e quasi nessuno la regola consapevolmente. Troppo lunga, e l'occhio fatica a ritrovare l'inizio della riga successiva. Troppo corta, e i continui ritorni a capo spezzano il ritmo. La zona comoda per la lettura continua sta fra circa 45 e 75 caratteri.
+
+<Demo title="La misura in ch · 45–75 è la zona comoda" tag="08.e">
+  <TheMeasure locale="it" />
+  <div slot="note">
+    <p>Trascina lo slider e guarda dove il testo smette di essere comodo. La misura si conta in <code>ch</code>, l'unità che vale la larghezza dello "0" del font corrente: dire <code>max-inline-size: 64ch</code> significa "circa 64 caratteri per riga", indipendentemente dal corpo. È molto più robusto di una larghezza in pixel, che cambia significato appena cambia la dimensione del testo. Il valore in ch è mostrato con <code>tabular-nums</code>, così non sussulta passando da 9 a 10 — la lezione del capitolo 06.</p>
+    <p>Due dettagli onesti. Primo: la leading si accorda alla misura — righe più lunghe ricevono un filo di interlinea in più, perché l'occhio ha bisogno di più aiuto a ritrovare la riga successiva quando il salto orizzontale è ampio. Secondo: il verdetto "comoda / troppo stretta / troppo larga" usa un grigio sobrio fuori zona, non un rosso d'allarme. La misura giusta è un <em>intervallo</em>, non una legge: 44 caratteri non sono un errore, sono solo un po' stretti. Il sistema consiglia, non sgrida.</p>
+  </div>
+</Demo>
+
+## La sillabazione onesta
+
+L'ultimo segno è il più frainteso: il testo giustificato. Allineare entrambi i margini sembra l'apice dell'ordine tipografico, ma su misure strette è spesso una trappola. Senza sillabazione, per pareggiare il margine destro il browser allarga gli spazi fra le parole — e quando una parola lunga non ci sta, li allarga troppo, fino a creare i "fiumi": rivoli bianchi che scorrono verticalmente attraverso il blocco e disturbano la lettura.
+
+<Demo title="hyphens: auto · e perché lang è obbligatorio" tag="08.f">
+  <HonestHyphenation locale="it" />
+  <div slot="note">
+    <p>Due interruttori sullo stesso paragrafo. Attiva solo <em>Giustificato</em> e guarda gli spazi dilatarsi su misura stretta. Aggiungi <em>Sillabazione</em> (<code>hyphens: auto</code>) e le parole si spezzano dove la lingua lo consente: gli spazi tornano regolari, il grigio del testo si fa uniforme. Giustificato e sillabazione sono una coppia — il primo da solo, su colonne strette, fa più danni che eleganza.</p>
+    <p>Ed ecco il punto onesto, il bug tipografico più comune del web: <code>hyphens: auto</code> funziona <em>solo</em> se l'elemento dichiara la sua lingua con l'attributo <code>lang</code>. Senza, il browser non sa quale dizionario di sillabazione usare e semplicemente non sillaba — silenziosamente, senza errori. Qui il paragrafo porta <code>lang="it"</code>, sempre. E la posizione di default di tutto il playground resta la bandiera a destra (<em>ragged right</em>): un margine destro irregolare ma con spazi puliti è quasi sempre più leggibile di un giustificato forzato.</p>
+  </div>
+</Demo>
+
+---
+
+Sei segni piccolissimi, ognuno invisibile da solo. La virgoletta che si curva nella lingua giusta, il titolo che non lascia parole orfane, le feature che danno voce al font, il peso che si accorda alla taglia, la riga lunga quanto l'occhio regge, la parola che si spezza solo se sa in che lingua è scritta. Nessuno di questi dettagli si nota quando è fatto bene — si nota solo che la pagina, complessivamente, *respira*. Ed è di nuovo il principio di Altrove: tutto quello che succede senza che l'utente se ne accorga è la vera potenza dell'interfaccia, mentre lui sta semplicemente leggendo.
+
+Il prossimo capitolo lascia la pagina e torna ai componenti, con una domanda apparentemente banale: *anatomia di un toggle*. Perché lo switch è l'unico controllo che si comporta come un oggetto fisico — ha due posizioni, non due stati — e quella differenza cambia tutto il modo in cui lo si disegna.

@@ -1,0 +1,182 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   TheMeasure — la misura giusta.
+
+   La "misura" è la lunghezza di una riga di testo. Si conta in
+   caratteri, non in pixel — e l'unità ch serve esattamente a quello:
+   1ch = la larghezza dello "0" del font corrente. Una riga troppo
+   lunga fa perdere il ritorno a capo; troppo corta spezza il ritmo
+   e stanca l'occhio coi continui salti. La zona comoda per la lettura
+   continua sta fra circa 45 e 75 caratteri.
+
+   Lo slider regola la misura del campione; il valore in ch è mostrato
+   con tabular-nums (non sussulta passando da 9 a 10, lezione del cap.06).
+   La leading si accorda alla misura: righe più lunghe vogliono un filo
+   di interlinea in più per ritrovare l'inizio della successiva.
+
+   Reduced motion: la larghezza segue lo slider senza transizione —
+   sarebbe in ritardo sul gesto.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Misura',
+    unit: 'caratteri',
+    sample:
+      'La tipografia comincia molto prima della scelta di un carattere: comincia da quanto è lunga una riga. È una decisione che l’occhio sente prima che la mente la sappia nominare. Trascina il cursore e guarda dove il testo smette di essere comodo.',
+    tooTight: 'troppo stretta',
+    cozy: 'comoda',
+    tooWide: 'troppo larga',
+  },
+  en: {
+    label: 'Measure',
+    unit: 'characters',
+    sample:
+      'Typography begins long before the choice of a typeface: it begins with how long a line is. It’s a decision the eye feels before the mind can name it. Drag the slider and watch where the text stops being comfortable.',
+    tooTight: 'too tight',
+    cozy: 'cozy',
+    tooWide: 'too wide',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="measure" data-i18n-tight={c.tooTight} data-i18n-cozy={c.cozy} data-i18n-wide={c.tooWide}>
+  <div class="measure__controls">
+    <label class="measure__label" for="measure-range">{c.label}</label>
+    <input
+      id="measure-range"
+      class="measure__range"
+      type="range"
+      min="28"
+      max="92"
+      value="64"
+      step="1"
+    />
+    <span class="measure__readout">
+      <strong class="measure__ch tabular">64</strong>
+      <span class="measure__unit">{c.unit}</span>
+      <span class="measure__verdict" data-zone="cozy">{c.cozy}</span>
+    </span>
+  </div>
+
+  <p class="measure__sample" style="--measure-ch: 64;">{c.sample}</p>
+</div>
+
+<style>
+  .measure {
+    inline-size: min(40rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .measure__controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+  }
+
+  .measure__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+
+  .measure__range {
+    flex: 1 1 12rem;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .measure__range:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: var(--radius-xs);
+  }
+
+  .measure__readout {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+
+  .measure__ch {
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    font-weight: var(--weight-semibold);
+  }
+
+  .measure__verdict {
+    font-size: var(--text-xs);
+    padding: 0.1rem 0.5rem;
+    border-radius: var(--radius-pill);
+    font-weight: var(--weight-medium);
+  }
+
+  .measure__verdict[data-zone='cozy'] {
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+
+  /* fuori zona: un grigio sobrio, non un allarme. È un consiglio,
+     non un errore — la misura "giusta" è un intervallo, non una legge. */
+  .measure__verdict[data-zone='tight'],
+  .measure__verdict[data-zone='wide'] {
+    background-color: var(--surface-sunken);
+    color: var(--ink-subtle);
+  }
+
+  .measure__sample {
+    margin: 0;
+    inline-size: 100%;
+    max-inline-size: calc(var(--measure-ch, 64) * 1ch);
+    color: var(--ink);
+    font-size: var(--text-base);
+    /* la leading cresce con la misura: da 1.45 (stretta) verso 1.7 (larga) */
+    line-height: clamp(1.45, calc(1.1 + var(--measure-ch, 64) * 0.0055), 1.72);
+    transition: max-inline-size var(--dur-fast) var(--ease-out-soft);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.measure').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const range = root.querySelector<HTMLInputElement>('.measure__range');
+      const sample = root.querySelector<HTMLElement>('.measure__sample');
+      const chOut = root.querySelector<HTMLElement>('.measure__ch');
+      const verdict = root.querySelector<HTMLElement>('.measure__verdict');
+      if (!range || !sample || !chOut || !verdict) return;
+
+      const tTight = root.dataset.i18nTight ?? 'too tight';
+      const tCozy = root.dataset.i18nCozy ?? 'cozy';
+      const tWide = root.dataset.i18nWide ?? 'too wide';
+
+      const render = () => {
+        const v = Number(range.value);
+        sample.style.setProperty('--measure-ch', String(v));
+        chOut.textContent = String(v);
+        let zone: 'tight' | 'cozy' | 'wide' = 'cozy';
+        if (v < 45) zone = 'tight';
+        else if (v > 75) zone = 'wide';
+        verdict.dataset.zone = zone;
+        verdict.textContent = zone === 'tight' ? tTight : zone === 'wide' ? tWide : tCozy;
+      };
+      range.addEventListener('input', render);
+      render();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

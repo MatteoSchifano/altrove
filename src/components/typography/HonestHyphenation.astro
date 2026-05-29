@@ -1,0 +1,165 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HonestHyphenation — la sillabazione onesta.
+
+   Due interruttori su uno stesso paragrafo:
+     • Giustificato → allinea entrambi i margini. Bello in teoria,
+       ma se non c'è sillabazione il browser allarga gli spazi fino
+       a creare "fiumi" bianchi che attraversano il blocco.
+     • Sillabazione → hyphens: auto. Spezza le parole a fine riga
+       secondo le regole della lingua, e gli spazi tornano regolari.
+
+   Il punto onesto: hyphens: auto FUNZIONA solo se l'elemento ha un
+   attributo lang corretto. Senza lang, il browser non sa quale
+   dizionario usare e non sillaba — è il bug tipografico più comune
+   del web. Qui il paragrafo dichiara la sua lingua, sempre.
+
+   E la posizione di default? Bandiera a destra (ragged right), non
+   giustificato. Su misure strette il giustificato fa più danni che
+   eleganza: meglio un margine destro irregolare ma spazi puliti.
+
+   Niente motion: la ri-composizione del testo non si anima.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    justify: 'Giustificato',
+    hyphen: 'Sillabazione',
+    sample:
+      'La giustificazione promette ordine e a volte mantiene disordine: senza sillabazione, parole particolarmente lunghe costringono il browser a dilatare gli spazi della riga precedente. Con la sillabazione attiva, invece, le parole si spezzano dove la lingua lo consente e il grigio del testo torna uniforme.',
+  },
+  en: {
+    justify: 'Justified',
+    hyphen: 'Hyphenation',
+    sample:
+      'Justification promises order and sometimes delivers disorder: without hyphenation, particularly long words force the browser to stretch the spaces of the preceding line. With hyphenation on, instead, words break where the language allows and the grey of the text becomes even again.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="hyph">
+  <div class="hyph__controls">
+    <label class="hyph__switch">
+      <input type="checkbox" class="hyph__check" data-prop="justify" />
+      <span class="hyph__track" aria-hidden="true"><span class="hyph__thumb"></span></span>
+      <span>{c.justify}</span>
+    </label>
+    <label class="hyph__switch">
+      <input type="checkbox" class="hyph__check" data-prop="hyphen" />
+      <span class="hyph__track" aria-hidden="true"><span class="hyph__thumb"></span></span>
+      <span>{c.hyphen}</span>
+    </label>
+  </div>
+
+  <p
+    class="hyph__sample"
+    lang={locale}
+    data-justify="off"
+    data-hyphen="off"
+  >{c.sample}</p>
+</div>
+
+<style>
+  .hyph {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .hyph__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .hyph__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  .hyph__check {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+  }
+
+  .hyph__track {
+    inline-size: 2.25rem;
+    block-size: 1.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    padding: 0.15rem;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+    flex-shrink: 0;
+  }
+
+  .hyph__thumb {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out-snappy);
+  }
+
+  .hyph__check:checked + .hyph__track { background-color: var(--accent); }
+  .hyph__check:checked + .hyph__track .hyph__thumb { transform: translateX(0.95rem); }
+  .hyph__check:focus-visible + .hyph__track { box-shadow: var(--halo-focus); }
+
+  .hyph__sample {
+    margin: 0;
+    /* misura volutamente stretta: è dove il giustificato senza
+       sillabazione mostra i fiumi più larghi */
+    max-inline-size: 24rem;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    text-align: left;
+    hyphens: manual;
+  }
+
+  .hyph__sample[data-justify='on'] { text-align: justify; }
+  .hyph__sample[data-hyphen='on'] { hyphens: auto; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.hyph').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const sample = root.querySelector<HTMLElement>('.hyph__sample');
+      const checks = root.querySelectorAll<HTMLInputElement>('.hyph__check');
+      if (!sample) return;
+
+      checks.forEach((check) => {
+        const prop = check.dataset.prop; // 'justify' | 'hyphen'
+        const sync = () => {
+          if (prop) sample.dataset[prop] = check.checked ? 'on' : 'off';
+        };
+        check.addEventListener('change', sync);
+        sync();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

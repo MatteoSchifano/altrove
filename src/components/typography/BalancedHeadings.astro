@@ -1,0 +1,156 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BalancedHeadings — il titolo che non si spezza male.
+
+   Due proprietà CSS, due mestieri diversi:
+     • text-wrap: balance  → pareggia le righe di un TITOLO corto,
+       così non resta una parola orfana sull'ultima riga.
+     • text-wrap: pretty   → cura le ultime righe di un PARAGRAFO,
+       evitando la "vedova" (una parola sola in fondo).
+
+   Il toggle spegne e riaccende entrambe, per vedere la differenza.
+   Quando sono spente, è il wrapping "greedy" di sempre: il browser
+   riempie ogni riga fino all'orlo e lascia gli avanzi all'ultima.
+
+   Niente motion: il re-wrapping del testo non si anima — apparirebbe
+   come uno scatto. Si commuta, e basta.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    toggle: 'Composizione curata',
+    heading: 'La pagina respira quando il titolo non lascia parole sole',
+    para:
+      'Il wrapping predefinito riempie ogni riga fino all’orlo e scarica gli avanzi sull’ultima: spesso una parola sola, sospesa nel vuoto. Una riga finale di una parola si chiama vedova, ed è il piccolo strappo che fa sembrare la pagina trascurata.',
+    on: 'curata',
+    off: 'greedy',
+  },
+  en: {
+    toggle: 'Considered wrapping',
+    heading: 'The page breathes when the title leaves no word alone',
+    para:
+      'The default wrap fills every line to the brim and dumps the leftovers onto the last one: often a single word, suspended in the void. A last line of one word is called a widow, and it’s the small tear that makes a page look neglected.',
+    on: 'considered',
+    off: 'greedy',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="balance">
+  <label class="balance__switch">
+    <input type="checkbox" class="balance__check" checked />
+    <span class="balance__track" aria-hidden="true"><span class="balance__thumb"></span></span>
+    <span class="balance__label">{c.toggle}</span>
+  </label>
+
+  <div class="balance__stage" data-mode="on">
+    <h4 class="balance__heading">{c.heading}</h4>
+    <p class="balance__para">{c.para}</p>
+  </div>
+</div>
+
+<style>
+  .balance {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* ── switch ── */
+  .balance__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    align-self: flex-start;
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  .balance__check {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+  }
+
+  .balance__track {
+    inline-size: 2.25rem;
+    block-size: 1.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    padding: 0.15rem;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+    flex-shrink: 0;
+  }
+
+  .balance__thumb {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out-snappy);
+  }
+
+  .balance__check:checked + .balance__track { background-color: var(--accent); }
+  .balance__check:checked + .balance__track .balance__thumb { transform: translateX(0.95rem); }
+  .balance__check:focus-visible + .balance__track { box-shadow: var(--halo-focus); }
+
+  /* ── stage ── */
+  .balance__stage {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    /* misura volutamente stretta: è dove orfane e vedove si notano */
+    max-inline-size: 22rem;
+  }
+
+  .balance__heading {
+    font-size: var(--text-lg);
+    margin-block-end: var(--space-xs);
+  }
+
+  .balance__para {
+    margin: 0;
+    max-inline-size: none;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* La cura tipografica vive qui, attivata dal data-mode */
+  .balance__stage[data-mode='on'] .balance__heading { text-wrap: balance; }
+  .balance__stage[data-mode='on'] .balance__para { text-wrap: pretty; }
+  .balance__stage[data-mode='off'] .balance__heading,
+  .balance__stage[data-mode='off'] .balance__para { text-wrap: wrap; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.balance').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const check = root.querySelector<HTMLInputElement>('.balance__check');
+      const stage = root.querySelector<HTMLElement>('.balance__stage');
+      if (!check || !stage) return;
+
+      const sync = () => { stage.dataset.mode = check.checked ? 'on' : 'off'; };
+      check.addEventListener('change', sync);
+      sync();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

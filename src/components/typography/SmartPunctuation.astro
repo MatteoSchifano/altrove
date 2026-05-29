@@ -1,0 +1,181 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SmartPunctuation — i segni che si curvano.
+
+   La tastiera ha solo segni "dritti": la virgoletta dattilografica
+   ("), l'apostrofo dritto ('), il trattino unico (-), i tre punti
+   (...). La tipografia vera ne ha di più, e ognuno ha un mestiere:
+     • « » / " "  virgolette curve (caporali in IT, double curly in EN)
+     • '          apostrofo tipografico (U+2019), non il dritto
+     • –          trattino medio (intervalli: "pag. 3–7")
+     • —          trattino lungo (incisi: "lui — distratto — annuì")
+     • …          puntini di sospensione come UN glifo, non tre punti
+
+   Si digita a sinistra "alla buona", si legge a destra "composto".
+   La sostituzione è consapevole della lingua: in italiano le
+   virgolette sono caporali, in inglese sono le double curly.
+
+   Niente motion: è testo che si trasforma, non si anima.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    inputLabel: 'Scrivi "alla buona"',
+    outputLabel: 'Composto',
+    sample: 'Disse "vengo" -- poi, distratto, aggiunse... "forse".',
+  },
+  en: {
+    inputLabel: 'Type it "the rough way"',
+    outputLabel: 'Typeset',
+    sample: 'She said "I\'m coming" -- then, distracted, added... "maybe".',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="punct" data-locale={locale}>
+  <div class="punct__col">
+    <label class="punct__cap" for="punct-in">{c.inputLabel}</label>
+    <textarea
+      id="punct-in"
+      class="punct__in"
+      rows="3"
+      spellcheck="false"
+      autocapitalize="off"
+    >{c.sample}</textarea>
+  </div>
+
+  <div class="punct__arrow" aria-hidden="true">→</div>
+
+  <div class="punct__col">
+    <span class="punct__cap" id="punct-out-label">{c.outputLabel}</span>
+    <output
+      class="punct__out hanging"
+      aria-labelledby="punct-out-label"
+      aria-live="polite"
+    ></output>
+  </div>
+</div>
+
+<style>
+  .punct {
+    inline-size: min(36rem, 100%);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  @media (max-width: 34rem) {
+    .punct { grid-template-columns: 1fr; }
+    .punct__arrow { transform: rotate(90deg); justify-self: center; }
+  }
+
+  .punct__col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-inline-size: 0;
+  }
+
+  .punct__cap {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ink-subtle);
+  }
+
+  .punct__in,
+  .punct__out {
+    inline-size: 100%;
+    min-block-size: 6.5rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+  }
+
+  .punct__in {
+    appearance: none;
+    resize: vertical;
+    /* Nell'input vogliamo VEDERE i segni dritti: niente legature
+       o sostituzioni del font che li abbelliscano per sbaglio. */
+    font-variant-ligatures: none;
+  }
+
+  .punct__in:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .punct__out {
+    display: block;
+    background-color: var(--surface-sunken);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  /* hanging-punctuation: la virgoletta d'apertura "sporge" oltre il
+     margine sinistro, così il bordo del testo resta visivamente dritto.
+     Supporto reale: solo Safari. Altrove degrada senza danni — il testo
+     resta composto, solo non sporge. Onestà sul supporto, non finzione. */
+  .hanging { hanging-punctuation: first last; }
+
+  .punct__arrow {
+    align-self: center;
+    color: var(--ink-subtle);
+    font-size: var(--text-lg);
+  }
+</style>
+
+<script>
+  type Loc = 'it' | 'en';
+
+  function typeset(raw: string, loc: Loc): string {
+    let s = raw;
+    // 1. Puntini di sospensione: tre punti → un glifo.
+    s = s.replace(/\.{3,}/g, '…');
+    // 2. Trattini: --- → em (—), -- → en (–). Em prima di en.
+    s = s.replace(/---/g, '—').replace(/--/g, '–');
+    // 3. Apostrofo dritto fra lettere → apostrofo tipografico (U+2019).
+    s = s.replace(/(\p{L})'(\p{L})/gu, '$1’$2');
+    // 4. Virgolette doppie: si alternano apertura/chiusura.
+    const open = loc === 'it' ? '«' : '“'; // « oppure "
+    const close = loc === 'it' ? '»' : '”'; // » oppure "
+    let isOpen = true;
+    s = s.replace(/"/g, () => {
+      const ch = isOpen ? open : close;
+      isOpen = !isOpen;
+      return ch;
+    });
+    return s;
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.punct').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const loc = (root.dataset.locale as Loc) || 'it';
+      const input = root.querySelector<HTMLTextAreaElement>('.punct__in');
+      const out = root.querySelector<HTMLElement>('.punct__out');
+      if (!input || !out) return;
+
+      const render = () => { out.textContent = typeset(input.value, loc); };
+      input.addEventListener('input', render);
+      render();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,165 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FontVoice — la voce nascosta del font.
+
+   Un font variabile come Geist porta dentro di sé delle "varianti
+   stilistiche" che restano spente finché non le chiami per nome.
+   Sono quelle che il design system di Altrove tiene accese di
+   default (vedi typography.css):
+     • cv11 → la 'a' a un solo piano, più calma
+     • ss03 → lo zero con la sbarra, che non si confonde con la 'o'
+     • ss04 → legature stilistiche tenui
+     • common-ligatures → fi, fl, ff si fondono in un glifo unico
+
+   I chip accendono e spengono ciascuna feature sul campione, così
+   si vede cosa cambia. Sono feature DOCUMENTATE di Geist: niente
+   sintesi finta del browser, niente promesse che il font non mantiene.
+
+   Niente motion: le feature commutano il disegno delle lettere,
+   non c'è una transizione da animare.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: { sample: 'affari ufficiali — 1080 fiorini' },
+  en: { sample: 'official affairs — 1080 florins' },
+} as const;
+
+const FEATURES = {
+  it: [
+    { id: 'liga', label: 'legature', kind: 'liga' },
+    { id: 'cv11', label: 'cv11 · a a un piano', kind: 'feat' },
+    { id: 'ss03', label: 'ss03 · zero sbarrato', kind: 'feat' },
+    { id: 'ss04', label: 'ss04 · legature stilistiche', kind: 'feat' },
+  ],
+  en: [
+    { id: 'liga', label: 'ligatures', kind: 'liga' },
+    { id: 'cv11', label: 'cv11 · single-storey a', kind: 'feat' },
+    { id: 'ss03', label: 'ss03 · slashed zero', kind: 'feat' },
+    { id: 'ss04', label: 'ss04 · stylistic ligatures', kind: 'feat' },
+  ],
+} as const;
+
+const c = COPY[locale];
+const features = FEATURES[locale];
+---
+
+<div class="voice">
+  <p class="voice__sample" data-liga="off">{c.sample}</p>
+
+  <div class="voice__chips" role="group" aria-label={locale === 'it' ? 'Feature tipografiche' : 'Typographic features'}>
+    {features.map((f) => (
+      <button
+        type="button"
+        class="voice__chip"
+        data-kind={f.kind}
+        data-feat={f.id}
+        aria-pressed="false"
+      >{f.label}</button>
+    ))}
+  </div>
+</div>
+
+<style>
+  .voice {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    align-items: center;
+  }
+
+  .voice__sample {
+    margin: 0;
+    max-inline-size: none;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    color: var(--ink-strong);
+    text-align: center;
+    /* Si parte da TUTTO spento, per vedere il font "nudo".
+       font-feature-settings vince sui default ereditati. */
+    font-feature-settings: 'cv11' 0, 'ss03' 0, 'ss04' 0;
+    font-variant-numeric: lining-nums;
+  }
+
+  .voice__sample[data-liga='off'] { font-variant-ligatures: none; }
+  .voice__sample[data-liga='on'] { font-variant-ligatures: common-ligatures; }
+
+  .voice__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .voice__chip {
+    appearance: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .voice__chip:hover { border-color: var(--border-strong); color: var(--ink-strong); }
+
+  .voice__chip[aria-pressed='true'] {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+
+  .voice__chip:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.voice').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const sample = root.querySelector<HTMLElement>('.voice__sample');
+      const chips = root.querySelectorAll<HTMLButtonElement>('.voice__chip');
+      if (!sample) return;
+
+      const apply = () => {
+        const feats: string[] = [];
+        chips.forEach((chip) => {
+          const on = chip.getAttribute('aria-pressed') === 'true';
+          if (chip.dataset.kind === 'liga') {
+            sample.dataset.liga = on ? 'on' : 'off';
+          } else if (chip.dataset.feat) {
+            feats.push(`'${chip.dataset.feat}' ${on ? 1 : 0}`);
+          }
+        });
+        sample.style.fontFeatureSettings = feats.join(', ');
+      };
+
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          const on = chip.getAttribute('aria-pressed') === 'true';
+          chip.setAttribute('aria-pressed', String(!on));
+          apply();
+        });
+      });
+      apply();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

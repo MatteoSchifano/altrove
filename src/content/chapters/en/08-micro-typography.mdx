@@ -1,0 +1,102 @@
+---
+lang: "en"
+translationKey: "chapter-08"
+number: "08"
+title: "Micro-typography"
+excerpt: "Almost everything in an interface is text. And text has a thousand small decisions — the quote mark that curls, the title that leaves no word alone, the line that lasts just long enough — that decide whether the page breathes or holds its breath."
+date: "May 2026"
+readMinutes: 12
+tags: ["typography", "editorial", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SmartPunctuation from '../../../components/typography/SmartPunctuation.astro';
+import BalancedHeadings from '../../../components/typography/BalancedHeadings.astro';
+import FontVoice from '../../../components/typography/FontVoice.astro';
+import WeightForSize from '../../../components/typography/WeightForSize.astro';
+import TheMeasure from '../../../components/typography/TheMeasure.astro';
+import HonestHyphenation from '../../../components/typography/HonestHyphenation.astro';
+
+Take any product and mentally remove the images, the buttons, the borders — what's left is text. It's almost all text: the field names, the error messages, the numbers, the labels, the headings, the copyright line at the bottom. Typography isn't the good suit a page puts on for important occasions: it's the material almost everything the user reads is made of. And precisely because it's everywhere, its flaws are spread everywhere too — invisible one by one, heavy all together.
+
+Micro-typography is the finest layer of this craft: not the choice of typeface or scale, but those tiny marks that separate "typed" text from *typeset* text. The straight quote that should curl. The title that leaves an orphan word on the last line. The line of text twice as long as the eye can bear. They're details no one could name, but everyone *feels*: a page with considered micro-typography simply looks more serious, without anyone knowing why.
+
+Six demonstrations, each on a decision that on its own feels negligible. And as always here, no libraries: the modern browser has learned to do almost all of it on its own — `text-wrap: balance`, OpenType features, variable-font axes, the `ch` unit, `hyphens: auto`. In a few years the platform has reclaimed what for decades was the typographer's exclusive trade.
+
+## The marks that curl
+
+The keyboard lies: it gives you a single mark for several different jobs. The straight quote (`"`) pretends to be two typographic quotation marks, the straight apostrophe (`'`) pretends to be a real apostrophe, the hyphen (`-`) pretends to be three different dashes. Typography keeps them apart because they do different jobs: the en dash (–) joins ranges, the em dash (—) opens an aside, and the ellipsis (…) is *one* glyph, not three dots stuck together.
+
+<Demo title="Typographic punctuation · language-aware" tag="08.a">
+  <SmartPunctuation locale="en" />
+  <div slot="note">
+    <p>Type on the left "the rough way" — with straight quotes, double hyphens, three dots — and read the typeset version on the right. The rules are few and honest: <code>...</code> becomes <code>…</code>, <code>--</code> becomes an en dash and <code>---</code> an em dash, an apostrophe between two letters curls into <code>’</code>. Double quotes alternate open/close, and here's the bilingual part: in English they become double curly quotes (<em>"​"</em>), in Italian the guillemets (<em>«»</em>) — because the convention changes with the language, and pretending it's universal is the first mistake.</p>
+    <p>The typeset sample carries <code>hanging-punctuation: first last</code>: the opening quote "hangs" past the margin, so the left edge of the text stays optically straight instead of looking indented. It only has real support in Safari — and that's perfectly fine: where it isn't supported, the text stays typeset, it just doesn't hang. That's the difference between a progressive enhancement and a promise the browser can't keep.</p>
+  </div>
+</Demo>
+
+## The title that doesn't break badly
+
+The way a browser wraps text is "greedy": it fills every line to the brim and dumps the leftovers onto the last one. For a long paragraph that's fine. For a two-line title it's a disaster: the last line ends with a single word, suspended, and the title looks broken. The lone word at the end is called an *orphan* (in a title) or a *widow* (at the bottom of a paragraph), and for years it was fought by hand, slipping in `<br>` tags or non-breaking spaces where needed.
+
+<Demo title="text-wrap · balance for titles, pretty for body" tag="08.b">
+  <BalancedHeadings locale="en" />
+  <div slot="note">
+    <p>Two properties, two jobs. <code>text-wrap: balance</code> distributes the words of a title across lines of similar length: no more orphans. The browser only applies it to short blocks (typically up to six lines) because it's an expensive calculation — and that's the right call, a title almost always is short. <code>text-wrap: pretty</code> instead works on the body: it looks at the last lines of the paragraph and avoids the widow, recomposing just enough.</p>
+    <p>Turn the switch off and greedy wrapping returns: watch the last line of the title shrink to a single word. The re-wrapping isn't animated — text sliding between one arrangement and another would read as a jerk, not a transition. It just switches. It's one of the recent CSS wins that saves the most manual markup: zero hand-placed <code>&lt;br&gt;</code>, zero non-breaking spaces, zero fixes that break the moment the copy changes.</p>
+  </div>
+</Demo>
+
+## The font's hidden voice
+
+A variable font like Geist doesn't just carry weights: it carries *stylistic variants* that stay off until you call them by name. They're how a typeface gains personality without changing family: the single-storey 'a' instead of the double, the slashed zero that won't be mistaken for an 'o', the ligatures that fuse `fi` and `fl` into a single glyph. Altrove's design system keeps some of them on by default — here we strip them bare to see what changes.
+
+<Demo title="OpenType features · cv11, ss03, ss04, ligatures" tag="08.c">
+  <FontVoice locale="en" />
+  <div slot="note">
+    <p>The sample starts "bare", with every feature off, so you see the base font. Switch the chips on and watch: <code>cv11</code> turns the 'a' into the single-storey one, calmer; <code>ss03</code> slashes the zero (try it on "1080" — useful anywhere a zero could be confused with the letter); <code>ss04</code> enables subtle stylistic ligatures; the common ligatures fuse the <code>ffi</code> in "official" into a single shape. These are <em>documented</em> Geist features, switched on via <code>font-feature-settings</code>.</p>
+    <p>The honest distinction matters: these are real features carved into the font, not browser synthesis. If you asked for small caps from a font that doesn't have them, the browser would "fake" them by shrinking the capitals — a forgery you can see, because the strokes stay as thick as the full-size ones. Not here: every glyph you watch change is drawn on purpose by the type designer. The rule is the same as across the whole playground — don't promise what the underlying material can't truly deliver.</p>
+  </div>
+</Demo>
+
+## Weight that follows size
+
+A variable font has a continuous weight axis — Geist runs from 100 to 900 — and this enables an optical rule that static assets can't apply. The larger a text, the *lighter* it wants to be: at large sizes a medium weight looks clumsy, bloated. The smaller a text, the more it wants a touch of extra weight, otherwise the thin strokes close up and the line fades. The same "perceived weight" is reached with different numbers depending on the size.
+
+<Demo title="Variable weight compensated per size" tag="08.d">
+  <WeightForSize locale="en" />
+  <div slot="note">
+    <p>With the switch off, the title, body and caption all use the same weight (500): watch the title look heavy and a little crude, and the caption thin, almost faded. Switch it on and each size takes its compensated weight — title at 380, body at 460, caption at 540 — via <code>font-variation-settings: 'wght'</code>. The "typographic colour", the average grey the text leaves on the page, becomes even across the three sizes. It's something you feel before you see it.</p>
+    <p>It's the kind of finishing that separates typography "just placed there" from typography that's *tuned*. It once required three different cuts of the same typeface (display, text, caption): weights drawn on purpose for each size. Today the variable axis gives it for free, as long as you remember that weight isn't an absolute value but a function of size. The transition between the two states uses the token durations, so with <code>prefers-reduced-motion</code> it switches cleanly, with no morphing.</p>
+  </div>
+</Demo>
+
+## The right measure
+
+Typography begins long before the choice of typeface: it begins with how long a line is. The "measure" — the number of characters per line — is perhaps the decision that most affects the readability of a long text, and almost no one sets it deliberately. Too long, and the eye struggles to find the start of the next line. Too short, and the constant line breaks shatter the rhythm. The comfortable zone for continuous reading sits between roughly 45 and 75 characters.
+
+<Demo title="Measure in ch · 45–75 is the cozy zone" tag="08.e">
+  <TheMeasure locale="en" />
+  <div slot="note">
+    <p>Drag the slider and watch where the text stops being comfortable. The measure is counted in <code>ch</code>, the unit that equals the width of the current font's "0": saying <code>max-inline-size: 64ch</code> means "about 64 characters per line", whatever the font size. It's far more robust than a width in pixels, which changes meaning the moment the text size does. The value in ch is shown with <code>tabular-nums</code>, so it doesn't jitter from 9 to 10 — the lesson of chapter 06.</p>
+    <p>Two honest details. First: the leading is tied to the measure — longer lines get a touch more line-height, because the eye needs more help finding the next line when the horizontal jump is wide. Second: the verdict "cozy / too tight / too wide" uses a sober grey out of zone, not an alarm red. The right measure is a <em>range</em>, not a law: 44 characters aren't an error, just a little tight. The system advises, it doesn't scold.</p>
+  </div>
+</Demo>
+
+## Honest hyphenation
+
+The last mark is the most misunderstood: justified text. Aligning both margins seems the height of typographic order, but on narrow measures it's often a trap. Without hyphenation, to even out the right margin the browser stretches the spaces between words — and when a long word won't fit, it stretches them too far, until it creates "rivers": white streams that run vertically through the block and disturb the reading.
+
+<Demo title="hyphens: auto · and why lang is mandatory" tag="08.f">
+  <HonestHyphenation locale="en" />
+  <div slot="note">
+    <p>Two switches on the same paragraph. Turn on only <em>Justified</em> and watch the spaces dilate on a narrow measure. Add <em>Hyphenation</em> (<code>hyphens: auto</code>) and the words break where the language allows: the spaces become regular again, the grey of the text grows even. Justification and hyphenation are a pair — the first alone, on narrow columns, does more damage than elegance.</p>
+    <p>And here's the honest point, the most common typographic bug on the web: <code>hyphens: auto</code> works <em>only</em> if the element declares its language with the <code>lang</code> attribute. Without it, the browser doesn't know which hyphenation dictionary to use and simply doesn't hyphenate — silently, with no error. Here the paragraph carries <code>lang="en"</code>, always. And the default position across the whole playground stays ragged right: an uneven right margin with clean spaces is almost always more readable than forced justification.</p>
+  </div>
+</Demo>
+
+---
+
+Six tiny marks, each invisible on its own. The quote that curls in the right language, the title that leaves no orphan words, the features that give the font a voice, the weight that tunes itself to size, the line as long as the eye can bear, the word that breaks only if it knows what language it's written in. None of these details is noticed when it's done well — what gets noticed is that the page, on the whole, *breathes*. And that's the principle of Altrove again: everything that happens without the user noticing is the real power of an interface, while they're simply reading.
+
+The next chapter leaves the page and returns to components, with a seemingly trivial question: *the anatomy of a toggle*. Because the switch is the only control that behaves like a physical object — it has two positions, not two states — and that difference changes the whole way you draw it.

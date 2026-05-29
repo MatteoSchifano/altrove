@@ -131,13 +131,12 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '08',
     translationKey: 'chapter-08',
     phase: 'A',
-    status: 'next',
+    status: 'published',
     title: { it: 'La micro-tipografia', en: 'Micro-typography' },
     question: {
       it: 'Dove finisce la lettera e dove comincia il ritmo?',
       en: 'Where does the letter end and the rhythm begin?',
     },
-    effort: 2,
   },
 
   /* ── Fase B · Componenti primari (09–14) ────────────────── */
@@ -145,7 +144,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '09',
     translationKey: 'chapter-09',
     phase: 'B',
-    status: 'planned',
+    status: 'next',
     title: { it: 'Anatomia di un toggle', en: 'The anatomy of a toggle' },
     question: {
       it: 'La differenza tra un bottone e uno switch è solo grafica?',

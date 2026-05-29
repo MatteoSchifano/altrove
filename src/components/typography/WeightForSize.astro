@@ -1,0 +1,169 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   WeightForSize — il peso che segue la dimensione.
+
+   Un font variabile non ha "un" grassetto: ha un asse continuo
+   (Geist va da 100 a 900). E c'è una regola di ottica che gli asset
+   statici non sanno applicare: più il testo è GRANDE, più vuole
+   essere LEGGERO; più è piccolo, più vuole un filo di peso in più
+   per non sparire. Stesso "peso percepito", numeri diversi.
+
+   Il toggle confronta:
+     • spento  → un solo peso (500) per tutte le taglie: il titolo
+       sembra pesante e goffo, la didascalia sottile e debole.
+     • acceso  → peso compensato per taglia (titolo 380, corpo 460,
+       didascalia 540): il colore tipografico resta uniforme.
+
+   Reduced motion: il peso transita comunque (le durate vanno a 1ms
+   via token), quindi commuta secco senza morphing percepibile.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    toggle: 'Peso compensato per taglia',
+    title: 'Il colore della pagina',
+    body: 'Il peso percepito di un blocco di testo dipende dalla sua dimensione: lo stesso valore numerico cambia voce a seconda di quanto è grande.',
+    caption: 'Didascalia · 13px, il peso più alto',
+  },
+  en: {
+    toggle: 'Weight compensated per size',
+    title: 'The colour of the page',
+    body: 'The perceived weight of a block of text depends on its size: the same numeric value changes its voice depending on how large it is.',
+    caption: 'Caption · 13px, the heaviest weight',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="wfs">
+  <label class="wfs__switch">
+    <input type="checkbox" class="wfs__check" checked />
+    <span class="wfs__track" aria-hidden="true"><span class="wfs__thumb"></span></span>
+    <span class="wfs__label">{c.toggle}</span>
+  </label>
+
+  <div class="wfs__stage" data-mode="on">
+    <h4 class="wfs__title">{c.title}</h4>
+    <p class="wfs__body">{c.body}</p>
+    <p class="wfs__caption">{c.caption}</p>
+  </div>
+</div>
+
+<style>
+  .wfs {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* ── switch (stesso linguaggio del resto del capitolo) ── */
+  .wfs__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    align-self: flex-start;
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  .wfs__check {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+  }
+
+  .wfs__track {
+    inline-size: 2.25rem;
+    block-size: 1.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    padding: 0.15rem;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+    flex-shrink: 0;
+  }
+
+  .wfs__thumb {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out-snappy);
+  }
+
+  .wfs__check:checked + .wfs__track { background-color: var(--accent); }
+  .wfs__check:checked + .wfs__track .wfs__thumb { transform: translateX(0.95rem); }
+  .wfs__check:focus-visible + .wfs__track { box-shadow: var(--halo-focus); }
+
+  /* ── stage ── */
+  .wfs__stage {
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .wfs__title {
+    font-size: var(--text-2xl);
+    letter-spacing: var(--tracking-tight);
+    margin-block-end: var(--space-2xs);
+    transition: font-variation-settings var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .wfs__body {
+    margin: 0 0 var(--space-2xs);
+    max-inline-size: none;
+    font-size: var(--text-base);
+    color: var(--ink);
+    transition: font-variation-settings var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .wfs__caption {
+    margin: 0;
+    max-inline-size: none;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    transition: font-variation-settings var(--dur-normal) var(--ease-out-soft);
+  }
+
+  /* spento: un peso unico, 500, per tutte le taglie */
+  .wfs__stage[data-mode='off'] .wfs__title,
+  .wfs__stage[data-mode='off'] .wfs__body,
+  .wfs__stage[data-mode='off'] .wfs__caption {
+    font-variation-settings: 'wght' 500;
+  }
+
+  /* acceso: peso compensato — grande più leggero, piccolo più pesante */
+  .wfs__stage[data-mode='on'] .wfs__title { font-variation-settings: 'wght' 380; }
+  .wfs__stage[data-mode='on'] .wfs__body { font-variation-settings: 'wght' 460; }
+  .wfs__stage[data-mode='on'] .wfs__caption { font-variation-settings: 'wght' 540; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.wfs').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const check = root.querySelector<HTMLInputElement>('.wfs__check');
+      const stage = root.querySelector<HTMLElement>('.wfs__stage');
+      if (!check || !stage) return;
+
+      const sync = () => { stage.dataset.mode = check.checked ? 'on' : 'off'; };
+      check.addEventListener('change', sync);
+      sync();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,6 +1,6 @@
 ---
 name: altrove
-description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, or displaying numbers — and you want an opinionated, honesty-first take — motion timed in named milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns named and avoided, sample data that tells the truth. Distilled, restrained UX and motion-design principles.
+description: Use when designing, building, or reviewing UI interactions and micro-interactions — buttons, loading/skeleton/optimistic states, empty/error/zero states, dialogs and confirmations, forms and inputs, scroll-driven effects, displaying numbers, or micro-typography (smart punctuation, text-wrap balance, OpenType features, line measure, hyphenation) — and you want an opinionated, honesty-first take — motion timed in named milliseconds, accessible by default, prefers-reduced-motion respected, dark patterns named and avoided, sample data that tells the truth. Distilled, restrained UX and motion-design principles.
 ---
 
 # Altrove · UX principles
@@ -41,6 +41,6 @@ The best interface works in silence while the user's mind is **elsewhere** (*alt
 
 ## Where to look
 
-- **`patterns.md`** — concrete, per-interaction heuristics: buttons, waiting/loading, empty & error states, dialogs & confirmations, scroll, numbers, inputs.
+- **`patterns.md`** — concrete, per-interaction heuristics: buttons, waiting/loading, empty & error states, dialogs & confirmations, scroll, numbers, inputs, micro-typography.
 - **`motion.md`** — motion as a craft: the timing laws, the four "feels", easing, and reduced-motion done right.
 - **`honesty.md`** — the honest-vs-deceptive throughline: a catalogue of patterns that respect the user vs dark patterns that lie.

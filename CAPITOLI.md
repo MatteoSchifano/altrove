@@ -18,10 +18,13 @@
 | 05 | Lo scroll che racconta | ✅ pubblicato |
 | 06 | Numeri che hanno peso | ✅ pubblicato |
 | 07 | Anatomia di un input | ✅ pubblicato |
-| 08 | La micro-tipografia | 📋 in roadmap |
-| 09–26 | *(vedi sotto)* | 💭 ipotizzati |
+| 08 | La micro-tipografia | ✅ pubblicato |
+| 09 | Anatomia di un toggle | 📋 prossimo |
+| 10–26 | *(vedi sotto)* | 💭 ipotizzati |
 
 I primi 8 sono dettagliati nel piano `playground-a-capitoli-validated-liskov.md`. Da 09 in poi: questo file è la fonte.
+
+Con il capitolo 08 la **Fase A** è chiusa: gli 8 capitoli fondativi sono tutti pubblicati.
 
 ---
 
