@@ -49,19 +49,19 @@ The way a browser wraps text is "greedy": it fills every line to the brim and du
 
 ## The figures a font can set
 
-A font doesn't just carry letters: it carries instructions on how to set *numbers*, and those are OpenType features that stay off until you call them by name. Geist does two of them that you see at once: it turns `1/2` into the single glyph ½ (a real fraction, not three stacked characters), and it gives every digit the same width so a column of numbers lines up vertically. The two switches turn on exactly these two.
+A font doesn't just carry letters: it carries instructions on how to set *numbers*, and those are OpenType features that stay off until you call them by name. Epilogue does two of them that you see at once: it turns `1/2` into the single glyph ½ (a real fraction, not three stacked characters), and it gives every digit the same width so a column of numbers lines up vertically. The two switches turn on exactly these two.
 
 <Demo title="OpenType features · fractions and tabular figures" tag="08.c">
   <FontVoice locale="en" />
   <div slot="note">
     <p>Turn on <em>Fractions</em> and watch <code>1/2</code>, <code>3/4</code>, <code>1/3</code> recompose into the glyphs ½ ¾ ⅓ — that's the <code>frac</code> feature, switched on via <code>font-variant-numeric: diagonal-fractions</code>. Turn on <em>Aligned figures</em> and the right-hand column snaps into line: <code>tabular-nums</code> gives every digit the same box, so the narrow "1" no longer makes the edges wobble (the lesson of chapter 06, seen here from the font's side). Off, they stay "typewriter" fractions and variable-width digits.</p>
-    <p>And here is the sharpest honesty lesson of the chapter, the one that bit me while writing it. I wanted to show Geist's <em>stylistic sets</em> — the single-storey 'a', the slashed zero, decorative ligatures — and discovered, by actually reading the features carved into the font file, that <strong>Geist doesn't contain them</strong>: no <code>cv11</code>, no <code>ss03</code>, no small caps. Setting them throws no error, it simply does nothing. So the demo shows only <code>frac</code> and <code>tnum</code>, which Geist genuinely has. The rule of the whole playground holds for the person building it too: don't promise what the underlying material can't deliver — and check the material, instead of trusting the documentation.</p>
+    <p>And here is the sharpest honesty lesson of the chapter, the one that bit me while writing it. Not every font composes these features, and when one is missing, setting it <em>throws no error</em>: it simply does nothing. The first version of this demo asked the font for <em>stylistic sets</em> (the single-storey 'a', the slashed zero) it didn't have — and the buttons changed nothing, silently. So the demo now shows only <code>frac</code> and <code>tnum</code>, after <strong>verifying on the real rendering</strong> that Epilogue genuinely composes them. The rule of the whole playground holds for the person building it too: don't promise what the underlying material can't deliver — and check the material, instead of trusting the documentation.</p>
   </div>
 </Demo>
 
 ## Weight that follows size
 
-A variable font has a continuous weight axis — Geist runs from 100 to 900 — and this enables an optical rule that static assets can't apply. The larger a text, the *lighter* it wants to be: at large sizes a medium weight looks clumsy, bloated. The smaller a text, the more it wants a touch of extra weight, otherwise the thin strokes close up and the line fades. The same "perceived weight" is reached with different numbers depending on the size.
+A variable font has a continuous weight axis — Epilogue runs from 100 to 900 — and this enables an optical rule that static assets can't apply. The larger a text, the *lighter* it wants to be: at large sizes a medium weight looks clumsy, bloated. The smaller a text, the more it wants a touch of extra weight, otherwise the thin strokes close up and the line fades. The same "perceived weight" is reached with different numbers depending on the size.
 
 <Demo title="Variable weight compensated per size" tag="08.d">
   <WeightForSize locale="en" />

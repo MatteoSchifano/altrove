@@ -5,7 +5,7 @@
    Twitter Card. Eseguibile via `npm run og`.
 
    Stack: satori (HTML/JSX-like → SVG) + resvg (SVG → PNG).
-   Font: Geist Variable WOFF2 (già installato come dependency).
+   Font: Epilogue WOFF (già installato come dependency).
    ───────────────────────────────────────────────────────────── */
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -18,10 +18,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
 /* satori non supporta WOFF2 (zlib+brotli) ma supporta WOFF (zlib).
-   Usiamo @fontsource/geist (non-variable) che fornisce file .woff. */
+   Usiamo @fontsource/epilogue (non-variable) che fornisce file .woff. */
 const FONT_PATH = resolve(
   ROOT,
-  'node_modules/@fontsource/geist/files/geist-latin-500-normal.woff',
+  'node_modules/@fontsource/epilogue/files/epilogue-latin-500-normal.woff',
 );
 
 const fontData = await readFile(FONT_PATH);
@@ -37,7 +37,7 @@ const markup = {
       justifyContent: 'space-between',
       padding: '80px',
       background: 'linear-gradient(135deg, #fafaf9 0%, #f0ede8 100%)',
-      fontFamily: 'Geist',
+      fontFamily: 'Epilogue',
       color: '#1a1916',
     },
     children: [
@@ -132,7 +132,7 @@ const markup = {
 const svg = await satori(markup, {
   width: 1200,
   height: 630,
-  fonts: [{ name: 'Geist', data: fontData, weight: 400, style: 'normal' }],
+  fonts: [{ name: 'Epilogue', data: fontData, weight: 400, style: 'normal' }],
 });
 
 const pngBuffer = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } })

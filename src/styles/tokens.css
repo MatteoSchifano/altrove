@@ -47,8 +47,8 @@
   --accent-on:   light-dark(oklch(0.99 0.005 var(--hue-accent)), oklch(0.18 0.02 var(--hue-accent)));
 
   /* ═══════════ TIPOGRAFIA ═══════════ */
-  --font-sans:    'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono:    'Geist Mono Variable', ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  --font-sans:    'Epilogue Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'Inconsolata Variable', ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace;
   --font-display: var(--font-sans);
 
   /* Scala fluida (clamp(min, ideal, max)) — base 16px, ratio ~1.2 */
@@ -78,7 +78,7 @@
   --tracking-wide:    0.04em;
   --tracking-wider:   0.12em;
 
-  /* Pesi (Geist Variable supporta 100–900) */
+  /* Pesi (Epilogue Variable supporta 100–900) */
   --weight-light:     300;
   --weight-regular:   400;
   --weight-medium:    500;

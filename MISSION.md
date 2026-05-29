@@ -79,7 +79,8 @@ Quattro preset (subtle / gentle / snappy / expressive), usati con coerenza. Nien
 | **Astro 6** | Content Collections mappano i capitoli, View Transitions API per le animazioni di navigazione, Islands per le interazioni complesse |
 | **CSS nativo** | `@layer`, OKLCH, `light-dark()`, `clamp()`, container queries — la palestra che cerco |
 | **Motion** (motion.dev) | Spring physics, gesture, vanilla JS — niente overhead di framework |
-| **Geist Variable** | Sans + Mono, variable font, clean senza essere freddo |
+| **Epilogue Variable** | Sans variabile (100–900) per testo e titoli — geometrico ma caldo |
+| **Inconsolata Variable** | Monospazio variabile per codice e dettagli tecnici |
 | **MDX** | I capitoli sono documenti con componenti dentro — il formato giusto per contenuto editoriale con demo interattive |
 
 ---

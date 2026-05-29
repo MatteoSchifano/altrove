@@ -1,25 +1,19 @@
 /* ─────────────────────────────────────────────────────────────
    Altrove · typography.css — la voce del progetto.
 
-   Geist Variable per tutto. Le differenze le fa il peso, il
-   tracking e la dimensione, non famiglie diverse.
+   Epilogue per il testo, Inconsolata per il monospazio. Nel sans
+   le differenze le fa il peso, il tracking e la dimensione.
    ───────────────────────────────────────────────────────────── */
 
 @layer base {
   html {
     font-family: var(--font-sans);
     font-size: 16px;
-    /* Geist supporta queste opentype features:
-       cv11 = miglior 'a' singolo livello
-       ss03 = '0' con slash (utile per tabelle/cifre miste)
-       ss04 = ligature stilistiche tenui
-       Lo lasciamo discreto — le features attivano la "voce". */
-    font-feature-settings:
-      'cv11' 1,
-      'ss03' 1,
-      'ss04' 1;
-    /* Numeri tabulari per UI con cifre allineate */
-    font-variant-numeric: oldstyle-nums proportional-nums;
+    /* Le feature che Epilogue attiva di default (kern, legature comuni)
+       bastano. Niente set stilistici forzati a livello globale: le
+       feature OpenType si impostano dove servono davvero — vedi il
+       cap. 08, che le verifica nel font prima di prometterle. */
+    font-variant-numeric: proportional-nums;
   }
 
   body {
@@ -101,7 +95,6 @@
 
   code, kbd, samp, pre {
     font-family: var(--font-mono);
-    font-feature-settings: 'ss03' 1; /* zero con slash, leggibile */
   }
 
   code {

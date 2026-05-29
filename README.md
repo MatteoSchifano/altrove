@@ -42,7 +42,8 @@ I capitoli crescono lentamente. Un capitolo finito al 100% vale più di tre capi
 | [Astro](https://astro.build) | 6 | Content Collections, View Transitions, islands |
 | **CSS nativo** | — | `@layer`, OKLCH, `light-dark()`, `clamp()`, container queries |
 | [Motion](https://motion.dev) | 12 | Spring physics, gesture, vanilla JS |
-| **Geist Variable** | 5 | Sans + Mono variabili (Vercel) |
+| **Epilogue Variable** | 5 | Sans variabile (100–900) per testo e titoli |
+| **Inconsolata Variable** | 5 | Monospazio variabile per codice e dettagli |
 | **MDX** | — | I capitoli sono documenti con componenti dentro |
 
 Niente Tailwind, niente UI kit, niente starter. La palestra è scrivere CSS con `@layer`, custom properties e container queries.
