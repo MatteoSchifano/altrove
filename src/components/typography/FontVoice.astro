@@ -1,22 +1,20 @@
 ---
 /* ─────────────────────────────────────────────────────────────
-   FontVoice — la voce nascosta del font.
+   FontVoice — le cifre che il font sa comporre.
 
-   Un font variabile come Geist porta dentro di sé delle "varianti
-   stilistiche" che restano spente finché non le chiami per nome.
-   Sono quelle che il design system di Altrove tiene accese di
-   default (vedi typography.css):
-     • cv11 → la 'a' a un solo piano, più calma
-     • ss03 → lo zero con la sbarra, che non si confonde con la 'o'
-     • ss04 → legature stilistiche tenui
-     • common-ligatures → fi, fl, ff si fondono in un glifo unico
+   Un font non porta solo lettere: porta delle istruzioni su come
+   comporre i NUMERI. Geist Variable, in particolare, espone (l'ho
+   verificato leggendo le feature OpenType del file, non a fiducia):
+   frac, tnum/pnum, numr/dnom, liga, kern. Niente set stilistici
+   (cv/ss) né maiuscoletto: quelli, semplicemente, non ci sono — e
+   un capitolo onesto sulla tipografia non finge il contrario.
 
-   I chip accendono e spengono ciascuna feature sul campione, così
-   si vede cosa cambia. Sono feature DOCUMENTATE di Geist: niente
-   sintesi finta del browser, niente promesse che il font non mantiene.
+   Due interruttori, due feature REALI e visibili:
+     • Frazioni (frac) → "1/2" diventa il glifo ½, non tre caratteri.
+     • Cifre incolonnate (tnum) → ogni cifra prende la stessa
+       larghezza, e la colonna di numeri si allinea in verticale.
 
-   Niente motion: le feature commutano il disegno delle lettere,
-   non c'è una transizione da animare.
+   Niente motion: la sostituzione dei glifi non si anima.
    ───────────────────────────────────────────────────────────── */
 
 interface Props {
@@ -25,42 +23,41 @@ interface Props {
 const { locale = 'it' } = Astro.props;
 
 const COPY = {
-  it: { sample: 'affari ufficiali — 1080 fiorini' },
-  en: { sample: 'official affairs — 1080 florins' },
+  it: {
+    frac: 'Frazioni',
+    tnum: 'Cifre incolonnate',
+    recipe: '1 1/2 tazza di farina, 3/4 di zucchero, 1/3 di latte',
+    rows: ['8,90', '124,50', '1.250,00'],
+  },
+  en: {
+    frac: 'Fractions',
+    tnum: 'Aligned figures',
+    recipe: '1 1/2 cups of flour, 3/4 sugar, 1/3 milk',
+    rows: ['8.90', '124.50', '1,250.00'],
+  },
 } as const;
-
-const FEATURES = {
-  it: [
-    { id: 'liga', label: 'legature', kind: 'liga' },
-    { id: 'cv11', label: 'cv11 · a a un piano', kind: 'feat' },
-    { id: 'ss03', label: 'ss03 · zero sbarrato', kind: 'feat' },
-    { id: 'ss04', label: 'ss04 · legature stilistiche', kind: 'feat' },
-  ],
-  en: [
-    { id: 'liga', label: 'ligatures', kind: 'liga' },
-    { id: 'cv11', label: 'cv11 · single-storey a', kind: 'feat' },
-    { id: 'ss03', label: 'ss03 · slashed zero', kind: 'feat' },
-    { id: 'ss04', label: 'ss04 · stylistic ligatures', kind: 'feat' },
-  ],
-} as const;
-
 const c = COPY[locale];
-const features = FEATURES[locale];
 ---
 
 <div class="voice">
-  <p class="voice__sample" data-liga="off">{c.sample}</p>
+  <div class="voice__stage">
+    <p class="voice__recipe" data-frac="off">{c.recipe}</p>
+    <div class="voice__column" data-tnum="off" aria-hidden="true">
+      {c.rows.map((n) => <span class="voice__num">{n}</span>)}
+    </div>
+  </div>
 
-  <div class="voice__chips" role="group" aria-label={locale === 'it' ? 'Feature tipografiche' : 'Typographic features'}>
-    {features.map((f) => (
-      <button
-        type="button"
-        class="voice__chip"
-        data-kind={f.kind}
-        data-feat={f.id}
-        aria-pressed="false"
-      >{f.label}</button>
-    ))}
+  <div class="voice__controls">
+    <label class="voice__switch">
+      <input type="checkbox" class="voice__check" data-prop="frac" />
+      <span class="voice__track" aria-hidden="true"><span class="voice__thumb"></span></span>
+      <span>{c.frac}</span>
+    </label>
+    <label class="voice__switch">
+      <input type="checkbox" class="voice__check" data-prop="tnum" />
+      <span class="voice__track" aria-hidden="true"><span class="voice__thumb"></span></span>
+      <span>{c.tnum}</span>
+    </label>
   </div>
 </div>
 
@@ -70,61 +67,94 @@ const features = FEATURES[locale];
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    align-items: center;
   }
 
-  .voice__sample {
-    margin: 0;
-    max-inline-size: none;
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--tracking-snug);
-    color: var(--ink-strong);
-    text-align: center;
-    /* Si parte da TUTTO spento, per vedere il font "nudo".
-       font-feature-settings vince sui default ereditati. */
-    font-feature-settings: 'cv11' 0, 'ss03' 0, 'ss04' 0;
-    font-variant-numeric: lining-nums;
-  }
-
-  .voice__sample[data-liga='off'] { font-variant-ligatures: none; }
-  .voice__sample[data-liga='on'] { font-variant-ligatures: common-ligatures; }
-
-  .voice__chips {
+  .voice__stage {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-  }
-
-  .voice__chip {
-    appearance: none;
-    padding: 0.4rem 0.75rem;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md) var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
     background-color: var(--surface-raised);
-    color: var(--ink-muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
+    border: 1px solid var(--border);
+  }
+
+  .voice__recipe {
+    margin: 0;
+    flex: 1 1 16rem;
+    max-inline-size: none;
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    line-height: var(--leading-snug);
+    /* parte "grezza": niente frazioni, le scrive 1/2 */
+    font-variant-numeric: normal;
+  }
+
+  .voice__recipe[data-frac='on'] { font-variant-numeric: diagonal-fractions; }
+
+  /* colonna di numeri: a destra, così l'allineamento (o il suo
+     fallimento) si legge a colpo d'occhio sui bordi delle cifre */
+  .voice__column {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+    font-size: var(--text-md);
+    color: var(--ink);
+    font-variant-numeric: proportional-nums;
+  }
+
+  .voice__column[data-tnum='on'] { font-variant-numeric: tabular-nums; }
+
+  /* ── switch (stesso linguaggio del resto del capitolo) ── */
+  .voice__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .voice__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     cursor: pointer;
-    transition:
-      border-color var(--dur-fast) var(--ease-out-soft),
-      color var(--dur-fast) var(--ease-out-soft),
-      background-color var(--dur-fast) var(--ease-out-soft);
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
   }
 
-  .voice__chip:hover { border-color: var(--border-strong); color: var(--ink-strong); }
-
-  .voice__chip[aria-pressed='true'] {
-    border-color: var(--accent);
-    background-color: var(--accent-soft);
-    color: var(--accent-ink);
+  .voice__check {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
   }
 
-  .voice__chip:focus-visible {
-    outline: none;
-    box-shadow: var(--halo-focus);
+  .voice__track {
+    inline-size: 2.25rem;
+    block-size: 1.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    padding: 0.15rem;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+    flex-shrink: 0;
   }
+
+  .voice__thumb {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out-snappy);
+  }
+
+  .voice__check:checked + .voice__track { background-color: var(--accent); }
+  .voice__check:checked + .voice__track .voice__thumb { transform: translateX(0.95rem); }
+  .voice__check:focus-visible + .voice__track { box-shadow: var(--halo-focus); }
 </style>
 
 <script>
@@ -133,31 +163,19 @@ const features = FEATURES[locale];
       if (root.dataset.bound === 'true') return;
       root.dataset.bound = 'true';
 
-      const sample = root.querySelector<HTMLElement>('.voice__sample');
-      const chips = root.querySelectorAll<HTMLButtonElement>('.voice__chip');
-      if (!sample) return;
+      const recipe = root.querySelector<HTMLElement>('.voice__recipe');
+      const column = root.querySelector<HTMLElement>('.voice__column');
+      const checks = root.querySelectorAll<HTMLInputElement>('.voice__check');
 
-      const apply = () => {
-        const feats: string[] = [];
-        chips.forEach((chip) => {
-          const on = chip.getAttribute('aria-pressed') === 'true';
-          if (chip.dataset.kind === 'liga') {
-            sample.dataset.liga = on ? 'on' : 'off';
-          } else if (chip.dataset.feat) {
-            feats.push(`'${chip.dataset.feat}' ${on ? 1 : 0}`);
-          }
-        });
-        sample.style.fontFeatureSettings = feats.join(', ');
-      };
-
-      chips.forEach((chip) => {
-        chip.addEventListener('click', () => {
-          const on = chip.getAttribute('aria-pressed') === 'true';
-          chip.setAttribute('aria-pressed', String(!on));
-          apply();
-        });
+      checks.forEach((check) => {
+        const prop = check.dataset.prop; // 'frac' | 'tnum'
+        const target = prop === 'frac' ? recipe : column;
+        const sync = () => {
+          if (target && prop) target.dataset[prop] = check.checked ? 'on' : 'off';
+        };
+        check.addEventListener('change', sync);
+        sync();
       });
-      apply();
     });
   }
 
