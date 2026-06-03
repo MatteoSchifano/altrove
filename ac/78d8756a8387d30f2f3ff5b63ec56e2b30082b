@@ -1,0 +1,42 @@
+src/components/toggle/DestructiveToggle.astro
+  s_9593faf6946e0c::t_79c406fd2228fd 123
+  s_9593faf6946e0c::t_bb9005737bb4b0 1-122,124-367
+.claude/skills/altrove/patterns.md
+  s_9593faf6946e0c::t_ec6eefb99c5674 78-91
+src/components/toggle/SoftSwitch.astro
+  s_9593faf6946e0c::t_27f3bbb205ae42 1-40,42-162
+  s_9593faf6946e0c::t_59ce971daa56b8 41
+src/components/toggle/HapticSwitch.astro
+  s_9593faf6946e0c::t_cf57fdba9c1c20 1-222
+src/components/toggle/CustomCheckbox.astro
+  s_9593faf6946e0c::t_238328d5b4f62c 162-166
+  s_9593faf6946e0c::t_f4c5739c13aa0a 1-161,167-242
+.claude/skills/altrove/SKILL.md
+  s_9593faf6946e0c::t_f615f016cebebe 3
+src/components/toggle/SegmentedToggle.astro
+  s_9593faf6946e0c::t_844757f8b9ecba 1-194
+src/content/chapters/en/09-anatomy-of-a-toggle.mdx
+  s_9593faf6946e0c::t_a6b2026b60b911 1-8,10-89
+  s_9593faf6946e0c::t_a97cecfd9794c2 9
+src/content/chapters/it/09-anatomia-di-un-toggle.mdx
+  s_9593faf6946e0c::t_132b4b43383164 9
+  s_9593faf6946e0c::t_94d7ca40cf1179 1-8,10-89
+CAPITOLI.md
+  s_9593faf6946e0c::t_890597c7881dbb 22-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ac78d8756a8387d30f2f3ff5b63ec56e2b30082b",
+  "prompts": {},
+  "sessions": {
+    "s_9593faf6946e0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0725e66b-035c-41b7-936d-14c70abe2899",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
