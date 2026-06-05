@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-10"
+number: "10"
+title: "Anatomia di un toast"
+excerpt: "Un toast è la cosa più difficile da fare bene: dare un'informazione senza rubare l'attenzione, restare il giusto e andarsene quando ha finito. Sbagliare il tono, la durata o la voce lo trasforma da cortesia in interruzione."
+date: "12 giugno 2026"
+releaseDate: "2026-06-12"
+readMinutes: 11
+tags: ["componenti", "accessibilità", "feedback"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import PriorityStack from '../../../components/toasts/PriorityStack.astro';
+import UndoToast from '../../../components/toasts/UndoToast.astro';
+import PersistVsAuto from '../../../components/toasts/PersistVsAuto.astro';
+import SmartPosition from '../../../components/toasts/SmartPosition.astro';
+import StatusVsAlert from '../../../components/toasts/StatusVsAlert.astro';
+
+Il capitolo scorso parlava di un oggetto che si tocca; questo parla di un messaggio che arriva. Il toast è la notifica più piccola dell'interfaccia — una striscia che compare in un angolo, dice una cosa, e se ne va — e proprio perché è piccola viene quasi sempre sottovalutata. Ma sotto quella semplicità si nasconde la domanda più difficile del feedback: *come si dà un'informazione senza interrompere?* Perché un toast vive su una lama: troppo discreto e nessuno lo legge, troppo invadente e diventa l'ennesima cosa da chiudere. La differenza fra una cortesia e un fastidio sta tutta in quattro decisioni — il tono, la durata, la posizione e la voce — che quasi nessuno prende di proposito.
+
+La tentazione, col toast, è trattarlo come un canale unico: una scatola grigia che mostra qualsiasi cosa, sempre uguale, sempre per tre secondi, sempre nello stesso angolo. Ma un toast non è un contenitore neutro: è una scelta su *quanto* quel messaggio merita l'attenzione dell'utente. Una conferma e un errore non sono la stessa informazione, e fingere che lo siano è il primo modo per renderli entrambi inutili. Un «salvato» che resta finché non lo chiudi è attrito gratuito; un «pagamento rifiutato» che svanisce dopo due secondi è una piccola crudeltà. Il peso del messaggio decide tutto il resto.
+
+Cinque dimostrazioni, una per ciascuna decisione: la priorità che convive in uno stack, l'annulla che sostituisce il «sei sicuro?», la persistenza contro l'auto-dismiss, la posizione che è informazione, e la voce che spiega contro quella che urla. E come sempre niente librerie: una live region nativa, un countdown onesto, un po' di CSS. Il difficile non è il codice — è la disciplina di chiedersi, ogni volta, quanto pesa davvero ciò che stai per dire.
+
+## La priorità che convive
+
+Il primo problema è la convivenza. I toast non arrivano mai uno alla volta in fila ordinata: prima o poi due informazioni si sovrappongono, e bisogna decidere come si accatastano e con che peso ciascuna si presenta.
+
+<Demo title="Stack di priorità · info, success, warning, error" tag="10.a">
+  <PriorityStack locale="it" />
+  <div slot="note">
+    <p>Premi <em>«Lancia un toast»</em> più volte: ne compare uno a caso fra i quattro livelli, e si accatastano in uno stack che si ricompone quando uno scade. Ogni livello ha un <strong>segno</strong> oltre al colore — la spunta per <em>success</em>, il triangolo per <em>warning</em>, l'ottagono per <em>error</em>, la «i» per <em>info</em> — perché chi non distingue i colori deve poter leggere il tipo dall'icona e dall'etichetta. Il colore è il terzo canale, mai l'unico: è la regola di accessibilità che torna in ogni capitolo. I toast più gravi restano in vita più a lungo (l'errore sette secondi, la conferma tre e mezzo): la durata stessa è un segnale di priorità.</p>
+    <p>L'onestà qui sta nel non confondere i livelli per fare scena: un'informazione di sistema non si traveste da errore per farsi notare, e una conferma non urla. Lo stack annuncia via <code>aria-live="polite"</code>, la voce giusta per ciò che non è un'emergenza: lo screen reader li legge quando può, senza strappare il focus. E con <code>prefers-reduced-motion</code> i toast non scivolano né dissolvono — compaiono e spariscono già in posizione, stesso stato finale, nessun viaggio. Il riflusso dello stack, quando uno se ne va, resta lieve: i superstiti colmano il vuoto, non sobbalzano.</p>
+  </div>
+</Demo>
+
+## L'annulla che sostituisce la domanda
+
+Il secondo è il toast più sottovalutato di tutti: quello che ti permette di tornare indietro. È la risposta onesta a un'intera categoria di dialog — il «sei sicuro?» che interrompe prima ancora che tu abbia sbagliato.
+
+<Demo title="Annulla con countdown · agire prima, pentirsi dopo" tag="10.b">
+  <UndoToast locale="it" />
+  <div slot="note">
+    <p>Archivia la conversazione: l'azione si compie <em>subito</em>, e compare un toast con una barra che si svuota in circa cinque secondi. Finché la barra non è vuota, un clic su <em>«Annulla»</em> (o <kbd>Esc</kbd>) riporta tutto com'era. È il pattern più rispettoso per le azioni reversibili: non chiedere conferma prima — un dialog che blocca il flusso per qualcosa che forse l'utente voleva davvero — ma agire e offrire una via di ritorno. La finestra di cinque secondi non è casuale: meno di tre e chi legge piano non fa in tempo, più di otto e il toast diventa rumore che non se ne va.</p>
+    <p>Qui l'onestà è doppia. La prima: il countdown mostra <em>esattamente</em> quanto tempo resta — la barra non finge urgenza per spingerti a non annullare, dice la verità sulla finestra. La seconda: l'azione dev'essere davvero reversibile, altrimenti l'annulla è una bugia. Promettere «puoi tornare indietro» e poi non poterlo mantenere è un dark pattern. La barra è progresso funzionale, non decorazione: per questo con <code>prefers-reduced-motion</code> non sparisce, ma salta a step di un secondo invece di scorrere — continua a dire «quanto manca», senza il movimento continuo.</p>
+  </div>
+</Demo>
+
+## La scelta fra restare e andarsene
+
+Terza decisione, e la più frequente da sbagliare: quanto deve durare un toast? La risposta non è un numero, è una domanda — l'utente *deve* leggerlo per agire? Da lì discendono due comportamenti opposti.
+
+<Demo title="Persistente vs auto-dismiss · l'errore resta, la conferma passa" tag="10.c">
+  <PersistVsAuto locale="it" />
+  <div slot="note">
+    <p>A sinistra un toast <strong>persistente</strong>: simula un errore di pagamento e resta lì, immobile, finché non lo chiudi con la sua X. A destra uno <strong>auto-dismiss</strong>: simula un salvataggio e sparisce da solo dopo tre secondi e mezzo. La regola che li separa è una sola: la persistenza è per ciò che l'utente non può permettersi di perdere — un errore che blocca, una decisione da prendere; l'auto-dismiss è per ciò che può tranquillamente ignorare — una conferma che rassicura e basta. Costringere a chiudere un «salvato» è attrito inutile; far svanire un errore prima che venga letto lascia l'utente col problema ma senza il messaggio.</p>
+    <p>Il dettaglio che li distingue anche sotto la pelle è l'ARIA: il persistente è un <code>role="alert"</code> con una X reale e il suo <code>aria-label</code>, perché chiede un'azione; l'auto è un <code>role="status"</code> che annuncia e basta, perché non la chiede. Sbagliare l'abbinamento — un errore che svanisce, una conferma che intrappola — è il modo più comune di tradire la fiducia su un canale che dovrebbe essere il più innocuo dell'interfaccia. Con <code>prefers-reduced-motion</code> entrambi appaiono e scompaiono senza scorrimento: lo stato finale è identico, cambia solo il fatto che non viaggiano.</p>
+  </div>
+</Demo>
+
+## La posizione che è informazione
+
+Quarta decisione, quasi sempre presa per inerzia: *dove* compare il toast. Non è una scelta estetica. Il posto dice qualcosa sul tipo di messaggio, e metterlo nel punto sbagliato confonde tanto quanto sbagliare le parole.
+
+<Demo title="Posizione per tipo · vicino alla causa, o stabile e condivisa" tag="10.d">
+  <SmartPosition locale="it" />
+  <div slot="note">
+    <p>Dentro un finto viewport, <em>«Pubblica»</em> fa comparire la conferma in alto a destra, vicino all'azione che l'ha generata e lontano dal contenuto su cui si lavora; <em>«Vai offline»</em> mostra lo stato di sistema in basso al centro, dove convenzionalmente vivono le barre di stato. La logica è questa: posiziona vicino alla causa quando il toast risponde a un gesto locale e periferico, e in un punto stabile e condiviso quando riguarda l'intera app. Mai sopra il contenuto attivo, mai dove copre il prossimo gesto dell'utente. Le linee grigie nel viewport servono proprio a mostrare che i toast non le coprono.</p>
+    <p>L'onestà del posizionamento è discreta ma reale: un toast che salta ogni volta in un punto diverso costringe l'occhio a cercarlo, e cercare è attrito. La coerenza — questo tipo sempre lì, quell'altro sempre là — è ciò che rende un toast leggibile senza pensarci. Visivamente i due toast sono <code>aria-hidden</code> e l'annuncio per gli screen reader passa da una live region separata, così la posizione resta un fatto puramente visivo che non si traduce in due letture diverse. Con <code>prefers-reduced-motion</code> compaiono già al loro posto, senza scivolare da fuori campo.</p>
+  </div>
+</Demo>
+
+## La voce che spiega e quella che urla
+
+L'ultima decisione vive interamente nell'invisibile: che voce dà il toast a chi non lo vede? È la distinzione più trascurata dell'accessibilità, ed è anche quella che separa il rispetto dall'aggressione.
+
+<Demo title="status/polite vs alert/assertive · spiegare o interrompere" tag="10.e">
+  <StatusVsAlert locale="it" />
+  <div slot="note">
+    <p>I due bottoni mostrano lo stesso toast con due voci diverse. <em>«Annuncia con calma»</em> usa <code>role="status"</code> e <code>aria-live="polite"</code>: lo screen reader aspetta una pausa nell'attività dell'utente e poi legge, senza interrompere. <em>«Annuncia con urgenza»</em> usa <code>role="alert"</code> e <code>aria-live="assertive"</code>: interrompe immediatamente e annuncia subito. È la differenza fra spiegare e urlare. <em>Polite</em> è per le conferme e le informazioni; <em>assertive</em> è per ciò che richiede attenzione adesso — una sessione scaduta, un errore che blocca.</p>
+    <p>La regola di onestà è la stessa del capitolo sul vuoto: <em>assertive</em> è un'interruzione, e interrompere è un costo che si paga ogni volta. Usarlo per un «salvato» è gridare al nulla e abituare l'utente a ignorare anche gli avvisi veri; non usarlo per un errore che blocca è lasciare al buio chi naviga col solo audio. Si alza la voce solo quando ne vale la pena. E la differenza non vive <em>solo</em> nell'ARIA: i due toast restano distinti anche all'occhio, per colore, icona ed etichetta — il canale sonoro è per chi non vede, ma il segno resta per tutti.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque decisioni, un'unica disciplina: un toast non è una scatola neutra in cui versare qualsiasi messaggio, ma una serie di scelte sul peso di ciò che si dice. La priorità che convive senza confondersi, l'annulla che rende reversibile invece di chiedere conferma, la persistenza riservata a ciò che blocca, la posizione coerente che non costringe a cercare, la voce che si alza solo quando serve — ognuna risponde alla stessa domanda di fondo, *quanto merita davvero l'attenzione dell'utente?* Dare un'informazione senza interrompere non è una questione di grafica gentile: è il rispetto per un'attenzione che non è nostra, e che possiamo chiedere in prestito solo per il tempo e col tono che il messaggio merita.
+
+Il prossimo capitolo resta tra i componenti ma cambia gesto ancora: dal messaggio che arriva alla scelta che si offre. *Anatomia di un menu* — come si offre una scelta senza nascondere il contesto, e come si tiene leggibile un elenco di azioni senza trasformarlo in un labirinto.

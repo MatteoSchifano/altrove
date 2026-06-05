@@ -1,0 +1,328 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   KeyboardReorder — la prova che il drag-and-drop può essere
+   100% tastiera.
+
+   Tutto il capitolo ripete che ogni trascinamento deve avere un
+   gemello da tastiera. Questa demo toglie il puntatore del tutto e
+   tiene solo il gemello, per mostrarlo nudo: non c’è nessun gesto,
+   eppure si riordina, e l’esperienza è completa.
+
+   Il modello è quello del "grab" esplicito, lo stesso che usano i
+   roving-reorder accessibili seri:
+     1. Tab porta il focus su un item.
+     2. Spazio/Invio lo *afferra* (entra in modalità spostamento).
+     3. ↑/↓ lo muovono di una posizione alla volta; ogni mossa è
+        annunciata via aria-live ("spostato in 2 di 5").
+     4. Spazio/Invio conferma e posa; Esc annulla e lo riporta dove
+        era.
+   La differenza con un semplice ↑/↓ "sempre attivo" è importante:
+   la modalità grab dice allo screen reader e all’utente *quando*
+   le frecce spostano invece di navigare. Senza quella modalità, le
+   frecce sarebbero ambigue.
+
+   Il colore non è l’unico segnale dello stato "afferrato": c’è
+   aria-grabbed, un’etichetta visibile ("in spostamento") e un bordo
+   pieno. Reduced motion: il ricomporsi è immediato (FLIP guardato
+   da matchMedia), lo stato finale identico.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Tappe del viaggio',
+    hint: 'Solo tastiera: Tab per il focus, Spazio per afferrare, ↑/↓ per spostare, Spazio per posare, Esc per annullare.',
+    moving: 'in spostamento',
+    items: ['Lisbona', 'Porto', 'Sintra', 'Coimbra', 'Faro'],
+    grabbed: '{0} afferrato, posizione {1} di {2}. Usa le frecce per spostarlo, Invio per posare, Esc per annullare.',
+    moved: 'Spostato in posizione {1} di {2}.',
+    placed: '{0} posato in posizione {1} di {2}.',
+    cancelled: 'Spostamento annullato. {0} torna in posizione {1} di {2}.',
+  },
+  en: {
+    label: 'Trip stops',
+    hint: 'Keyboard only: Tab to focus, Space to grab, ↑/↓ to move, Space to drop, Esc to cancel.',
+    moving: 'moving',
+    items: ['Lisbon', 'Porto', 'Sintra', 'Coimbra', 'Faro'],
+    grabbed: '{0} grabbed, position {1} of {2}. Use the arrows to move it, Enter to drop, Esc to cancel.',
+    moved: 'Moved to position {1} of {2}.',
+    placed: '{0} dropped at position {1} of {2}.',
+    cancelled: 'Move cancelled. {0} returns to position {1} of {2}.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div
+  class="kbr"
+  data-msg-grabbed={c.grabbed}
+  data-msg-moved={c.moved}
+  data-msg-placed={c.placed}
+  data-msg-cancelled={c.cancelled}
+>
+  <div class="kbr__head">
+    <span class="kbr__label">{c.label}</span>
+    <span class="kbr__hint">{c.hint}</span>
+  </div>
+
+  <ol class="kbr__list">
+    {c.items.map((item) => (
+      <li
+        class="kbr__item"
+        tabindex="0"
+        role="button"
+        aria-grabbed="false"
+      >
+        <span class="kbr__grip" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none">
+            <circle cx="6" cy="4" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="4" r="1.1" fill="currentColor" />
+            <circle cx="6" cy="8" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="8" r="1.1" fill="currentColor" />
+            <circle cx="6" cy="12" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="12" r="1.1" fill="currentColor" />
+          </svg>
+        </span>
+        <span class="kbr__title">{item}</span>
+        <span class="kbr__badge" aria-hidden="true">{c.moving}</span>
+      </li>
+    ))}
+  </ol>
+
+  <span class="kbr__live" role="status" aria-live="polite"></span>
+</div>
+
+<style>
+  .kbr {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .kbr__head { display: flex; flex-direction: column; gap: 0.15rem; }
+  .kbr__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .kbr__hint { font-size: var(--text-xs); color: var(--ink-muted); line-height: var(--leading-normal); }
+
+  .kbr__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    counter-reset: stop;
+  }
+
+  .kbr__item {
+    counter-increment: stop;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    cursor: default;
+    will-change: transform;
+  }
+  .kbr__item::before {
+    content: counter(stop);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    inline-size: 1.2rem;
+    text-align: end;
+  }
+  .kbr__item:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+    border-color: var(--accent);
+  }
+
+  /* Stato "afferrato": bordo pieno + badge testuale + ombra.
+     Il colore NON è l’unico segnale (c’è anche aria-grabbed e il badge). */
+  .kbr__item[aria-grabbed='true'] {
+    border-color: var(--accent);
+    border-style: solid;
+    background-color: var(--accent-soft);
+    box-shadow: var(--shadow-md);
+  }
+
+  .kbr__grip { display: inline-flex; color: var(--ink-subtle); }
+  .kbr__grip svg { inline-size: 1rem; block-size: 1rem; }
+
+  .kbr__title { flex: 1; }
+
+  .kbr__badge {
+    display: none;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-ink);
+    padding: 0.1rem 0.45rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--accent);
+  }
+  .kbr__item[aria-grabbed='true'] .kbr__badge { display: inline-block; }
+
+  .kbr__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+  type Cleanup = () => void;
+
+  const fmt = (t: string, ...a: string[]) =>
+    t.replace(/\{(\d+)\}/g, (_, n) => a[Number(n)] ?? '');
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.kbr').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const list = root.querySelector<HTMLElement>('.kbr__list');
+      const live = root.querySelector<HTMLElement>('.kbr__live');
+      if (!list || !live) return;
+
+      const msgGrabbed = root.dataset.msgGrabbed ?? '';
+      const msgMoved = root.dataset.msgMoved ?? '';
+      const msgPlaced = root.dataset.msgPlaced ?? '';
+      const msgCancelled = root.dataset.msgCancelled ?? '';
+
+      const reduce = () =>
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const items = () =>
+        Array.from(list.querySelectorAll<HTMLElement>('.kbr__item'));
+      const titleOf = (el: HTMLElement) =>
+        el.querySelector('.kbr__title')?.textContent?.trim() ?? '';
+      const announce = (s: string) => { live.textContent = s; };
+
+      // Stato della modalità grab.
+      let grabbed: HTMLElement | null = null;
+      let originIdx = 0; // posizione di partenza, per l’annullamento
+
+      const flip = (mutate: () => void) => {
+        const els = items();
+        if (reduce()) { mutate(); return; }
+        const first = new Map<HTMLElement, number>();
+        els.forEach((el) => first.set(el, el.getBoundingClientRect().top));
+        mutate();
+        items().forEach((el) => {
+          const before = first.get(el);
+          if (before == null) return;
+          const dy = before - el.getBoundingClientRect().top;
+          if (!dy) return;
+          el.style.transition = 'none';
+          el.style.transform = `translateY(${dy}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = `transform var(--dur-fast) var(--ease-out-soft)`;
+            el.style.transform = '';
+          });
+        });
+      };
+
+      const moveBy = (el: HTMLElement, delta: number) => {
+        const els = items();
+        const cur = els.indexOf(el);
+        const to = Math.max(0, Math.min(els.length - 1, cur + delta));
+        if (to === cur) return cur;
+        flip(() => {
+          const ref = els[to];
+          if (to > cur) ref.after(el);
+          else ref.before(el);
+        });
+        el.focus();
+        return to;
+      };
+
+      const grab = (el: HTMLElement) => {
+        grabbed = el;
+        originIdx = items().indexOf(el);
+        el.setAttribute('aria-grabbed', 'true');
+        announce(fmt(msgGrabbed, titleOf(el), String(originIdx + 1), String(items().length)));
+      };
+
+      const drop = (el: HTMLElement) => {
+        el.setAttribute('aria-grabbed', 'false');
+        const at = items().indexOf(el);
+        grabbed = null;
+        announce(fmt(msgPlaced, titleOf(el), String(at + 1), String(items().length)));
+      };
+
+      const cancel = (el: HTMLElement) => {
+        const els = items();
+        const cur = els.indexOf(el);
+        if (cur !== originIdx) {
+          flip(() => {
+            const ref = els[originIdx];
+            if (originIdx > cur) ref.after(el);
+            else ref.before(el);
+          });
+        }
+        el.setAttribute('aria-grabbed', 'false');
+        el.focus();
+        announce(fmt(msgCancelled, titleOf(el), String(originIdx + 1), String(items().length)));
+        grabbed = null;
+      };
+
+      list.addEventListener('keydown', (e: KeyboardEvent) => {
+        const el = (e.target as HTMLElement)?.closest<HTMLElement>('.kbr__item');
+        if (!el) return;
+
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          if (grabbed === el) drop(el);
+          else if (!grabbed) grab(el);
+          return;
+        }
+        if (e.key === 'Escape' && grabbed === el) {
+          e.preventDefault();
+          cancel(el);
+          return;
+        }
+        if (grabbed !== el) return; // le frecce spostano solo in modalità grab
+        let delta = 0;
+        if (e.key === 'ArrowUp') delta = -1;
+        else if (e.key === 'ArrowDown') delta = 1;
+        else return;
+        e.preventDefault();
+        const at = moveBy(el, delta);
+        announce(fmt(msgMoved, '', String(at + 1), String(items().length)));
+      });
+
+      // Se il focus lascia un item afferrato, lo posiamo (niente stato appeso).
+      list.addEventListener('focusout', (e: FocusEvent) => {
+        if (!grabbed) return;
+        const next = e.relatedTarget as HTMLElement | null;
+        if (next && grabbed.contains(next)) return;
+        if (next === grabbed) return;
+        drop(grabbed);
+      });
+
+      const cleanup: Cleanup = () => {};
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

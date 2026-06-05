@@ -1,0 +1,357 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   DragToAction — trascinare verso un’azione, con un’uscita per
+   chi non trascina.
+
+   Il pattern è quello della casella di posta su mobile: prendi un
+   elemento e lo porti su una "drop zone" etichettata — Archivia,
+   Elimina. È diretto e fisico. Ma da solo è una trappola: senza
+   mouse, senza il gesto, l’azione sparisce. Per questo ogni zona
+   ha ANCHE un pulsante vero, sempre presente, raggiungibile da
+   tastiera. Il drag è la scorciatoia; il pulsante è la strada.
+
+   Le zone non sono distinte solo dal colore: hanno un’etichetta e
+   un’icona (freccia giù = archivia, croce = elimina). Il colore è
+   il terzo segnale, non il primo — chi non lo distingue legge
+   comunque la parola e il simbolo. Quando l’elemento sorvola una
+   zona, questa si illumina e l’elemento "scatta" verso di lei.
+
+   Accessibilità: l’elemento trascinabile è un <button> con i suoi
+   pulsanti-azione adiacenti. Pointer Events per il drag (niente
+   drag-image del browser). Una regione aria-live="polite" annuncia
+   l’azione compiuta ("archiviato"). Reduced motion: niente squash
+   né rientro animato, lo stato finale è immediato.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Messaggio',
+    subject: 'Promemoria: rinnovo dominio',
+    from: 'da fatturazione@altrove.test',
+    hint: 'Trascina il messaggio su una zona, oppure usa i pulsanti.',
+    archive: 'Archivia',
+    delete: 'Elimina',
+    btnArchive: 'Archivia il messaggio',
+    btnDelete: 'Elimina il messaggio',
+    reset: 'Ripristina',
+    drag: 'Trascina per archiviare o eliminare',
+    doneArchive: 'Messaggio archiviato.',
+    doneDelete: 'Messaggio eliminato.',
+    backState: 'Messaggio ripristinato.',
+  },
+  en: {
+    label: 'Message',
+    subject: 'Reminder: domain renewal',
+    from: 'from billing@altrove.test',
+    hint: 'Drag the message onto a zone, or use the buttons.',
+    archive: 'Archive',
+    delete: 'Delete',
+    btnArchive: 'Archive the message',
+    btnDelete: 'Delete the message',
+    reset: 'Restore',
+    drag: 'Drag to archive or delete',
+    doneArchive: 'Message archived.',
+    doneDelete: 'Message deleted.',
+    backState: 'Message restored.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div
+  class="dta"
+  data-done-archive={c.doneArchive}
+  data-done-delete={c.doneDelete}
+  data-back={c.backState}
+>
+  <span class="dta__hint">{c.hint}</span>
+
+  <div class="dta__zones">
+    <div class="dta__zone" data-zone="archive" data-action-label={c.archive}>
+      <svg viewBox="0 0 20 20" aria-hidden="true" fill="none">
+        <path d="M10 4v9m0 0 3.2-3.2M10 13 6.8 9.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>{c.archive}</span>
+    </div>
+    <div class="dta__zone dta__zone--danger" data-zone="delete" data-action-label={c.delete}>
+      <svg viewBox="0 0 20 20" aria-hidden="true" fill="none">
+        <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+      <span>{c.delete}</span>
+    </div>
+  </div>
+
+  <div class="dta__card-wrap">
+    <button type="button" class="dta__card" aria-label={c.drag}>
+      <span class="dta__subject">{c.subject}</span>
+      <span class="dta__from">{c.from}</span>
+    </button>
+    <p class="dta__gone" hidden></p>
+  </div>
+
+  <div class="dta__actions">
+    <button type="button" class="dta__act" data-do="archive" aria-label={c.btnArchive}>{c.archive}</button>
+    <button type="button" class="dta__act dta__act--danger" data-do="delete" aria-label={c.btnDelete}>{c.delete}</button>
+    <button type="button" class="dta__act dta__act--ghost" data-do="reset" hidden>{c.reset}</button>
+  </div>
+
+  <span class="dta__live" role="status" aria-live="polite"></span>
+</div>
+
+<style>
+  .dta {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .dta__hint { font-size: var(--text-xs); color: var(--ink-muted); }
+
+  .dta__zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+  .dta__zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3xs);
+    min-block-size: 4rem;
+    padding: var(--space-sm);
+    border-radius: var(--radius-lg);
+    border: 1.5px dashed var(--border-strong);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    background-color: var(--surface-sunken);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .dta__zone svg { inline-size: 1.25rem; block-size: 1.25rem; }
+  .dta__zone[data-over] {
+    border-style: solid;
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+  }
+  .dta__zone--danger[data-over] {
+    border-color: oklch(0.55 0.18 22);
+    color: oklch(0.55 0.18 22);
+    background-color: color-mix(in oklab, oklch(0.55 0.18 22) 12%, transparent);
+  }
+
+  .dta__card-wrap { position: relative; min-block-size: 3.5rem; }
+
+  .dta__card {
+    appearance: none;
+    inline-size: 100%;
+    text-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    cursor: grab;
+    touch-action: none;
+    transition:
+      transform var(--dur-fast) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft),
+      opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .dta__card[data-lift] {
+    cursor: grabbing;
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent);
+    transition: box-shadow var(--dur-fast) var(--ease-out-soft);
+    transform: translate(var(--dx, 0), var(--dy, 0)) scale(1.02);
+  }
+  .dta__card[hidden] { display: none; }
+  .dta__card:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .dta__subject {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+  .dta__from { font-size: var(--text-xs); color: var(--ink-subtle); }
+
+  .dta__gone {
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    background-color: var(--surface-sunken);
+  }
+  .dta__gone[hidden] { display: none; }
+
+  .dta__actions { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
+  .dta__act {
+    appearance: none;
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-raised);
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .dta__act:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .dta__act--danger:hover {
+    border-color: oklch(0.55 0.18 22);
+    color: oklch(0.55 0.18 22);
+  }
+  .dta__act--ghost { border-style: dashed; color: var(--ink-muted); }
+  .dta__act[hidden] { display: none; }
+  .dta__act:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .dta__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+  type Cleanup = () => void;
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.dta').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const card = root.querySelector<HTMLButtonElement>('.dta__card');
+      const gone = root.querySelector<HTMLElement>('.dta__gone');
+      const zones = Array.from(root.querySelectorAll<HTMLElement>('.dta__zone'));
+      const live = root.querySelector<HTMLElement>('.dta__live');
+      const acts = Array.from(root.querySelectorAll<HTMLButtonElement>('.dta__act'));
+      if (!card || !gone || !live) return;
+
+      const doneArchive = root.dataset.doneArchive ?? '';
+      const doneDelete = root.dataset.doneDelete ?? '';
+      const back = root.dataset.back ?? '';
+
+      const announce = (s: string) => { live.textContent = s; };
+
+      const applyAction = (zone: 'archive' | 'delete') => {
+        const msg = zone === 'archive' ? doneArchive : doneDelete;
+        gone.textContent = msg;
+        gone.hidden = false;
+        card.hidden = true;
+        acts.forEach((b) => {
+          const d = b.dataset.do;
+          b.hidden = d === 'archive' || d === 'delete' ? true : false;
+        });
+        announce(msg);
+      };
+
+      const reset = () => {
+        gone.hidden = true;
+        card.hidden = false;
+        acts.forEach((b) => {
+          const d = b.dataset.do;
+          b.hidden = d === 'reset' ? true : false;
+        });
+        announce(back);
+        card.focus();
+      };
+
+      // ── Pulsanti: la strada sempre disponibile ──
+      acts.forEach((b) => {
+        b.addEventListener('click', () => {
+          const d = b.dataset.do;
+          if (d === 'archive' || d === 'delete') applyAction(d);
+          else if (d === 'reset') reset();
+        });
+      });
+
+      // ── Puntatore: la scorciatoia ──
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let overZone: HTMLElement | null = null;
+
+      const zoneUnder = (x: number, y: number): HTMLElement | null => {
+        for (const z of zones) {
+          const r = z.getBoundingClientRect();
+          if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return z;
+        }
+        return null;
+      };
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging) return;
+        card.style.setProperty('--dx', `${e.clientX - startX}px`);
+        card.style.setProperty('--dy', `${e.clientY - startY}px`);
+        const z = zoneUnder(e.clientX, e.clientY);
+        if (z !== overZone) {
+          if (overZone) delete overZone.dataset.over;
+          overZone = z;
+          if (overZone) overZone.dataset.over = '';
+        }
+      };
+
+      const endDrag = (e: PointerEvent) => {
+        if (!dragging) return;
+        dragging = false;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+        try { card.releasePointerCapture(e.pointerId); } catch {}
+        delete card.dataset.lift;
+        card.style.removeProperty('--dx');
+        card.style.removeProperty('--dy');
+        const target = overZone;
+        if (overZone) { delete overZone.dataset.over; overZone = null; }
+        if (target) {
+          const z = target.dataset.zone === 'delete' ? 'delete' : 'archive';
+          applyAction(z);
+        }
+      };
+
+      card.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (e.button !== 0 || card.hidden) return;
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        card.dataset.lift = '';
+        try { card.setPointerCapture(e.pointerId); } catch {}
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', endDrag);
+        document.addEventListener('pointercancel', endDrag);
+      });
+
+      // Click nativo sul card non deve fare nulla (il drag gestisce tutto).
+      card.addEventListener('click', (e) => e.preventDefault());
+
+      const cleanup: Cleanup = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+      };
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

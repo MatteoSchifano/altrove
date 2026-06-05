@@ -4,6 +4,7 @@
    ───────────────────────────────────────────────────────────── */
 
 import { getCollection, render } from 'astro:content';
+import { isReleased } from '../../../lib/chapters';
 import Chapter from '../../../layouts/Chapter.astro';
 import { localizedPath, getOtherLocales, type Locale } from '../../../lib/i18n';
 import { resolveReadingTime } from '../../../lib/readingTime';
@@ -23,7 +24,7 @@ export const getStaticPaths = (async () => {
   const stripPrefix = (id: string, lang: string) =>
     id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
 
-  const all = await getCollection('chapters', ({ data }) => !data.draft);
+  const all = await getCollection('chapters', ({ data }) => isReleased(data));
   const here = all.filter((e) => e.data.lang === PAGE_LOCALE);
   return here.map((entry) => {
     const slug = stripPrefix(entry.id, PAGE_LOCALE);

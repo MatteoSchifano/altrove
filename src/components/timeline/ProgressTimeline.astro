@@ -1,0 +1,227 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ProgressTimeline — il tempo come percorso, non come percentuale.
+
+   Lo stato di una spedizione (o di un onboarding, o di un reso) non
+   è un numero: è un *posto* lungo una strada. "Sei al 60%" non dice
+   nulla; "spedito, in transito, in consegna" dice tutto. Una timeline
+   di progresso orizzontale rende il tempo un percorso con tappe — e
+   la tappa corrente è un luogo, non una barra che si riempie.
+
+   I tre stati — completato / corrente / pendente — devono essere
+   leggibili senza colore:
+     • completato → segno di spunta (✓) dentro il nodo;
+     • corrente   → nodo pieno + aria-current="step" + l’etichetta in
+                    grassetto, marcata "· in corso";
+     • pendente   → nodo vuoto, testo attenuato.
+   Il colore è il terzo segnale, mai il primo.
+
+   <ol> perché le tappe hanno un ordine; aria-current="step" perché
+   è esattamente ciò per cui l’attributo esiste — "lo step corrente
+   in un insieme di step". Niente date assolute qui: una consegna si
+   racconta con tappe relative, non con timestamp.
+
+   Reduced motion: nessuna barra che cresce; lo stato è già disegnato
+   alla sua misura finale (durate-token → 1ms).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Status = 'done' | 'current' | 'pending';
+
+interface Step {
+  label: string;
+  meta: string;
+  status: Status;
+}
+
+const COPY = {
+  it: {
+    heading: 'Stato dell’ordine',
+    current: 'in corso',
+    steps: [
+      { label: 'Ordine confermato', meta: 'lun 14', status: 'done' },
+      { label: 'In preparazione', meta: 'mar 15', status: 'done' },
+      { label: 'In transito', meta: 'oggi', status: 'current' },
+      { label: 'In consegna', meta: 'gio 18', status: 'pending' },
+      { label: 'Consegnato', meta: '—', status: 'pending' },
+    ] as Step[],
+  },
+  en: {
+    heading: 'Order status',
+    current: 'in progress',
+    steps: [
+      { label: 'Order confirmed', meta: 'Mon 14', status: 'done' },
+      { label: 'Preparing', meta: 'Tue 15', status: 'done' },
+      { label: 'In transit', meta: 'today', status: 'current' },
+      { label: 'Out for delivery', meta: 'Thu 18', status: 'pending' },
+      { label: 'Delivered', meta: '—', status: 'pending' },
+    ] as Step[],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<section class="pg" aria-label={c.heading}>
+  <h4 class="pg__heading">{c.heading}</h4>
+
+  <ol class="pg__list" role="list" style={`--count:${c.steps.length}`}>
+    {c.steps.map((s) => (
+      <li
+        class="pg__step"
+        data-status={s.status}
+        aria-current={s.status === 'current' ? 'step' : undefined}
+      >
+        <span class="pg__node" aria-hidden="true">
+          {s.status === 'done' && (
+            <svg viewBox="0 0 16 16" class="pg__check" aria-hidden="true">
+              <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          )}
+        </span>
+        <span class="pg__label">{s.label}</span>
+        <span class="pg__meta tabular">
+          {s.meta}
+          {s.status === 'current' && <span class="pg__badge"> · {c.current}</span>}
+        </span>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .pg {
+    inline-size: min(34rem, 100%);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .pg__heading {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .pg__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--count), 1fr);
+    gap: var(--space-2xs);
+  }
+
+  .pg__step {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    text-align: center;
+  }
+
+  /* La linea di collegamento fra un nodo e il successivo. Parte dal
+     centro del nodo e va al nodo dopo. Completata = piena d’accento. */
+  .pg__step::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.6rem;
+    inset-inline-start: 50%;
+    inline-size: 100%;
+    block-size: 2px;
+    background-color: var(--border);
+    z-index: 0;
+  }
+  .pg__step:last-child::before { display: none; }
+  .pg__step[data-status='done']::before {
+    background-color: var(--accent);
+  }
+
+  .pg__node {
+    position: relative;
+    z-index: 1;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background-color: var(--surface-raised);
+    border: 2px solid var(--border-strong);
+    color: var(--accent-on);
+    transition: background-color var(--dur-normal) var(--ease-out-soft),
+                border-color var(--dur-normal) var(--ease-out-soft);
+  }
+
+  /* Completato: nodo pieno + spunta. */
+  .pg__step[data-status='done'] .pg__node {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .pg__check {
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+  }
+
+  /* Corrente: nodo pieno con anello, l’anello è il "tu sei qui". */
+  .pg__step[data-status='current'] .pg__node {
+    background-color: var(--surface-raised);
+    border-color: var(--accent);
+    box-shadow: var(--halo-accent);
+  }
+
+  /* Pendente: nodo vuoto, niente accento. */
+  .pg__step[data-status='pending'] .pg__node {
+    border-color: var(--border-strong);
+  }
+
+  .pg__label {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+  .pg__step[data-status='current'] .pg__label {
+    color: var(--ink-strong);
+    font-weight: var(--weight-semibold);
+  }
+  .pg__step[data-status='done'] .pg__label {
+    color: var(--ink);
+  }
+
+  .pg__meta {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+  }
+  .pg__badge {
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+
+  /* Su schermi stretti la fila orizzontale diventa una colonna
+     leggibile: la spina ruota di lato. */
+  @media (max-width: 32rem) {
+    .pg__list {
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+    .pg__step {
+      grid-template-columns: auto 1fr auto;
+      justify-items: start;
+      align-items: center;
+      text-align: start;
+      gap: var(--space-sm);
+    }
+    .pg__step::before {
+      inset-block-start: 1.25rem;
+      inset-inline-start: 0.6rem;
+      inline-size: 2px;
+      block-size: 100%;
+    }
+    .pg__meta { justify-self: end; }
+  }
+</style>

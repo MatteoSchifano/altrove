@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-23"
+number: "23"
+title: "Il calendario"
+excerpt: "Chiedere una data è uno dei modi più facili per far odiare un form: tre menu a tendina, un fuso orario taciuto, un «fra 3 giorni» che non dice quale. Cinque modi per chiederla con rispetto — tastiera-first, fusi espliciti, linguaggio naturale onesto."
+date: "11 settembre 2026"
+releaseDate: "2026-09-11"
+readMinutes: 12
+tags: ["componenti", "date", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import KeyboardCalendar from '../../../components/calendar/KeyboardCalendar.astro';
+import DateRangePicker from '../../../components/calendar/DateRangePicker.astro';
+import RelativeDuration from '../../../components/calendar/RelativeDuration.astro';
+import ExplicitTimezone from '../../../components/calendar/ExplicitTimezone.astro';
+import SmartDateInput from '../../../components/calendar/SmartDateInput.astro';
+
+C'è una domanda che ogni interfaccia prima o poi pone, e che quasi sempre pone male: «in che data?». Sembra banale, eppure è uno dei posti dove si concentra più frustrazione. Tre menu a tendina giorno/mese/anno che nessuno pensa davvero. Un calendario che si naviga solo col mouse, irraggiungibile da tastiera. Un orario mostrato senza fuso, che è una bugia travestita da precisione. Un «scade fra 3 giorni» che non dice *quale* giorno. La data è un dato ostico perché è insieme un numero, un nome, una posizione su una griglia e un punto assoluto nel tempo — e ogni form sceglie quale di queste verità ignorare.
+
+Il tema di questo capitolo è il rispetto per il modo in cui le persone pensano il tempo. Nessuno ragiona in `2026-09-14T16:00:00Z`; si ragiona in «venerdì pomeriggio», «fra due settimane», «lo stesso giorno della call». Una buona interfaccia di date non costringe l'utente a tradurre il suo pensiero nel formato della macchina: fa il contrario, traduce la macchina nel suo. E lo fa senza librerie pesanti — il browser ha già `Intl.DateTimeFormat` e `Intl.RelativeTimeFormat`, che conoscono i nomi dei mesi in ogni lingua, l'ordine giusto degli elementi, i fusi, le forme «ieri/domani». Il nostro lavoro è cucirci attorno la tastiera e l'onestà.
+
+Cinque dimostrazioni, una per ferita tipica del «chiedi una data». Il calendario che si usa senza mouse; l'intervallo che dice in quale dei due gesti sei; la durata relativa che non nasconde mai l'assoluto; l'orario che porta sempre il suo fuso; il campo che capisce «domani» ma è onesto quando non capisce. Cinque modi per chiedere una data senza far odiare il browser.
+
+## Il calendario che si usa senza mouse
+
+Un calendario è una griglia, e una griglia ha una tastiera precisa. Il primo errore è dimenticarla: tanti date picker si navigano solo col puntatore, e per chi usa la tastiera diventano muri. Qui partiamo dall'opposto — `role="grid"` e una tastiera che ci si muove dentro come su un foglio a quadretti.
+
+<Demo title="Calendario tastiera-first · role=grid, frecce e PageUp/PageDown" tag="23.a">
+  <KeyboardCalendar locale="it" />
+  <div slot="note">
+    <p>Dai il focus a un giorno e muoviti: le frecce spostano di un giorno, <kbd>PagSu</kbd>/<kbd>PagGiù</kbd> di un mese, <kbd>Home</kbd>/<kbd>Fine</kbd> all'inizio e alla fine della settimana, <kbd>Invio</kbd> seleziona. È la tastiera che l'utente già conosce da Excel e da Google Calendar: non la inventiamo, la rispettiamo. Il segreto tecnico è il <em>roving tabindex</em> — una sola cella è tabbabile alla volta, così il <kbd>Tab</kbd> entra ed esce dalla griglia in un colpo, e dentro si naviga con le frecce. Il giorno selezionato viene annunciato a voce in un live region; «oggi» porta <code>aria-current="date"</code>.</p>
+    <p>Tutti i nomi — mesi, giorni della settimana — arrivano da <code>Intl.DateTimeFormat</code>, mai da array scritti a mano: così la settimana parte di lunedì in italiano e di domenica in inglese senza un solo `if` cablato, e «settembre» è «settembre» nella lingua giusta. Il colore non è l'unico segnale: «oggi» è un anello, il selezionato è un riempimento pieno, e comunque la verità completa è nell'etichetta annunciata («mercoledì 16 settembre 2026»). Il cambio di mese non è uno spettacolo: la griglia si ridisegna e basta, perché un calendario che fa acrobazie a ogni mese stanca alla terza navigazione.</p>
+  </div>
+</Demo>
+
+## L'intervallo che dice dove sei
+
+Selezionare «dal 12 al 19» non è un gesto, sono due — e l'errore più comune è non dire all'utente in quale dei due si trova. Un intervallo ha un inizio e una fine, e tra i due c'è uno stato intermedio che va reso visibile, non lasciato indovinare.
+
+<Demo title="Selezione intervallo · entry, exit e anteprima del range" tag="23.b">
+  <DateRangePicker locale="it" />
+  <div slot="note">
+    <p>Il primo clic fissa l'inizio; da lì, mentre il puntatore si muove, l'intervallo si <em>anteprima</em> sotto il cursore — si vede cosa si sta per scegliere prima di confermarlo col secondo clic. Lo stato è sempre esplicito sotto la griglia: «scegli l'inizio», poi «scegli la fine», poi il riepilogo con le notti contate. Se il secondo clic cade prima del primo non si rompe nulla: l'intervallo si normalizza da solo, l'inizio è sempre la data minore. Un terzo clic ricomincia da capo, senza trappole.</p>
+    <p>I due capi dell'intervallo sono marcati su <strong>due canali</strong>, mai solo col colore: riempimento pieno <em>e</em> forma a pillola netta, mentre il corpo è una barra morbida continua. Chi non distingue bene i colori legge comunque «inizio» e «fine» dal riepilogo testuale e dalle etichette accessibili di ogni cella. È la stessa disciplina del resto del playground portata sulle date: il colore decora, ma non è mai l'unico a parlare. E la barra dell'intervallo non si anima a ogni movimento del mouse — si ridipinge, perché è un indicatore di stato, non un effetto.</p>
+  </div>
+</Demo>
+
+## La durata che non nasconde la data
+
+«Pubblicato il 2026-09-11T07:30:00Z» è preciso e gelido: per capire «quanto fa» il cervello deve sottrarre da solo. «Un'ora e mezza fa» lo capisce a colpo d'occhio. Ma il relativo da solo è una mezza verità — per questo l'assoluto non sparisce mai.
+
+<Demo title="Durata relativa · Intl.RelativeTimeFormat con l'assoluto sempre a portata" tag="23.c">
+  <RelativeDuration locale="it" />
+  <div slot="note">
+    <p><code>Intl.RelativeTimeFormat</code> genera «fra 3 giorni», «2 ore fa», «ieri» — nella lingua giusta e con le forme corrette (con <code>numeric: "auto"</code> dice «ieri», non «1 giorno fa»). Il codice sceglie l'unità più leggibile per ogni distanza: minuti finché contano, poi ore, poi giorni — mai «2880 minuti fa». È la scorciatoia per gli occhi, quella che fa rispondere subito a «mi serve agire ora?».</p>
+    <p>Ma «fra 3 giorni» non dice <em>quale</em> giorno, e a mezzanotte cambia significato: il relativo, da solo, mente per omissione. Per questo la data assoluta resta <strong>sempre</strong> raggiungibile — nel <code>title</code> (tooltip al passaggio), nell'attributo <code>datetime</code> dell'elemento <code>&lt;time&gt;</code> (la forma che leggono le macchine e gli screen reader) e stampata in piccolo sotto. Il relativo è la voce amichevole; l'assoluto è la fonte di verità, e non si butta mai via in nome della leggibilità.</p>
+  </div>
+</Demo>
+
+## L'orario che porta il suo fuso
+
+«La call è alle 18:00» è una frase incompleta: alle 18:00 *dove*? Un orario senza fuso costringe ogni lettore a indovinare, e chi indovina sbagliato perde la riunione. La regola non è negoziabile: ogni orario che attraversa fusi diversi porta il suo fuso, esplicito, accanto al numero.
+
+<Demo title="Orario col fuso esplicito · perché un orario senza fuso è una bugia" tag="23.d">
+  <ExplicitTimezone locale="it" />
+  <div slot="note">
+    <p>Lo stesso identico istante — un punto assoluto nel tempo — proiettato in fusi diversi mostra numeri diversi: a Roma sono le 18:00, a New York mezzogiorno, a Tokyo l'una di notte del giorno dopo. Senza l'etichetta del fuso sarebbero indistinguibili e ingannevoli. <code>Intl.DateTimeFormat</code> fa tutto: dato l'istante e una <code>timeZone</code>, lo proietta nell'ora locale di quel fuso e, con <code>timeZoneName</code>, ci attacca l'etichetta. Usiamo <code>formatToParts</code> per isolare il nome del fuso e dargli risalto: non è un dettaglio in sordina, è ciò che rende l'orario vero.</p>
+    <p>La lezione è una sola, e vale anche quando mostri un orario singolo: il fuso non è opzionale. Un evento, una scadenza, un «ci vediamo alle» che attraversano un confine geografico portano sempre il loro fuso — altrimenti l'apparente precisione del numero è proprio ciò che inganna. È la versione temporale dell'onestà che attraversa tutto il playground: meglio un dato più lungo e vero di uno più corto e ambiguo. L'ora senza fuso non è concisa, è incompleta.</p>
+  </div>
+</Demo>
+
+## Il campo che capisce «domani»
+
+Chiedere una data con tre menu a tendina è tecnicamente corretto e umanamente ostile: nessuno pensa «15 / settembre / 2026», pensa «venerdì prossimo». L'ultimo pezzo accetta il linguaggio naturale di base — ma la sua vera lezione non è capire: è essere onesto quando *non* capisce.
+
+<Demo title="Input intelligente · capisce «domani», onesto quando non capisce" tag="23.e">
+  <SmartDateInput locale="it" />
+  <div slot="note">
+    <p>Scrivi «domani», «venerdì prossimo», «+3 giorni», «fra 2 settimane», e sotto compare subito la data interpretata, con il giorno della settimana incluso (perché «ah, è un venerdì» è metà del valore). Niente librerie di parsing: una manciata di regole esplicite, ognuna riconoscibile, e i nomi dei giorni presi da <code>Intl</code> così «venerdì» e «friday» funzionano entrambi nella loro lingua. L'eco istantanea è la chiave — l'utente conferma con gli occhi la data prima di inviarla, e non scopre l'errore solo dopo.</p>
+    <p>La parte difficile non è capire, è <strong>ammettere di non capire</strong>. Un parser che indovina a caso («interpreto qualcosa, nel dubbio oggi») è peggio di uno che dice «non ho capito»: la data sbagliata silenziosa è una trappola che esplode più tardi. Qui, se l'input non combacia con nessun pattern noto, lo diciamo chiaro e suggeriamo cosa provare — niente fallback inventato. I tre stati (in attesa, capito, non capito) sono distinti su segno + testo + colore, mai solo colore. La fiducia in un campo intelligente si costruisce proprio sui suoi limiti dichiarati: capisce poco ma non mente mai.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque modi di chiedere una data, un'unica disciplina: tradurre la macchina nel pensiero umano, non viceversa. Il calendario che si naviga con le frecce perché la tastiera non è un ripensamento; l'intervallo che dice sempre in quale dei due gesti sei; il relativo che semplifica senza mai cancellare l'assoluto sotto; l'orario che porta il suo fuso perché un numero senza contesto inganna; il campo che capisce «domani» ma confessa quando non capisce. La data è ostica proprio perché è quattro cose insieme — un numero, un nome, una posizione, un istante — e chiederla bene significa onorarle tutte e quattro, senza scegliere quale verità sacrificare per far prima.
+
+Il prossimo capitolo resta nel tempo ma cambia forma: dalla data come dato alla *timeline* come oggetto visuale. *Il tempo come oggetto visuale, non come tabella* — come si disegna una sequenza di eventi perché si legga come un racconto, e non come un foglio di calcolo con le date in colonna.

@@ -1,0 +1,275 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   RhythmDivider — il divider come RITMO, non come linea.
+
+   La domanda del capitolo, portata al limite: il silenzio nella
+   pagina si disegna o si lascia accadere? Una linea è un separatore
+   *disegnato*; lo spazio bianco è un separatore *che accade*. E spesso
+   il secondo basta — anzi, è più quieto.
+
+   Tre cose in una dimostrazione, con un toggle che alterna due ritmi:
+
+   1. Larghezza. Una regola a tutta-pagina (full-bleed) recide il flusso
+      con autorità; una regola a larghezza-prosa, allineata al testo,
+      separa *dentro* la lettura senza spezzare la colonna. Stessa linea,
+      due gesti diversi.
+
+   2. Lo spazio bianco come separatore. Togliendo del tutto la linea e
+      lasciando solo aria fra i blocchi, la separazione continua a
+      leggersi: l’occhio sa dove finisce un paragrafo e ne comincia un
+      altro. La linea era un’opzione, non un obbligo.
+
+   3. Il rapporto (whitespace ratio): quanto dello spazio è vuoto. Il
+      toggle mostra il numero — non per esattezza scientifica, ma per
+      rendere visibile una scelta di solito invisibile.
+
+   Onestà: il separatore visibile è un <hr> vero in entrambi i ritmi;
+   quando "scompare" diventa spazio, marchiamo comunque la cesura con
+   role="separator" così la struttura resta leggibile a chi non vede
+   l’aria. Il toggle è un <button role="switch"> nativo: tastiera e
+   stato annunciato gratis.
+
+   Motion: minima e onesta. La larghezza dell'<hr> transita con durate-
+   token; sotto prefers-reduced-motion le durate collassano a 1ms — lo
+   stato finale è identico, sparisce solo il viaggio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Ritmo',
+    bleed: 'Full-bleed',
+    prose: 'Larghezza-prosa',
+    ratioLabel: 'Spazio vuoto',
+    before:
+      'Un blocco di testo finisce qui. La separazione che segue può urlare o sussurrare, e la scelta cambia il respiro di tutta la pagina.',
+    after:
+      'Un altro blocco comincia. Nota come, anche senza una linea, sai già che è una sezione nuova: lo dice l’aria.',
+    plain: 'Solo spazio — la linea non c’è, la pausa sì.',
+  },
+  en: {
+    label: 'Rhythm',
+    bleed: 'Full-bleed',
+    prose: 'Prose-width',
+    ratioLabel: 'Empty space',
+    before:
+      'A block of text ends here. The separation that follows can shout or whisper, and the choice changes the breath of the whole page.',
+    after:
+      'Another block begins. Notice how, even without a line, you already know it’s a new section: the air says so.',
+    plain: 'Just space — no line, but the pause is there.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="rhythm" data-rhythm="prose">
+  <div class="rhythm__controls">
+    <span class="rhythm__label" id="rhythm-label">{c.label}</span>
+    <button
+      type="button"
+      class="rhythm__switch"
+      role="switch"
+      aria-checked="false"
+      aria-labelledby="rhythm-label"
+      data-bleed={c.bleed}
+      data-prose={c.prose}
+    >
+      <span class="rhythm__track" aria-hidden="true">
+        <span class="rhythm__thumb"></span>
+      </span>
+      <span class="rhythm__mode" aria-hidden="true">{c.prose}</span>
+    </button>
+
+    <span class="rhythm__ratio">
+      <span class="rhythm__ratio-label">{c.ratioLabel}</span>
+      <strong class="rhythm__ratio-val tabular" data-ratio>58%</strong>
+    </span>
+  </div>
+
+  <div class="rhythm__stage">
+    <p class="rhythm__text">{c.before}</p>
+
+    <hr class="rhythm__hr" />
+    <p class="rhythm__plain" role="separator" aria-orientation="horizontal">{c.plain}</p>
+
+    <p class="rhythm__text">{c.after}</p>
+  </div>
+</div>
+
+<style>
+  .rhythm {
+    inline-size: min(38rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .rhythm__controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem var(--space-md);
+  }
+  .rhythm__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+
+  /* ── Il toggle (button role=switch) ── */
+  .rhythm__switch {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+  }
+  .rhythm__switch:focus-visible { outline: none; }
+  .rhythm__switch:focus-visible .rhythm__track { box-shadow: var(--halo-focus); }
+
+  .rhythm__track {
+    position: relative;
+    inline-size: 2.7rem;
+    block-size: 1.5rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    padding: 0.18rem;
+    transition: background-color var(--dur-normal) var(--ease-out-soft);
+  }
+  .rhythm__thumb {
+    display: block;
+    inline-size: 1.14rem;
+    block-size: 1.14rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .rhythm__mode {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    inline-size: 7rem;
+    text-align: start;
+  }
+
+  .rhythm__switch[aria-checked='true'] .rhythm__track {
+    background-color: var(--accent);
+  }
+  .rhythm__switch[aria-checked='true'] .rhythm__thumb {
+    transform: translateX(1.2rem);
+  }
+
+  .rhythm__ratio {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+  .rhythm__ratio-val {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--ink-strong);
+  }
+
+  /* ── Lo stage ── */
+  .rhythm__stage {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .rhythm__text {
+    margin: 0;
+    margin-inline: auto;
+    max-inline-size: 42ch;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+
+  /* ── La regola visibile ──
+     in modo "prose" è allineata e larga quanto il testo;
+     in modo "bleed" si estende a tutto lo stage. La larghezza
+     transita: è l’unica animazione, e collassa a 1ms con
+     reduced-motion (durate-token). */
+  .rhythm__hr {
+    border: 0;
+    block-size: 1px;
+    background-color: var(--border-strong);
+    margin-inline: auto;
+    margin-block: var(--space-md);
+    inline-size: 42ch;
+    max-inline-size: 100%;
+    transition: inline-size var(--dur-normal) var(--ease-out-soft);
+  }
+
+  /* Modo full-bleed: la linea si allarga, lo spazio si stringe. */
+  .rhythm[data-rhythm='bleed'] .rhythm__hr {
+    inline-size: 100%;
+    margin-block: var(--space-sm);
+  }
+
+  /* ── Lo spazio come separatore ──
+     in modo "prose" la linea c’è e questo blocco-spazio è muto
+     (solo aria); in modo "bleed" lo nascondiamo dalla vista ma
+     resta nel DOM come separatore per chi naviga di struttura.
+     La pausa, in entrambi i casi, è data dallo spazio. */
+  .rhythm__plain {
+    margin: 0;
+    margin-block: var(--space-lg);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    text-align: center;
+    font-style: italic;
+  }
+  .rhythm[data-rhythm='bleed'] .rhythm__plain {
+    margin-block: var(--space-md);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.rhythm').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const sw = root.querySelector<HTMLButtonElement>('.rhythm__switch');
+      const mode = root.querySelector<HTMLElement>('.rhythm__mode');
+      const ratio = root.querySelector<HTMLElement>('[data-ratio]');
+      if (!sw) return;
+
+      const bleed = sw.dataset.bleed ?? 'Full-bleed';
+      const prose = sw.dataset.prose ?? 'Prose-width';
+
+      // Whitespace ratio: due cifre oneste, non scientifiche — il
+      // ritmo a larghezza-prosa lascia più aria (più vuoto attorno),
+      // il full-bleed la riempie con la linea piena.
+      const PROSE_RATIO = 58;
+      const BLEED_RATIO = 41;
+
+      const render = (isBleed: boolean) => {
+        root.dataset.rhythm = isBleed ? 'bleed' : 'prose';
+        if (mode) mode.textContent = isBleed ? bleed : prose;
+        if (ratio) ratio.textContent = `${isBleed ? BLEED_RATIO : PROSE_RATIO}%`;
+      };
+
+      sw.addEventListener('click', () => {
+        const next = sw.getAttribute('aria-checked') !== 'true';
+        sw.setAttribute('aria-checked', String(next));
+        render(next);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

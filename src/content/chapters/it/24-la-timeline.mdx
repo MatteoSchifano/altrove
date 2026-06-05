@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-24"
+number: "24"
+title: "La timeline"
+excerpt: "Una tabella di date si legge una riga alla volta; una timeline si legge con l'occhio. Trasformare il tempo in un oggetto visuale — una linea, un percorso, una barra, un nastro da riavvolgere — non è decorazione: è dare allo scorrere una forma che il cervello capisce prima di leggere."
+date: "18 settembre 2026"
+releaseDate: "2026-09-18"
+readMinutes: 11
+tags: ["componenti", "dataviz", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import EventTimeline from '../../../components/timeline/EventTimeline.astro';
+import ProgressTimeline from '../../../components/timeline/ProgressTimeline.astro';
+import MiniGantt from '../../../components/timeline/MiniGantt.astro';
+import BreathingTimeline from '../../../components/timeline/BreathingTimeline.astro';
+import ReplayScrubber from '../../../components/timeline/ReplayScrubber.astro';
+
+Il capitolo scorso parlava di un singolo controllo; questo allarga lo sguardo a un'intera struttura di dati — il tempo — e alla domanda che la governa: come si mostra una sequenza di eventi? La risposta pigra è una tabella: una colonna "data", una colonna "cosa", una riga per evento. Funziona, e si legge una riga alla volta, con la fatica di tenere a mente l'ordine. Ma il tempo non è una colonna di celle: è un *flusso*, una direzione, una distanza fra prima e dopo. Una timeline è il tentativo di restituire quella forma — di rendere il tempo un oggetto visuale, non un campo da incrociare a mente.
+
+«Visuale» non vuol dire «decorato». Vuol dire che la forma fa una parte del lavoro che altrimenti tocca alla lettura. Una linea verticale dice «sequenza» prima che tu legga le date. Una barra lunga il doppio dice «dura il doppio» senza che tu sottragga due numeri. Un nodo che pulsa dice «questo è ancora caldo» senza un badge che urli «NUOVO». Quando funziona, leggi *meno* e capisci *prima*: è la UX invisibile applicata al tempo.
+
+Cinque dimostrazioni, cinque modi di dare forma allo scorrere — la linea che scende, il percorso a tappe, la barra sull'asse, il respiro del recente, il nastro da riavvolgere. E come sempre niente librerie: `<ol>` per dire «c'è un ordine», `<time datetime>` per le date leggibili dalla macchina, CSS Grid come griglia temporale già pronta. Il tempo è già semantico nell'HTML; il nostro lavoro è solo dargli una forma onesta.
+
+## La linea che scende
+
+Il primo è la timeline nella sua forma più pura: un registro di eventi che scende, in stile commit-log. Una spina dorsale verticale collega i nodi, e ogni nodo porta una data e una riga di cosa è successo.
+
+<Demo title="Storico eventi · nodo, linea, ⟨time⟩, descrizione" tag="24.a">
+  <EventTimeline locale="it" />
+  <div slot="note">
+    <p>La linea verticale fa un lavoro che nessuna colonna «data» farebbe: dice, prima ancora che tu legga, che gli eventi sono in sequenza e che il sopra viene prima del sotto. È un <code>&lt;ol&gt;</code>, non una pila di <code>&lt;div&gt;</code> — così lo screen reader conta «elemento 1 di 5» e l'ordine diventa semantica, non solo grafica. Le date sono <code>&lt;time datetime&gt;</code>: leggibili dalla macchina, senza ambiguità di fuso o di lingua. Il deploy ha il nodo pieno d'accento, gli altri sono cerchi vuoti: forma più colore, mai colore da solo.</p>
+    <p>L'etichetta relativa — «2 giorni fa» — non è scritta nel markup: la calcola un piccolo script dopo il mount. È una scelta di onestà tecnica: niente <code>new Date()</code> nel build, perché un tempo «adesso» fissato a compilazione invecchierebbe in silenzio e mentirebbe domani. Lo script àncora il «relativo» a un istante coerente col capitolo, così i campioni restano veri. E l'entrata dei nodi sale una volta sola, in cascata corta da 60ms: sotto <code>prefers-reduced-motion</code> sono già al loro posto, identico stato finale, nessun viaggio.</p>
+  </div>
+</Demo>
+
+## Il percorso a tappe
+
+Spostiamo il registro su un asse orizzontale e cambiamo il significato: non più «cosa è successo», ma «a che punto siamo». Lo stato di una spedizione, di un onboarding, di un reso — un percorso con tappe completate, una tappa corrente, tappe che devono ancora venire.
+
+<Demo title="Timeline di progresso · completato / corrente / pendente" tag="24.b">
+  <ProgressTimeline locale="it" />
+  <div slot="note">
+    <p>«Sei al 60%» non dice nulla; «spedito, in transito, in consegna» dice tutto. Una percentuale è un numero astratto, una tappa è un *luogo* — e il cervello orienta meglio nei luoghi che nei numeri. Per questo lo stato corrente non è una barra che si riempie, è un nodo con un anello: il «tu sei qui» di una mappa. I tre stati si leggono senza colore: completato porta una spunta <code>✓</code> dentro il nodo, corrente ha l'anello e l'etichetta in grassetto marcata «· in corso», pendente è un cerchio vuoto e attenuato. Il colore è il terzo segnale, mai il primo.</p>
+    <p>La tappa corrente ha <code>aria-current="step"</code> — l'attributo esiste esattamente per questo: «lo step corrente in un insieme di step». Senza, uno screen reader leggerebbe cinque voci tutte uguali e l'utente dovrebbe indovinare dove si trova; con, sente «passo corrente» e l'ambiguità sparisce. Su schermo stretto la fila orizzontale ruota in colonna leggibile invece di stringersi fino all'illeggibile: la forma si adatta, la semantica resta identica.</p>
+  </div>
+</Demo>
+
+## La barra sull'asse
+
+Terza forma, la più letterale: il Gantt. Qui l'asse orizzontale *è* il calendario, e una barra non racconta la durata — la *misura*. Una barra lunga il doppio dura il doppio, e lo si legge con l'occhio, senza sottrarre date a mente.
+
+<Demo title="Mini-Gantt · CSS Grid come griglia temporale" tag="24.c">
+  <MiniGantt locale="it" />
+  <div slot="note">
+    <p>Il trucco è che non serve una libreria: CSS Grid <em>è già</em> una griglia temporale. Una colonna per giorno, una riga per task, e ogni barra dichiara la sua campata con <code>grid-column: inizio / fine</code>. Lo spazio fa da matematica — la lunghezza della barra è letteralmente la durata, e la sovrapposizione fra task si vede perché due barre stanno sulle stesse colonne. Niente SVG da calcolare, niente <code>new Date()</code>: la griglia di date è un array fisso di campioni, e le barre dicono la durata vera, non una lunghezza «che sta bene».</p>
+    <p>La barra colorata da sola è muta per chi non la vede: per questo ogni task porta uno <code>&lt;span&gt;</code> visivamente nascosto che descrive la campata a parole — «Design: dal 14 al 16 set». La barra dipinta è il canale visivo, la frase è il canale per lo screen reader, e gli estremi sono <code>&lt;time&gt;</code>. I task si distinguono per tinta e per tratto (pieno, scuro, tratteggiato), non per colore soltanto. Sotto reduced motion le barre non crescono da zero: sono già alla loro lunghezza, perché la lunghezza <em>è</em> il dato, non un effetto.</p>
+  </div>
+</Demo>
+
+## Il respiro del recente
+
+Quarta forma, e cambia registro: dal mostrare il passato al segnalare il presente. In un feed che si aggiorna, gli eventi più nuovi non sono solo «in alto» — sono *vivi*. La domanda è come dirlo senza gridare.
+
+<Demo title="Timeline che respira · il pulse del recente, tolto sotto reduced motion" tag="24.d">
+  <BreathingTimeline locale="it" />
+  <div slot="note">
+    <p>Un pulse delicatissimo sul nodo più nuovo è il modo più onesto di dire «questo è ancora caldo»: non un badge che urla «NUOVO», ma un battito lento, come qualcosa che non si è ancora raffreddato. La soglia è tutta nel dosaggio. L'alone cresce e svanisce su un ciclo di ≈ 2,4s — un <em>respiro</em>, non un lampeggio — e si applica solo ai pochissimi eventi marcati «recenti», mai a tutta la lista. Lampeggiare sarebbe rumore; respirare è presenza. Un feed che pulsa intero è un feed che grida, e ha già perso.</p>
+    <p>Qui sta la prova del nove dell'onestà del movimento. Sotto <code>prefers-reduced-motion</code> il respiro sparisce <em>del tutto</em>: non rallentato, tolto. Ma l'informazione «questo è recente» non può svanire con l'animazione — sarebbe nascondere uno stato. Per questo sotto il pulse vive sempre un segno statico: un puntino <code>•</code> e la parola «recente», leggibile da chi non vede né colore né movimento. Il battito è una rifinitura per chi può riceverla; il segno è la verità per tutti. Mai affidare un'informazione al solo movimento.</p>
+  </div>
+</Demo>
+
+## Il nastro da riavvolgere
+
+L'ultima forma rovescia il verbo: la timeline non si guarda, si *manovra*. Uno slider per «scrubbing» temporale — trascini il cursore e rivedi lo stato del sistema a quell'istante. Il tempo diventa una dimensione che hai in mano.
+
+<Demo title="Scrubber di replay · ⟨input type=range⟩ con aria-valuetext leggibile" tag="24.e">
+  <ReplayScrubber locale="it" />
+  <div slot="note">
+    <p>È la differenza fra leggere un log e riavvolgere un nastro. Il cuore è un <code>&lt;input type="range"&gt;</code> vero, non un <code>&lt;div&gt;</code> con dei listener: così le frecce <kbd>←</kbd>/<kbd>→</kbd> scrubbano di uno step, <kbd>Home</kbd>/<kbd>End</kbd> saltano agli estremi, e trascinamento, touch e focus arrivano gratis dal browser. Basta dichiarare <code>min</code>, <code>max</code>, <code>step</code> e la semantica c'è. Trascinando, il fotogramma in alto cambia: data, esito, una riga di cosa stava succedendo — uno stato di campione vero per ogni istante, non un riempitivo.</p>
+    <p>Ma uno slider che racconta il tempo ha un problema di accessibilità sottile: senza aiuto, lo screen reader legge «3 di 5», un numero muto. La cura è <code>aria-valuetext</code>, aggiornato a ogni passo: legge «16 set, build verde» — il <em>significato</em> di quel momento, non il suo indice. L'esito non è affidato al colore: ogni fotogramma porta un glifo (<code>✓</code> / <code>✕</code> / <code>◔</code>) accanto alla parola. E poiché lo scrubbing è guidato dall'utente, non è un'auto-animazione: non c'è nulla da «togliere» sotto reduced motion, solo la breve evidenziazione del frame che collassa a 1ms. Il movimento qui lo fa il dito, e il dito ha sempre ragione.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque forme, un'unica intuizione: il tempo merita meglio di una colonna di celle. La linea che scende dà alla sequenza una direzione; il percorso a tappe trasforma una percentuale astratta in un luogo; la barra sull'asse fa misurare la durata all'occhio; il respiro segnala il vivo senza gridare; il nastro mette il passato sotto il polpastrello. Ognuna sceglie *quale* proprietà del tempo rendere visibile — l'ordine, la posizione, la durata, la freschezza, la reversibilità — e la rende con la forma giusta, non con un grafico in più. Mostrare il tempo, alla fine, è soprattutto decidere cosa di esso conta in quel momento, e lasciare che la forma lo dica prima delle parole.
+
+Il prossimo capitolo lascia l'occhio e passa al dito. Dopo aver dato forma a ciò che si guarda, ci chiediamo cosa cambia quando l'interfaccia si *tocca*, invece di cliccarla: *Il gesto* — la grammatica dello swipe, del long-press, del trascinamento, e perché un'azione fatta col pollice non è la stessa fatta col mouse.

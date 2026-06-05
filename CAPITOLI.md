@@ -9,23 +9,45 @@
 
 ## Stato
 
-| # | Titolo | Stato |
-|---|--------|-------|
-| 01 | Anatomia di un bottone | ✅ pubblicato |
-| 02 | L'arte dell'attesa | ✅ pubblicato |
-| 03 | La voce del vuoto | ✅ pubblicato |
-| 04 | Il dialogo silenzioso | ✅ pubblicato |
-| 05 | Lo scroll che racconta | ✅ pubblicato |
-| 06 | Numeri che hanno peso | ✅ pubblicato |
-| 07 | Anatomia di un input | ✅ pubblicato |
-| 08 | La micro-tipografia | ✅ pubblicato |
-| 09 | Anatomia di un toggle | ✅ pubblicato |
-| 10 | Anatomia di un toast | 📋 prossimo |
-| 11–26 | *(vedi sotto)* | 💭 ipotizzati |
+Tutti i 26 capitoli sono **scritti e in repo**. L'uscita in produzione è
+*scaglionata*: un capitolo ogni **venerdì**, a partire da venerdì 5 giugno 2026.
+In sviluppo si vedono tutti; in produzione compare un capitolo solo quando la sua
+`releaseDate` è passata (vedi `src/lib/chapters.ts`). Per rivedere il futuro prima
+del suo venerdì: `ALTROVE_SHOW_ALL=1 npm run build`.
+
+| # | Titolo | Stato | Rilascio (venerdì) |
+|---|--------|-------|--------------------|
+| 01 | Anatomia di un bottone | ✅ live | — |
+| 02 | L'arte dell'attesa | ✅ live | — |
+| 03 | La voce del vuoto | ✅ live | — |
+| 04 | Il dialogo silenzioso | ✅ live | — |
+| 05 | Lo scroll che racconta | ✅ live | — |
+| 06 | Numeri che hanno peso | ✅ live | — |
+| 07 | Anatomia di un input | ✅ live | — |
+| 08 | La micro-tipografia | ✅ live | — |
+| 09 | Anatomia di un toggle | ✅ live | 2026-06-05 |
+| 10 | Anatomia di un toast | 🗓️ programmato | 2026-06-12 |
+| 11 | Anatomia di un menu | 🗓️ programmato | 2026-06-19 |
+| 12 | Anatomia di una tab | 🗓️ programmato | 2026-06-26 |
+| 13 | Anatomia di una scheda | 🗓️ programmato | 2026-07-03 |
+| 14 | Anatomia di un divider | 🗓️ programmato | 2026-07-10 |
+| 15 | La pagina lunga | 🗓️ programmato | 2026-07-17 |
+| 16 | La griglia editoriale | 🗓️ programmato | 2026-07-24 |
+| 17 | La citazione | 🗓️ programmato | 2026-07-31 |
+| 18 | La nota a margine | 🗓️ programmato | 2026-08-07 |
+| 19 | L'indice del libro | 🗓️ programmato | 2026-08-14 |
+| 20 | Le immagini in editoria | 🗓️ programmato | 2026-08-21 |
+| 21 | Il drag e il drop | 🗓️ programmato | 2026-08-28 |
+| 22 | La ricerca as-you-type | 🗓️ programmato | 2026-09-04 |
+| 23 | Il calendario | 🗓️ programmato | 2026-09-11 |
+| 24 | La timeline | 🗓️ programmato | 2026-09-18 |
+| 25 | Il gesto | 🗓️ programmato | 2026-09-25 |
+| 26 | Il commiato | 🗓️ programmato | 2026-10-02 |
 
 I primi 8 sono dettagliati nel piano `playground-a-capitoli-validated-liskov.md`. Da 09 in poi: questo file è la fonte.
 
-Con il capitolo 08 la **Fase A** è chiusa: gli 8 capitoli fondativi sono tutti pubblicati.
+Con il capitolo 08 la **Fase A** è chiusa. I capitoli 09–26 sono scritti e
+programmati: il libro è completo, ne resta da svelare un venerdì alla volta.
 
 ---
 

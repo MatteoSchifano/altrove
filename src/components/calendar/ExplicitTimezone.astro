@@ -1,0 +1,171 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ExplicitTimezone — un orario senza fuso è una bugia.
+
+   "La call è alle 18:00" è una frase incompleta: alle 18:00 *dove*?
+   Un orario mostrato senza fuso costringe ogni lettore a indovinare,
+   e chi indovina sbagliato perde la riunione. La regola è semplice e
+   non negoziabile: ogni orario che attraversa fusi diversi porta il
+   suo fuso, esplicito, accanto al numero.
+
+   Intl.DateTimeFormat fa tutto: dato un istante (lo stesso per tutti)
+   e una timeZone, lo proietta nell’ora locale di quel fuso e, con
+   timeZoneName, ci attacca l’etichetta ("CEST", "GMT+9", …). Lo
+   stesso identico momento, letto da città diverse, mostra numeri
+   diversi ma indica lo *stesso* punto nel tempo — ed è questo che
+   rende l’orario onesto.
+
+   Mostriamo l’istante in più fusi insieme, così si vede a colpo
+   d’occhio che non è un dettaglio pedante: sono ore diverse, e senza
+   l’etichetta sarebbero indistinguibili.
+
+   IMPORTANTE: nessun new Date() dinamico nel frontmatter. L’istante è
+   un ISO fisso con offset Z (un punto assoluto nel tempo), formattato
+   per ogni fuso nel client.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    title: 'Lo stesso istante, fusi diversi',
+    sub: 'Un orario senza fuso è una bugia.',
+  },
+  en: {
+    title: 'The same instant, different zones',
+    sub: 'A time without a zone is a lie.',
+  },
+} as const;
+const c = COPY[locale];
+const bcp = locale === 'it' ? 'it-IT' : 'en-US';
+
+// Istante assoluto FISSO (no new Date() server): un punto nel tempo.
+const INSTANT_ISO = '2026-09-11T16:00:00Z';
+
+const zones = [
+  { tz: 'Europe/Rome', city: locale === 'it' ? 'Roma' : 'Rome' },
+  { tz: 'America/New_York', city: locale === 'it' ? 'New York' : 'New York' },
+  { tz: 'Asia/Tokyo', city: locale === 'it' ? 'Tokyo' : 'Tokyo' },
+  { tz: 'UTC', city: 'UTC' },
+];
+---
+
+<div class="tz" data-locale={bcp} data-instant={INSTANT_ISO}>
+  <div class="tz__head">
+    <h4 class="tz__title">{c.title}</h4>
+    <p class="tz__sub">{c.sub}</p>
+  </div>
+
+  <ul class="tz__list">
+    {zones.map((z) => (
+      <li class="tz__row" data-tz={z.tz}>
+        <span class="tz__city">{z.city}</span>
+        <time class="tz__time tabular" data-tz-time>&nbsp;</time>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .tz {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .tz__head { display: flex; flex-direction: column; gap: 0.1rem; padding-block-end: var(--space-2xs); border-block-end: 1px solid var(--border); }
+  .tz__title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .tz__sub { margin: 0; font-size: var(--text-xs); color: var(--ink-muted); }
+
+  .tz__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .tz__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-2xs);
+    border-block-end: 1px dashed var(--border);
+  }
+  .tz__row:last-child { border-block-end: 0; }
+
+  .tz__city {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+  .tz__time {
+    font-size: var(--text-base);
+    color: var(--ink-strong);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+  /* Il nome del fuso non è un dettaglio in sordina: è ciò che rende
+     l’orario vero. Lo evidenziamo con l’accent, non lo nascondiamo. */
+  .tz__time :global(.tz__zone) {
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+    margin-inline-start: 0.35rem;
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.tz').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bcp = root.dataset.locale ?? 'it-IT';
+      const instant = new Date(root.dataset.instant ?? '2026-09-11T16:00:00Z');
+
+      root.querySelectorAll<HTMLElement>('.tz__row').forEach((row) => {
+        const tz = row.dataset.tz!;
+        const timeEl = row.querySelector<HTMLTimeElement>('[data-tz-time]')!;
+
+        // L’orario locale del fuso + l’etichetta esplicita del fuso.
+        const fmt = new Intl.DateTimeFormat(bcp, {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          weekday: 'short',
+          timeZoneName: 'short',
+        });
+
+        // Separiamo l’etichetta del fuso per poterla evidenziare:
+        // formatToParts ci dà i pezzi senza ricostruire stringhe a mano.
+        const parts = fmt.formatToParts(instant);
+        const zoneName = parts.find((p) => p.type === 'timeZoneName')?.value ?? tz;
+        const rest = parts
+          .filter((p) => p.type !== 'timeZoneName')
+          .map((p) => p.value)
+          .join('')
+          .replace(/[,\s]+$/, '')
+          .trim();
+
+        timeEl.replaceChildren();
+        timeEl.append(document.createTextNode(rest));
+        const zoneEl = document.createElement('span');
+        zoneEl.className = 'tz__zone';
+        zoneEl.textContent = zoneName;
+        timeEl.append(zoneEl);
+
+        timeEl.dateTime = instant.toISOString();
+        timeEl.title = fmt.format(instant);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

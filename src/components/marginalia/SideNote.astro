@@ -1,0 +1,277 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SideNote — la nota che vive a margine, non in mezzo al filo.
+
+   La domanda del capitolo: come si parla al lettore senza spezzare
+   la lettura? La risposta editoriale più antica è la nota a margine.
+   Non interrompe la frase: vive *accanto*, nello spazio bianco che
+   un buon impaginato lascia apposta a destra del testo.
+
+   Il punto di mestiere è uno solo, e va contro l’abitudine: dove
+   sta la nota non dipende dalla larghezza della *finestra*, ma dalla
+   larghezza di *questo blocco di testo*. Un articolo dentro una
+   colonna stretta — una sidebar, un riquadro — non ha margine per
+   ospitarla, anche su uno schermo enorme. Per questo decidiamo con
+   una container query (@container), non con una media query: misura
+   il contenitore reale, non il vetro. Largo abbastanza → la nota
+   scivola nel margine; stretto → si chiude in un <details> inline,
+   un popover onesto che si apre solo se richiesto.
+
+   Accessibilità: il riferimento nel testo è un vero <button> con
+   aria-expanded e aria-controls; la nota è un <aside> collegato.
+   Su desktop il bottone resta operabile (apre/chiude l’evidenza),
+   ma la nota è comunque sempre visibile a margine: nessuna
+   informazione è nascosta dietro un gesto.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    lede:
+      'L’impaginazione di un libro non è decorazione: è il modo in cui la pagina respira.',
+    body:
+      'Il margine destro, quello spazio che a un occhio frettoloso sembra sprecato, è in realtà la stanza degli ospiti del testo. Lì si accomodano le note',
+    mark: 'le note',
+    bodyTail:
+      ', i richiami, le seconde voci — senza mai mettersi in mezzo alla frase principale.',
+    noteLabel: 'Nota a margine',
+    note:
+      'Questo riquadro è volutamente stretto: prova a immaginarlo dentro una sidebar. Non c’è spazio per il margine, quindi la nota si raccoglie qui dentro, in linea, come un piccolo popover.',
+    open: 'Apri la nota',
+    close: 'Chiudi la nota',
+  },
+  en: {
+    lede:
+      'A book’s layout isn’t decoration: it’s how the page breathes.',
+    body:
+      'The right margin — the space a hurried eye reads as wasted — is really the text’s guest room. That’s where notes',
+    mark: 'notes',
+    bodyTail:
+      ', callouts and second voices settle, without ever cutting into the main sentence.',
+    noteLabel: 'Side note',
+    note:
+      'This panel is deliberately narrow: picture it inside a sidebar. There’s no room for a margin, so the note gathers in here, inline, like a small popover.',
+    open: 'Open the note',
+    close: 'Close the note',
+  },
+} as const;
+const c = COPY[locale];
+const noteId = 'sidenote-aside';
+---
+
+<div class="sn">
+  <p class="sn__lede">{c.lede}</p>
+  <p class="sn__body">
+    {c.body}
+    <button
+      type="button"
+      class="sn__ref"
+      aria-expanded="false"
+      aria-controls={noteId}
+    >
+      {c.mark}<sup class="sn__sup" aria-hidden="true">1</sup>
+    </button>{c.bodyTail}
+  </p>
+
+  <aside class="sn__note" id={noteId} aria-label={c.noteLabel}>
+    <span class="sn__note-mark" aria-hidden="true">1</span>
+    <span class="sn__note-label">{c.noteLabel}</span>
+    <p class="sn__note-text">{c.note}</p>
+  </aside>
+</div>
+
+<style>
+  /* Il contenitore di query: misuriamo LUI, non la finestra. */
+  .sn {
+    container-type: inline-size;
+    inline-size: min(30rem, 100%);
+    position: relative;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .sn__lede {
+    font-size: var(--text-base);
+    color: var(--ink-strong);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-snug);
+    margin: 0 0 var(--space-2xs);
+    max-inline-size: none;
+  }
+  .sn__body {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  /* Il richiamo nel testo: un bottone vero, ma vestito da parola. */
+  .sn__ref {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: var(--accent-ink);
+    font: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--accent) 50%, transparent);
+    text-underline-offset: 0.18em;
+    border-radius: var(--radius-xs);
+  }
+  .sn__ref:hover {
+    text-decoration-color: var(--accent);
+  }
+  .sn__ref:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .sn__sup {
+    font-size: 0.7em;
+    margin-inline-start: 0.05em;
+  }
+
+  /* ── Base (stretto): la nota è un popover inline, chiuso di default ──
+     Niente margine disponibile → la nota si raccoglie sotto il richiamo. */
+  .sn__note {
+    margin-block-start: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-inline-start: 2px solid var(--accent);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-2xs);
+    row-gap: var(--space-3xs);
+    /* Chiuso: collassa con grid-rows onesto (misura il contenuto reale) */
+    overflow: hidden;
+    interpolate-size: allow-keywords;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+  /* Stato chiuso nel layout stretto: nascosto finché il bottone non apre */
+  .sn:not(.is-wide) .sn__note {
+    display: none;
+  }
+  .sn:not(.is-wide).is-open .sn__note {
+    display: grid;
+    animation: sn-slide var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .sn__note-mark {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: start;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+  }
+  .sn__note-label {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+  .sn__note-text {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  /* ── Largo (≥ 34rem di CONTENITORE): la nota va nel margine destro ──
+     Qui c’è spazio: la nota esce dal flusso e si affianca al testo,
+     sempre visibile. Il bottone resta utile come ancora di focus. */
+  @container (min-width: 34rem) {
+    .sn {
+      padding-inline-end: calc(var(--space-lg) + 13rem);
+    }
+    .sn__note {
+      position: absolute;
+      inset-block-start: var(--space-md);
+      inset-inline-end: var(--space-lg);
+      inline-size: 11.5rem;
+      margin-block-start: 0;
+      display: grid;
+      background-color: transparent;
+      border: 0;
+      border-inline-start: 2px solid var(--border-strong);
+      border-radius: 0;
+      padding: 0 0 0 var(--space-sm);
+    }
+  }
+
+  @keyframes sn-slide {
+    from { opacity: 0; transform: translateY(-0.25rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sn:not(.is-wide).is-open .sn__note { animation: none; }
+    .sn__note { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sn').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const ref = root.querySelector<HTMLButtonElement>('.sn__ref');
+      if (!ref) return;
+
+      // Una container query non è leggibile da JS via media query: misuriamo
+      // il contenitore reale con un ResizeObserver e marchiamo lo stato.
+      // Soglia identica al CSS (34rem ≈ 544px a 16px di root).
+      const WIDE_PX = 34 * 16;
+
+      const sync = () => {
+        const wide = root.clientWidth >= WIDE_PX;
+        root.classList.toggle('is-wide', wide);
+        // Nel layout largo la nota è sempre a margine: il bottone non
+        // nasconde nulla, riflette solo "espanso" per coerenza ARIA.
+        ref.setAttribute('aria-expanded', wide ? 'true' : String(root.classList.contains('is-open')));
+      };
+
+      const ro = new ResizeObserver(sync);
+      ro.observe(root);
+      sync();
+
+      ref.addEventListener('click', () => {
+        // Nel layout largo la nota resta visibile: il click non la chiude.
+        if (root.classList.contains('is-wide')) return;
+        const open = root.classList.toggle('is-open');
+        ref.setAttribute('aria-expanded', String(open));
+      });
+
+      // Teardown pulito se il nodo viene rimosso fra una navigazione e l’altra.
+      root.addEventListener('astro:before-swap', () => ro.disconnect(), { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

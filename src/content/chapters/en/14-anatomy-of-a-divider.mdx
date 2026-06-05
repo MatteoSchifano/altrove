@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-14"
+number: "14"
+title: "The anatomy of a divider"
+excerpt: "A line that separates is the smallest decision in a page, and for that reason the most neglected. Yet choosing between a drawn rule and a bit of air that just happens is choosing how the silence between two blocks sounds."
+date: "July 10, 2026"
+releaseDate: "2026-07-10"
+readMinutes: 9
+tags: ["components", "typography", "layout"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import HonestRule from '../../../components/dividers/HonestRule.astro';
+import LabeledDivider from '../../../components/dividers/LabeledDivider.astro';
+import VerticalDivider from '../../../components/dividers/VerticalDivider.astro';
+import IconBreath from '../../../components/dividers/IconBreath.astro';
+import RhythmDivider from '../../../components/dividers/RhythmDivider.astro';
+
+The divider is the component nobody defends. A line, grey, between two things: what is there to design? And yet it's exactly its humility that makes it interesting. When we're done talking about toasts, dialogs and forms — the objects that demand attention — the quietest question of all remains: how do you separate two blocks of content without saying anything? The line is the only component whose purpose is *not* to be noticed, and getting it wrong is dead easy.
+
+The chapter's guiding question is almost a koan: "is the silence in a page drawn, or is it let to happen?". Because there are two opposite ways to separate. One is to *draw* the break — trace a line, place a glyph, raise a wall. The other is to *let it happen* — strip every mark and trust the white space, which separates perfectly well on its own. The whole chapter plays on this tension: how much line is really needed, and how much is just fear of emptiness.
+
+Five demos, from the most literal divider to the divider as pure rhythm. And as always semantics come before graphics: HTML already knows the separator — the `<hr>`, the `role="separator"` with its orientation — and our job is to dress it without stripping it, not replace it with a mute `<div>` because the default is ugly.
+
+## The honest rule
+
+The first is the divider in its bare form: a horizontal rule. The browser already has one, the `<hr>`, but it draws it like it's the nineties — inset, with arbitrary margins. The temptation is to throw it away. The lesson is to dress it.
+
+<Demo title="The tuned <hr> · dress the semantics, don’t replace them" tag="14.a">
+  <HonestRule locale="en" />
+  <div slot="note">
+    <p>On the left the browser default: an inset, grey border with margins nobody chose. On the right the same `<hr>` — not a `<div>` — with the border zeroed out, a single thin token line and deliberate space around it. The difference is entirely cosmetic, and that's the point: the semantics aren't touched. A screen reader still announces "separator", the document outline understands it, the keyboard skips it. The common mistake is precisely giving all that up for a `<div class="divider">` just because the default is unpleasant.</p>
+    <p>There's a lesson about space too: a rule is half line and half the emptiness you put around it. Tight margins make it look like a cut; generous margins make it look like a pause. Colour isn't the only channel — the separation reads from the line *and* the space, so it holds up for someone who can't tell the tints apart. The honest rule doesn't shout: it just shows up where it's needed, and disappears from thought right after.</p>
+  </div>
+</Demo>
+
+## The divider that speaks
+
+Sometimes the break has to say a word. "Or", between two ways in: sign in with email, or continue with a passkey. The line alone isn't enough — you need a label in the middle, with a thread on each side. It's the divider that separates *by offering a choice*.
+
+<Demo title="Labeled divider · “or” between two logins" tag="14.b">
+  <LabeledDivider locale="en" />
+  <div slot="note">
+    <p>The pattern is everywhere, and almost always built badly: three `<div>` and a `<span>`, graphically perfect and semantically mute. Here instead the break is a `role="separator"` with `aria-orientation="horizontal"` and an accessible label, while the two lines on the sides are pure decoration — `aria-hidden`, because the word "or" is enough on its own. The structure is a three-column flex: elastic line · word · elastic line, so the lines stretch by themselves whatever the width.</p>
+    <p>The little word in the middle is a signal, not an ornament: it says the two roads are *equal-rank alternatives*, not an obligatory step. That's why the labeled divider lives well between a primary button and a quieter alternative — it tells "this, or that" without putting the two in conflict. Take away the label and it becomes any old line; take away the semantics and it becomes a drawing. Keeping both costs three attributes, and is worth every one.</p>
+  </div>
+</Demo>
+
+## The cut between micro-actions
+
+The rule so far has been horizontal. But there's a place where the divider stands up vertical: the action bar, where a few neighbouring verbs — Reply, Forward, Archive — want a thread to separate them without pushing them apart.
+
+<Demo title="Vertical divider · role=separator, aria-orientation vertical" tag="14.c">
+  <VerticalDivider locale="en" />
+  <div slot="note">
+    <p>A vertical separator isn't an `<hr>`: that tag is born horizontal. The honest answer is `role="separator"` with `aria-orientation="vertical"`, which a screen reader recognises for what it is. The detail always forgotten is the *inset*: the thread doesn't reach the bar's edges, it has a little breath above and below. A thread that touches the margins "cuts" the group in two; a shorter thread merely "separates" it — the same difference between a severing and a comma.</p>
+    <p>Here too the separation is geometric, not chromatic: the bar still reads as a group even if the thread vanished, because the spacing and alignment already say so. The vertical divider is the case where the temptation to overdo it is strongest — make it taller, darker, more spaced — and almost always the right version is the most timid: a one-pixel thread, with a bit of air at the ends, reminding the eye where one action ends and another begins.</p>
+  </div>
+</Demo>
+
+## The breath
+
+A full line, sometimes, is too sharp: it cuts where you'd only want to let people catch their breath. Here the divider turns gentler — a line broken by a small glyph in the middle, three dots, a breath between two blocks.
+
+<Demo title="Icon divider · the glyph as a pause, not a wall" tag="14.d">
+  <IconBreath locale="en" />
+  <div slot="note">
+    <p>Three dots in the middle of an interrupted line: the glyph softens the break. It says "catch your breath here" instead of "this ends here" — the difference between a threshold and a wall. It's the right separator between two sections that are relatives, not strangers: a chapter ending, a scene change, the point where one thought makes room for the next. The full line would be too firm; the glyph softens it without erasing it.</p>
+    <p>The honesty is in the distinction between structure and ornament. The break is a real `role="separator"`, which someone navigating by structure hears; but the icon is pure decorative trim — a glyph that adds no meaning — so `aria-hidden`. A screen reader perceives the pause, not the little drawing. And half the work isn't the glyph: it's the generous space above and below. The breath is in the air around it; the dot is just the mark that invites it.</p>
+  </div>
+</Demo>
+
+## The rhythm, and the emptiness
+
+The last demo takes the guiding question to its limit. So far we've *drawn* the silence: lines, glyphs, threads. But the quietest separator isn't drawn at all — it's white space, which separates perfectly well on its own. When is a line needed, and when is it just fear of the void?
+
+<Demo title="The divider as rhythm · full-bleed, prose, and the void as separator" tag="14.e">
+  <RhythmDivider locale="en" />
+  <div slot="note">
+    <p>The switch alternates two rhythms of the same line. *Full-bleed*: the rule crosses the whole stage and severs the flow with authority — it's the cut between large sections. *Prose-width*: the same line, but aligned to the text and as wide as it, separates *inside* the reading without breaking the column. Same `<hr>`, two different gestures; only where the line reaches changes, and with it how much "emptiness" stays in the page — the number on the right makes that ratio, usually invisible, visible.</p>
+    <p>But the most important block is the one without a line. Remove the rule, leave only air between two paragraphs, and the separation *still reads*: the eye knows where one thought ends and another begins. The line was an option, not an obligation. It's the answer to the koan — silence can be drawn, but often it's enough to let it happen. The unmarked break stays a `role="separator"` for someone navigating by structure, so the air the eye sees is declared to those who don't see it. And the one animation, the line widening, collapses to an instant under `prefers-reduced-motion`: same final rhythm, no journey.</p>
+  </div>
+</Demo>
+
+---
+
+Five ways to separate, one shared insight: the divider isn't a line, it's a *quantity of silence*, and the line is only one of the ways to measure it out. The honest rule that dresses without betraying itself, the label that offers a choice, the vertical thread that separates without cutting, the glyph that lets you catch your breath, the emptiness that's enough on its own — each answers the same question at a different volume. And the most recurring answer, in a playground that chases removal, is that the best separation often isn't drawn: it's let to happen. A well-spaced page has very few lines, because it doesn't need them.
+
+With this, Phase B closes: from the objects you touch to the messages that arrive, all the way to the silence that keeps them apart. The next chapter changes scale and looks at the whole: *the long page* — how to keep company with someone reading for ten minutes, between rhythm, rests, and the thread that must never break.

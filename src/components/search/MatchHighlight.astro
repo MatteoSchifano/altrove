@@ -1,0 +1,268 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   MatchHighlight — far vedere *perché* un risultato è lì.
+
+   Quando la ricerca mostra «Anatomia di un toggle» per la query
+   «togg», l’utente deve poter leggere a colpo d’occhio quale pezzo
+   ha fatto match. Evidenziare la sotto-stringa che corrisponde non
+   è decorazione: è la spiegazione del risultato, resa visibile.
+
+   Due cautele, entrambe sull’onestà e sull’accessibilità.
+
+     1. Il tag giusto è <mark>, non uno <span> colorato. <mark>
+        ha un significato semantico — “porzione rilevante per il
+        contesto corrente” — e alcuni screen reader la annunciano.
+        Il colore è il *secondo* canale; il <mark> è il primo.
+
+     2. Mai costruire l’HighlightHTML per concatenazione di stringhe:
+        sarebbe un’iniezione in attesa. Si lavora sui nodi di testo,
+        spezzando la stringa in segmenti (match / non-match) e
+        creando elementi reali. La query dell’utente non diventa mai
+        markup.
+
+   La corrispondenza è case-insensitive e accent-insensitive (così
+   «citta» trova «città»), ma il testo mostrato resta quello vero,
+   accenti compresi: si evidenzia senza riscrivere.
+
+   Reduced motion: nessuna animazione qui — l’evidenziazione è uno
+   stato, non un movimento.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Evidenzia le corrispondenze',
+    placeholder: 'prova «anat», «scrol», «numer»…',
+    hint: 'Le porzioni in giallo dicono perché il risultato è lì.',
+    empty: 'Scrivi per vedere le corrispondenze evidenziate.',
+    none: 'Nessuna corrispondenza — prova meno lettere.',
+    countOne: 'risultato',
+    countMany: 'risultati',
+  },
+  en: {
+    label: 'Highlight the matches',
+    placeholder: 'try “anat”, “scrol”, “numb”…',
+    hint: 'The highlighted parts say why each result is here.',
+    empty: 'Type to see the matches highlighted.',
+    none: 'No match — try fewer letters.',
+    countOne: 'result',
+    countMany: 'results',
+  },
+} as const;
+const c = COPY[locale];
+
+const DATA = [
+  'Anatomia di un toggle',
+  'La ricerca as-you-type',
+  'Lo scroll che racconta',
+  'I numeri che non sussultano',
+  'Lo stato vuoto che accoglie',
+  'Le città e i loro nomi accentati',
+  'Il bottone che risponde prima della rete',
+];
+---
+
+<div class="mhl">
+  <label class="mhl__label" for="mhl-input">{c.label}</label>
+  <input
+    id="mhl-input"
+    class="mhl__input"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder={c.placeholder}
+    aria-describedby="mhl-hint"
+  />
+  <p class="mhl__hint" id="mhl-hint">{c.hint}</p>
+
+  <p class="mhl__status" role="status" aria-live="polite">{c.empty}</p>
+
+  <ul
+    class="mhl__list"
+    data-empty={c.empty}
+    data-none={c.none}
+    data-one={c.countOne}
+    data-many={c.countMany}
+    data-pool={JSON.stringify(DATA)}
+  >
+  </ul>
+</div>
+
+<style>
+  .mhl {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .mhl__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .mhl__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .mhl__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .mhl__input:hover { border-color: var(--border-strong); }
+  .mhl__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .mhl__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .mhl__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .mhl__list {
+    list-style: none;
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mhl__item {
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+
+  /* <mark>: il colore è il secondo canale; il peso e il tag sono il
+     primo. Sfondo morbido sull’accento, testo che resta leggibile. */
+  .mhl__item :global(mark) {
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+    border-radius: var(--radius-xs);
+    padding-inline: 0.1em;
+  }
+</style>
+
+<script>
+  type Pool = string[];
+
+  // Toglie i diacritici per il *confronto*, mai per la visualizzazione.
+  // Così «citta» fa match su «città», ma a schermo resta «città».
+  const fold = (s: string) =>
+    s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.mhl').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('.mhl__input');
+      const status = root.querySelector<HTMLElement>('.mhl__status');
+      const list = root.querySelector<HTMLUListElement>('.mhl__list');
+      if (!input || !list || !status) return;
+
+      let pool: Pool = [];
+      try { pool = JSON.parse(list.dataset.pool ?? '[]'); } catch { pool = []; }
+
+      const tEmpty = list.dataset.empty ?? '';
+      const tNone = list.dataset.none ?? '';
+      const tOne = list.dataset.one ?? 'result';
+      const tMany = list.dataset.many ?? 'results';
+
+      // Costruisce un <li> con la sotto-stringa avvolta in <mark>.
+      // Lavora sui caratteri, mai per concatenazione di HTML: la query
+      // dell’utente diventa textContent, mai markup.
+      const buildItem = (text: string, needle: string): HTMLLIElement => {
+        const li = document.createElement('li');
+        li.className = 'mhl__item';
+
+        const foldedText = fold(text);
+        const foldedNeedle = fold(needle);
+        let from = 0;
+        let idx = foldedText.indexOf(foldedNeedle, from);
+
+        if (!foldedNeedle || idx === -1) {
+          li.textContent = text;
+          return li;
+        }
+
+        while (idx !== -1) {
+          if (idx > from) {
+            li.appendChild(document.createTextNode(text.slice(from, idx)));
+          }
+          const mark = document.createElement('mark');
+          // La fold preserva la lunghezza (NFD + rimozione diacritici
+          // non altera il conteggio dei caratteri base qui usati), così
+          // gli indici valgono anche sul testo originale.
+          mark.textContent = text.slice(idx, idx + foldedNeedle.length);
+          li.appendChild(mark);
+          from = idx + foldedNeedle.length;
+          idx = foldedText.indexOf(foldedNeedle, from);
+        }
+        if (from < text.length) {
+          li.appendChild(document.createTextNode(text.slice(from)));
+        }
+        return li;
+      };
+
+      const render = () => {
+        const q = input.value.trim();
+        list.replaceChildren();
+
+        if (q === '') {
+          status.textContent = tEmpty;
+          return;
+        }
+
+        const needle = fold(q);
+        const results = pool.filter((x) => fold(x).includes(needle));
+
+        if (results.length === 0) {
+          status.textContent = tNone;
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        for (const r of results) frag.appendChild(buildItem(r, q));
+        list.appendChild(frag);
+
+        const noun = results.length === 1 ? tOne : tMany;
+        status.textContent = `${results.length} ${noun}`;
+      };
+
+      input.addEventListener('input', render);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,308 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HonestLightbox — la miniatura non "apre" una finestra: diventa
+   la finestra.
+
+   Un lightbox onesto non fa apparire una scatola dal nulla: prende
+   la stessa immagine cliccata e la fa crescere fino a riempire lo
+   schermo. La continuità è la cura — l’occhio segue l’oggetto, non
+   "cambia pagina". Lo facciamo con la View Transitions API: lo
+   stesso view-transition-name sulla miniatura e sull’immagine
+   grande, e il browser interpola il morph fra le due posizioni.
+
+   È un miglioramento progressivo: dove l’API non c’è (o con reduced
+   motion) il <dialog> si apre comunque, solo senza morph. Stesso
+   stato finale. Il <dialog> nativo regala focus trap e Esc; noi
+   aggiungiamo il restore del focus sul trigger alla chiusura.
+
+   Niente file: l’immagine è un gradient SVG con aspect-ratio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    trigger: 'Apri a tutto schermo',
+    alt: 'Marina astratta: orizzonte basso, cielo ampio in toni di lavanda.',
+    caption: 'Marina, ore 19 — il novanta per cento è cielo. Lo spazio vuoto è il soggetto.',
+    close: 'Chiudi',
+    hint: 'Esc per chiudere · il focus torna al pulsante',
+  },
+  en: {
+    trigger: 'Open full screen',
+    alt: 'Abstract seascape: low horizon, wide sky in lavender tones.',
+    caption: 'Seascape, 7pm — ninety per cent is sky. The empty space is the subject.',
+    close: 'Close',
+    hint: 'Esc to close · focus returns to the button',
+  },
+} as const;
+const c = COPY[locale];
+
+const scene = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200'>
+  <defs>
+    <linearGradient id='sky' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#cdb9e0'/>
+      <stop offset='0.55' stop-color='#a98fc4'/>
+      <stop offset='1' stop-color='#6b5a86'/>
+    </linearGradient>
+  </defs>
+  <rect width='320' height='200' fill='url(#sky)'/>
+  <circle cx='250' cy='52' r='20' fill='#f3ecf8' opacity='0.85'/>
+  <rect x='0' y='164' width='320' height='36' fill='#3a3050'/>
+  <rect x='0' y='164' width='320' height='4' fill='#d8cce8' opacity='0.5'/>
+</svg>`)}`;
+const uid = `hlb-${locale}`;
+---
+
+<div class="hlb">
+  <button type="button" class="hlb__trigger" aria-haspopup="dialog" data-open>
+    <img class="hlb__thumb" src={scene} alt={c.alt} data-morph={`${uid}-img`} />
+    <span class="hlb__cta">{c.trigger}</span>
+  </button>
+
+  <dialog class="hlb__dialog" aria-labelledby={`${uid}-cap`}>
+    <div class="hlb__panel">
+      <figure class="hlb__figure">
+        <img class="hlb__full" src={scene} alt={c.alt} data-morph-target={`${uid}-img`} />
+        <figcaption class="hlb__caption" id={`${uid}-cap`}>{c.caption}</figcaption>
+      </figure>
+      <button type="button" class="hlb__close" aria-label={c.close} data-close>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+      <p class="hlb__hint">{c.hint}</p>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .hlb {
+    inline-size: min(26rem, 100%);
+  }
+
+  .hlb__trigger {
+    position: relative;
+    inline-size: 100%;
+    display: block;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface-sunken);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .hlb__trigger:hover { box-shadow: var(--shadow-lg); }
+  .hlb__trigger:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .hlb__thumb {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+
+  .hlb__cta {
+    position: absolute;
+    inset-block-end: 0.6rem;
+    inset-inline-end: 0.6rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-overlay);
+    color: var(--ink-strong);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-wide);
+    backdrop-filter: blur(4px);
+  }
+
+  /* ─── Dialog ─── */
+  .hlb__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(46rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .hlb__dialog:not([open]) { display: none; }
+  .hlb__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.6);
+    backdrop-filter: blur(3px);
+  }
+
+  /* Fallback enter/exit quando NON c’è morph (es. reduced motion
+     o API assente): il pannello entra ed esce, le cose escono più
+     in fretta di quanto entrino. */
+  @keyframes hlb-in  { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+  @keyframes hlb-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+  .hlb__dialog[open] .hlb__panel { animation: hlb-in var(--dur-normal) var(--ease-out-soft); }
+  .hlb__dialog[data-closing='true'] .hlb__panel { animation: hlb-out var(--dur-fast) var(--ease-in) forwards; }
+
+  .hlb__panel {
+    position: relative;
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-2xs);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .hlb__figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+  .hlb__full {
+    inline-size: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    display: block;
+  }
+  .hlb__caption {
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    padding: 0 var(--space-2xs) var(--space-2xs);
+  }
+
+  .hlb__close {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background-color: var(--surface-overlay);
+    color: var(--ink-strong);
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .hlb__close:hover { background-color: var(--surface-raised); }
+  .hlb__close:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .hlb__close svg { inline-size: 0.9rem; block-size: 0.9rem; }
+
+  .hlb__hint {
+    margin: 0;
+    padding: 0 var(--space-2xs) var(--space-2xs);
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  /* Il morph: la miniatura e l’immagine grande condividono il nome,
+     il browser interpola fra le due posizioni. Le cose escono più
+     in fretta di quanto entrino. */
+  :global(::view-transition-old(hlb-morph)),
+  :global(::view-transition-new(hlb-morph)) {
+    animation-duration: var(--dur-normal);
+    animation-timing-function: var(--ease-out-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hlb__dialog[open] .hlb__panel,
+    .hlb__dialog[data-closing='true'] .hlb__panel { animation-duration: 1ms; }
+    :global(::view-transition-old(hlb-morph)),
+    :global(::view-transition-new(hlb-morph)) { animation: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.hlb').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const trigger = root.querySelector<HTMLButtonElement>('[data-open]')!;
+      const dialog = root.querySelector<HTMLDialogElement>('.hlb__dialog')!;
+      const closeBtn = root.querySelector<HTMLButtonElement>('[data-close]')!;
+      const thumb = root.querySelector<HTMLImageElement>('.hlb__thumb')!;
+      const full = root.querySelector<HTMLImageElement>('.hlb__full')!;
+      const MORPH = 'hlb-morph';
+
+      const reduce = () =>
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const startVT = (document as Document & {
+        startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+      }).startViewTransition;
+      const canMorph = () => typeof startVT === 'function' && !reduce();
+
+      let previouslyFocused: HTMLElement | null = null;
+
+      const doOpen = () => {
+        // Trasferisce il nome di transizione dalla miniatura
+        // all’immagine grande: stesso "named element", due posizioni.
+        thumb.style.viewTransitionName = '';
+        full.style.viewTransitionName = MORPH;
+        dialog.showModal();
+        closeBtn.focus();
+      };
+
+      const open = () => {
+        previouslyFocused = document.activeElement as HTMLElement | null;
+        if (canMorph()) {
+          thumb.style.viewTransitionName = MORPH;
+          startVT!.call(document, doOpen);
+        } else {
+          doOpen();
+        }
+      };
+
+      const doClose = () => {
+        full.style.viewTransitionName = '';
+        thumb.style.viewTransitionName = '';
+        dialog.close();
+        delete dialog.dataset.closing;
+        previouslyFocused?.focus();
+      };
+
+      const close = () => {
+        if (!dialog.open) return;
+        if (canMorph()) {
+          full.style.viewTransitionName = MORPH;
+          thumb.style.viewTransitionName = '';
+          const vt = startVT!.call(document, () => {
+            full.style.viewTransitionName = '';
+            thumb.style.viewTransitionName = MORPH;
+            dialog.close();
+          });
+          vt.finished.finally(() => {
+            thumb.style.viewTransitionName = '';
+            previouslyFocused?.focus();
+          });
+        } else {
+          // Fallback animato via CSS, poi chiusura e focus restore.
+          dialog.dataset.closing = 'true';
+          const onEnd = () => {
+            dialog.removeEventListener('animationend', onEnd);
+            doClose();
+          };
+          dialog.addEventListener('animationend', onEnd);
+          window.setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 260);
+        }
+      };
+
+      trigger.addEventListener('click', open);
+      closeBtn.addEventListener('click', close);
+      dialog.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+      dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

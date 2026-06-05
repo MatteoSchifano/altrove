@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-18"
+number: "18"
+title: "The side note"
+excerpt: "A note doesn’t have to interrupt to be read. It lives in the margin, folds away when it should, and lets the reader decide how much they want to hear you — the oldest, and gentlest, way to speak to them without breaking their thread."
+date: "August 7, 2026"
+releaseDate: "2026-08-07"
+readMinutes: 11
+tags: ["editorial", "layout", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SideNote from '../../../components/marginalia/SideNote.astro';
+import AsideVariants from '../../../components/marginalia/AsideVariants.astro';
+import HighlightToNote from '../../../components/marginalia/HighlightToNote.astro';
+import FootnoteVsSidenote from '../../../components/marginalia/FootnoteVsSidenote.astro';
+import DetailsMargin from '../../../components/marginalia/DetailsMargin.astro';
+
+Every text, sooner or later, has something to add to itself: a clarification, a source, a second voice commenting on the first. The question isn’t *whether* to say it, but *where* — because the wrong spot does more harm than silence. Slotting the addition into the middle of the sentence weighs it down; putting it in a box that explodes in the centre of the screen interrupts the reading like a phone call at night. Publishing tradition solved the problem centuries ago, and it solved it with white space: the side note, which lives *beside* the text without ever getting in the way.
+
+It’s an act of respect disguised as layout. The side note doesn’t demand attention: it offers it, and lets the reader take it or leave it. Those in a hurry stay on the main thread; those who want more turn their eye a few degrees to the right. No one is stopped, no one is forced. It’s the opposite of the “Did you know…?” modal that plants itself in front of the content: there the addition is a toll, here it’s a gift.
+
+Five demos for five ways of speaking to the reader without interrupting them. Where the note goes when space changes, how to tell a warning voice from a quoting one without trusting colour alone, how to let the reader write their own notes, when a footnote is right and when a side note, and how to fold away an expansion because not everyone wants it now. And as always, no libraries: the margin, `<details>`, the Selection API — the browser already does almost everything.
+
+## The note that knows where to live
+
+The first decision is geometric: a side note needs a margin. And the margin doesn’t depend on how big the screen is, but on how wide *this* column of text is. That’s why we decide with a container query, not the window.
+
+<Demo title="SideNote · @container, not window width" tag="18.a">
+  <SideNote locale="en" />
+  <div slot="note">
+    <p>The panel above is deliberately narrow: it simulates a note inside a reduced column — a sidebar, a box — where there’s no margin, even on a huge screen. In that case the note gathers inline, like a small popover that opens only on request. Widen the container past the threshold and the same note slides into the right margin, always visible. The difference isn’t decided by the glass, it’s decided by the text: and it’s the only honest way to do it, because a `@media (min-width)` would look at the screen and get it wrong every time the component lives inside something narrow.</p>
+    <p>The in-text reference is a real `<button>` with `aria-expanded`, not just a coloured word: a keyboard user reaches and opens it, a screen reader announces the state. And in the wide layout the note is never hidden behind a gesture — the button becomes a focus anchor, but the information stays in the margin, readable by anyone. Hiding content behind a click when there’s room to show it would be manufactured disclosure: we reserve it for the narrow case, where it genuinely earns its keep.</p>
+  </div>
+</Demo>
+
+## The voice you recognise without colour
+
+A margin hosts different tones: a piece of information, a warning, a quote, a code snippet. The reader must grasp *which tone* they’re reading before even reading it — and trusting colour for everything is the fastest way to exclude anyone who can’t tell colours apart.
+
+<Demo title="AsideVariants · icon + sign + label, never colour alone" tag="18.b">
+  <AsideVariants locale="en" />
+  <div slot="note">
+    <p>Four real `<aside>` elements, four tones, and each carries three redundant signals: an icon (the circle for info, the triangle for warning, the quotes for the quote, the angle brackets for code), a plain text label, and a coloured border. Colour is the *third* channel, never the first: strip the colour — black-and-white print, colour blindness, extreme dark mode — and the note stays perfectly legible, because the triangle and the word “Warning” already say it all. It’s the playground’s accessibility rule applied to the letter: sign, then label, then colour, in that order.</p>
+    <p>The semantics follow the tone: info and warning notes are `aside[role="note"]`, the quote is a `<blockquote>` with its `<cite>`, the code a `<pre>`. It isn’t pedantry: it’s what lets a screen reader announce “quote” instead of reading out an undifferentiated wall of text. And no animation here: a side note holds still. It appears already in place, because bouncing on entry would turn it from a note into a notification — the opposite of what it should be.</p>
+  </div>
+</Demo>
+
+## The pen handed to the reader
+
+So far the author places the notes. But the truest dialogue begins when the reader chooses what to annotate: highlight a sentence, and a note attached to that passage is born. It’s marginalia reversed — not you speaking to them, but them replying to the text.
+
+<Demo title="HighlightToNote · Selection API, but honest and accessible" tag="18.c">
+  <HighlightToNote locale="en" />
+  <div slot="note">
+    <p>Select a sentence with the mouse and its side note appears: the Selection API reads what you highlighted and attaches the anchor to the sentence. Convenient — but the trap would be stopping there. The selection gesture is awkward by keyboard, impossible without a pointer, and invisible until you stumble on it by chance. That’s why selection is a *shortcut*, not the only path: every sentence also has an always-present “Annotate” button reachable with Tab, and everything that pops up — the anchor, the “Remove” — is made of real `<button>` elements. The gesture is the bonus for those who can; the baseline works for everyone.</p>
+    <p>Honesty lives in the details you don’t see: an `aria-live` announces “note added” to anyone who can’t see the anchor appear, the annotated sentence gets background *plus* number *plus* border sign (never colour alone), and the action is idempotent — one note per sentence, no duplicates if you select twice. We anchor the note to the sentence element, not to a fragile character range, so it stays valid even if the page re-renders. Handing the reader the pen is easy; handing it so it works without a mouse too is the real work.</p>
+  </div>
+</Demo>
+
+## Two roads for the same clarification
+
+Footnote and side note aren’t the same thing under two names: they’re two answers to the question “where do I put this note?”. One sends the reader away, to the foot; the other keeps them where they are, alongside. Seeing them on the same text is the fastest way to choose.
+
+<Demo title="FootnoteVsSidenote · when one, when the other" tag="18.d">
+  <FootnoteVsSidenote locale="en" />
+  <div slot="note">
+    <p>The exact same text, two modes switchable with a `<fieldset>` of real radios. In *footnote* mode, the little number is a real link: it jumps down to the note at the foot, separated by the typographic “foot” rule, with a back-link that returns you. It wins when the note is long, dense, bibliographic — things that wouldn’t fit in a margin. The cost is the jump: the eye leaves the line, descends, climbs back. In *sidenote* mode, the same note appears alongside, at the same height, without losing your place. It wins when it’s short and you want it read in the flow.</p>
+    <p>The choice, then, isn’t taste but content: length of the note and space available. A long sidenote bursts the margin and becomes illegible; a footnote for a three-word aside forces a jump worth more than the note itself. The reference number stays in both modes — it’s the thread tying text and note, and it doesn’t rely on colour to be understood. The rule of thumb: short note and there’s a margin → sidenote; long note or no margin → footnote.</p>
+  </div>
+</Demo>
+
+## The expansion offered folded away
+
+The last note is the one not everyone wants now. Honest progressive disclosure doesn’t *hide* to deceive: it *offers folded*, leaving the thread clean for those who carry on and the expansion within reach for those who seek it. And HTML already has the right element.
+
+<Demo title="DetailsMargin · native <details>, honest disclosure" tag="18.e">
+  <DetailsMargin locale="en" />
+  <div slot="note">
+    <p>The side notes here are native `<details>/<summary>`, and the choice isn’t laziness but respect. The open/closed state is *real*: a screen reader announces “expand/collapse”, the keyboard works on its own with Enter or Space on the summary, the browser handles focus. They’re also searchable — “Find in page” can open a `<details>` containing the searched text, something a fake disclosure made of a `<div>` and a little JS would lose along the way. It’s HTML that does what it promises, even without JavaScript.</p>
+    <p>Our only touch of script is the marker that rotates and the label that switches from “Read more” to “Close”: we don’t reinvent the state, we listen to the native `toggle` event and *reflect* it. And the little triangle is never the only signal — there’s always the word beside it, because an icon alone isn’t enough. Under `prefers-reduced-motion` the marker doesn’t rotate by animation and the text doesn’t slide in: they’re already in position, same final state, no journey. The most honest disclosure is the one that works identically with or without animation.</p>
+  </div>
+</Demo>
+
+---
+
+Five notes, one discipline: adding without interrupting. The note that knows where to live according to real space, the voice you recognise without trusting colour, the pen handed to the reader so it works without a mouse too, the two roads — alongside or at the foot — chosen by content, and the expansion offered folded to whoever wants it. Underneath is always the same respect: the addition is a gift, not a toll. The white margin isn’t wasted space — it’s the room where the reader, if they wish, replies to you.
+
+The next chapter widens the view from the single note to the whole work. *The book’s index* — a site that speaks about itself, how does it orient within itself? How do you give the reader a map that helps them move without turning into a menu that shouts.

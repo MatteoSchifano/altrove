@@ -1,0 +1,300 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SwipeToDismiss — il gesto come acceleratore, mai come unica via.
+
+   Una card si può scartare con uno swipe: il dito (o il puntatore)
+   la trascina e lei segue 1:1, con una resistenza crescente che
+   racconta «sto cedendo, ma non ancora». Superata la soglia, vola
+   via; sotto la soglia, torna in posizione con una curva morbida.
+
+   Ma lo swipe è un *acceleratore*, non un cancello. Chi non può —
+   o non vuole — trascinare ha sempre il pulsante "Scarta", che fa
+   esattamente la stessa cosa, raggiungibile da tastiera. Il gesto
+   aggiunge velocità a chi lo conosce, non sottrae la funzione a chi
+   non lo conosce.
+
+   Contenimento: il gesto vive dentro la card. Usiamo Pointer Events
+   con setPointerCapture e touch-action: pan-y, così il trascinamento
+   orizzontale non sequestra lo scroll verticale della pagina.
+
+   Reduced motion: il ritorno elastico e l’uscita decorativa
+   collassano (le durate sono token --dur-*). Il gesto resta: la card
+   segue ancora il dito; sparisce solo il "viaggio" decorativo del
+   settle.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    title: 'Notifica',
+    body: 'Tre persone hanno commentato il tuo capitolo. Scartala per archiviarla.',
+    hint: 'Trascina lateralmente per scartare — oppure usa il pulsante.',
+    dismiss: 'Scarta',
+    restore: 'Ripristina',
+    gone: 'Scartata.',
+    back: 'Ripristinata.',
+  },
+  en: {
+    title: 'Notification',
+    body: 'Three people commented on your chapter. Swipe it away to archive it.',
+    hint: 'Drag sideways to dismiss — or use the button.',
+    dismiss: 'Dismiss',
+    restore: 'Restore',
+    gone: 'Dismissed.',
+    back: 'Restored.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="swipe" data-state="present">
+  <div class="swipe__stack">
+    <article class="swipe__card" aria-labelledby="swipe-title">
+      <div class="swipe__grip" aria-hidden="true"></div>
+      <div class="swipe__copy">
+        <h4 id="swipe-title" class="swipe__title">{c.title}</h4>
+        <p class="swipe__body">{c.body}</p>
+      </div>
+      <button type="button" class="swipe__dismiss" data-action="dismiss">{c.dismiss}</button>
+    </article>
+    <p class="swipe__placeholder" hidden>
+      <span class="swipe__placeholder-text"></span>
+      <button type="button" class="swipe__restore" data-action="restore">{c.restore}</button>
+    </p>
+  </div>
+
+  <p class="swipe__hint">{c.hint}</p>
+  <span class="swipe__live" aria-live="polite" data-gone={c.gone} data-back={c.back}></span>
+</div>
+
+<style>
+  .swipe {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .swipe__stack {
+    position: relative;
+    min-block-size: 6.5rem;
+    display: grid;
+  }
+
+  .swipe__card {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    touch-action: pan-y; /* il drag orizzontale non ruba lo scroll verticale */
+    user-select: none;
+    /* --x: spostamento orizzontale guidato dal dito; --gone: 1 quando esce */
+    transform: translateX(var(--x, 0)) rotate(calc(var(--x, 0px) * 0.02));
+    opacity: calc(1 - var(--gone, 0));
+  }
+  /* Ritorno elastico e uscita: animati solo quando NON si trascina */
+  .swipe__card:not([data-dragging]) {
+    transition:
+      transform var(--dur-normal) var(--ease-out-snug),
+      opacity var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .swipe__grip {
+    flex: 0 0 auto;
+    inline-size: 0.3rem;
+    block-size: 2.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+  }
+
+  .swipe__copy { flex: 1 1 auto; min-inline-size: 0; }
+  .swipe__title {
+    margin: 0 0 0.15rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .swipe__body {
+    margin: 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+    color: var(--ink-muted);
+  }
+
+  .swipe__dismiss {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .swipe__dismiss:hover { background-color: var(--surface-sunken); }
+  .swipe__dismiss:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .swipe__placeholder {
+    grid-area: 1 / 1;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border-strong);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+  }
+  .swipe__placeholder[hidden] { display: none; }
+
+  .swipe__restore {
+    flex: 0 0 auto;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    border: 0;
+    color: var(--bg);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .swipe__restore:hover { transform: translateY(-1px); }
+  .swipe__restore:active { transform: translateY(0); }
+  .swipe__restore:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .swipe__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+  }
+
+  .swipe__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+  const DISMISS_PX = 120; // soglia: oltre questo spostamento, la card vola via
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.swipe').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const card = root.querySelector<HTMLElement>('.swipe__card');
+      const placeholder = root.querySelector<HTMLElement>('.swipe__placeholder');
+      const placeholderText = root.querySelector<HTMLElement>('.swipe__placeholder-text');
+      const dismissBtn = root.querySelector<HTMLButtonElement>('[data-action="dismiss"]');
+      const restoreBtn = root.querySelector<HTMLButtonElement>('[data-action="restore"]');
+      const live = root.querySelector<HTMLElement>('.swipe__live');
+      if (!card || !placeholder || !placeholderText || !dismissBtn || !restoreBtn || !live) return;
+
+      const goneMsg = live.dataset.gone ?? '';
+      const backMsg = live.dataset.back ?? '';
+
+      let dragging = false;
+      let startX = 0;
+      let dx = 0;
+      let pointerId: number | null = null;
+
+      const setX = (v: number) => card.style.setProperty('--x', `${v}px`);
+
+      const dismiss = (direction: number) => {
+        // direction: -1 sinistra, +1 destra. Esce dal lato del gesto.
+        const off = direction * (card.offsetWidth + 80);
+        card.style.setProperty('--x', `${off}px`);
+        card.style.setProperty('--gone', '1');
+        root.dataset.state = 'gone';
+        placeholderText.textContent = goneMsg;
+        placeholder.hidden = false;
+        card.setAttribute('aria-hidden', 'true');
+        dismissBtn.tabIndex = -1;
+        live.textContent = goneMsg;
+        window.setTimeout(() => restoreBtn.focus(), 60);
+      };
+
+      const restore = () => {
+        card.style.setProperty('--x', '0px');
+        card.style.setProperty('--gone', '0');
+        root.dataset.state = 'present';
+        placeholder.hidden = true;
+        card.removeAttribute('aria-hidden');
+        dismissBtn.tabIndex = 0;
+        live.textContent = backMsg;
+        window.setTimeout(() => dismissBtn.focus(), 60);
+      };
+
+      // ── Gesto: Pointer Events, segue il dito con resistenza ──
+      const onDown = (e: PointerEvent) => {
+        if (root.dataset.state === 'gone') return;
+        // ignora i pointerdown originati dal pulsante (è un suo click)
+        if ((e.target as HTMLElement).closest('.swipe__dismiss')) return;
+        dragging = true;
+        pointerId = e.pointerId;
+        startX = e.clientX;
+        dx = 0;
+        card.dataset.dragging = '';
+        card.setPointerCapture(e.pointerId);
+      };
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        const raw = e.clientX - startX;
+        // resistenza: oltre la soglia il movimento "rallenta" (radice quadrata)
+        const sign = Math.sign(raw);
+        const abs = Math.abs(raw);
+        dx = abs <= DISMISS_PX ? raw : sign * (DISMISS_PX + Math.sqrt(abs - DISMISS_PX) * 6);
+        setX(dx);
+      };
+
+      const onUp = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        dragging = false;
+        pointerId = null;
+        delete card.dataset.dragging;
+        if (card.hasPointerCapture(e.pointerId)) card.releasePointerCapture(e.pointerId);
+        if (Math.abs(dx) >= DISMISS_PX) {
+          dismiss(Math.sign(dx) || 1);
+        } else {
+          setX(0); // insufficiente → ritorna in posizione
+        }
+        dx = 0;
+      };
+
+      card.addEventListener('pointerdown', onDown);
+      card.addEventListener('pointermove', onMove);
+      card.addEventListener('pointerup', onUp);
+      card.addEventListener('pointercancel', onUp);
+
+      // ── Equivalenti espliciti (acceleratore, non cancello) ──
+      dismissBtn.addEventListener('click', () => dismiss(1));
+      restoreBtn.addEventListener('click', restore);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

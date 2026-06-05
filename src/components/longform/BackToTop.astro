@@ -1,0 +1,214 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BackToTop — il pulsante che compare solo quando serve.
+
+   In cima alla pagina, un "torna su" è inutile: sei già su. Per
+   questo il pulsante non c’è all’inizio — appare solo dopo che il
+   lettore ha sceso una certa percentuale (qui il 35%), cioè quando
+   tornare in cima è un viaggio abbastanza lungo da valere una
+   scorciatoia. Comparire prima sarebbe rumore; comparire dopo è un
+   servizio.
+
+   L’apparizione e la scomparsa rispettano la legge del capitolo
+   01: entra in ~220ms, esce più in fretta. Il click riporta su con
+   scroll fluido — salto netto sotto prefers-reduced-motion. Tutto
+   dentro un finto contenitore scrollabile, così la demo non muove
+   la pagina vera. Il pulsante è un vero <button> con etichetta
+   accessibile, raggiungibile da tastiera quando è visibile e tolto
+   dal flusso (e da Tab) quando non lo è.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    scrollerLabel: 'Pagina lunga di prova scrollabile',
+    title: 'Scendi, poi guarda in basso a destra',
+    btnLabel: 'Torna su',
+    btnText: 'Su',
+    paras: [
+      'Scorri verso il basso. Per ora, in basso a destra, non c’è niente: sei ancora vicino alla cima, e un "torna su" sarebbe solo un pulsante che dice l’ovvio.',
+      'Continua. La soglia è il 35% della pagina: è lì che tornare in cima smette di essere un gesto da una scrollata e diventa un viaggio. Solo allora il pulsante ha senso di esistere.',
+      'Eccolo: ora che sei abbastanza in basso, è comparso con una breve entrata. Non lampeggia, non rimbalza — sale in posizione e si ferma, come si conviene a uno strumento, non a una notifica.',
+      'Quando risali sopra la soglia se ne va, e più in fretta di quanto sia arrivato: le cose escono di scena più rapide di come entrano. È la stessa coerenza fisica di un oggetto che si toglie di mezzo.',
+      'Premilo e la pagina risale con uno scorrimento fluido — un salto netto, invece, se hai chiesto meno movimento. In entrambi i casi finisci dove volevi: in cima.',
+      'Questo è l’ultimo paragrafo, abbastanza in basso da rendere il pulsante davvero utile. Provalo: l’unico modo onesto di mostrare un "torna su" è darti una pagina da cui valga la pena tornare.',
+    ],
+  },
+  en: {
+    scrollerLabel: 'Scrollable sample long page',
+    title: 'Scroll down, then look bottom-right',
+    btnLabel: 'Back to top',
+    btnText: 'Top',
+    paras: [
+      'Scroll down. For now, bottom-right, there’s nothing: you’re still near the top, and a "back to top" would just be a button stating the obvious.',
+      'Keep going. The threshold is 35% of the page: that’s where returning to the top stops being a one-flick gesture and becomes a journey. Only then does the button earn its place.',
+      'There it is: now that you’re far enough down, it has appeared with a brief entrance. It doesn’t flash, it doesn’t bounce — it rises into place and stops, as befits a tool, not a notification.',
+      'When you climb back above the threshold it leaves, and faster than it arrived: things exit the stage quicker than they enter. It’s the same physical coherence as an object getting out of the way.',
+      'Press it and the page rises with a smooth scroll — a clean jump, instead, if you asked for less motion. Either way you end up where you wanted: at the top.',
+      'This is the last paragraph, far enough down to make the button genuinely useful. Try it: the only honest way to show a "back to top" is to give you a page worth returning from.',
+    ],
+  },
+} as const;
+
+const c = COPY[locale];
+---
+
+<div class="btt">
+  <div class="btt__scroller" data-scroller tabindex="0" aria-label={c.scrollerLabel}>
+    <article class="btt__article">
+      <h4>{c.title}</h4>
+      {c.paras.map((p) => <p>{p}</p>)}
+    </article>
+  </div>
+
+  <button type="button" class="btt__btn" data-top aria-label={c.btnLabel} hidden>
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path d="M8 13V4M8 4l-4 4M8 4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </svg>
+    <span class="btt__btn-text">{c.btnText}</span>
+  </button>
+</div>
+
+<style>
+  .btt {
+    position: relative;
+    inline-size: min(34rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .btt__scroller {
+    block-size: 24rem;
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-lg);
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+  }
+  .btt__scroller:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .btt__article {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 42ch;
+  }
+  .btt__article h4 {
+    margin: 0 0 var(--space-2xs);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .btt__article p {
+    margin: 0 0 var(--space-md);
+  }
+
+  .btt__btn {
+    position: absolute;
+    inset-block-end: var(--space-md);
+    inset-inline-end: var(--space-md);
+    z-index: var(--z-raised);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.7rem 0.4rem 0.6rem;
+    color: var(--accent-on);
+    background-color: var(--accent);
+    border: none;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    cursor: pointer;
+    /* Stato di partenza: fuori, in basso, trasparente. */
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  /* Visibile quando data-visible: entra in posizione. */
+  .btt__btn[data-visible] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .btt__btn:hover { box-shadow: var(--shadow-lg); }
+  .btt__btn:active { transform: translateY(0) scale(0.97); }
+  .btt__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .btt__btn-text { line-height: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btt__scroller { scroll-behavior: auto; }
+    .btt__btn {
+      transition: opacity 1ms;
+      transform: none;
+    }
+    .btt__btn[data-visible] { transform: none; }
+    .btt__btn:active { transform: scale(0.97); }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.btt').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const btn = el.querySelector<HTMLButtonElement>('[data-top]')!;
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const THRESHOLD = 0.35; // appare dopo il 35% di scroll
+
+      let visible = false;
+      const setVisible = (next: boolean) => {
+        if (next === visible) return;
+        visible = next;
+        if (next) {
+          // Mostra: rimuovi hidden, poi attiva la transizione al frame dopo.
+          btn.hidden = false;
+          requestAnimationFrame(() => btn.setAttribute('data-visible', ''));
+        } else {
+          btn.removeAttribute('data-visible');
+          // Toglilo dal flusso/da Tab dopo l’uscita (più rapida dell’entrata).
+          window.setTimeout(() => {
+            if (!visible) btn.hidden = true;
+          }, reduce ? 0 : 160);
+        }
+      };
+
+      const onScroll = () => {
+        const max = scroller.scrollHeight - scroller.clientHeight;
+        const ratio = max <= 0 ? 0 : scroller.scrollTop / max;
+        setVisible(ratio >= THRESHOLD);
+      };
+
+      scroller.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      btn.addEventListener('click', () => {
+        scroller.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+        // Dopo il ritorno in cima, il focus va al contenuto, non a un
+        // pulsante che sta per sparire.
+        scroller.focus({ preventScroll: true });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

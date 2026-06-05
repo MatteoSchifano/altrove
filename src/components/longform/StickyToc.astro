@@ -1,0 +1,300 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   StickyToc — l’indice che resta a fianco e dice "sei qui".
+
+   In una pagina lunga il lettore perde il filo di dove si trova.
+   Un indice sticky non è decorazione: è una mappa che si aggiorna
+   da sola. La voce attiva non è "quella in alto", è quella che il
+   lettore sta davvero leggendo — la sezione che occupa la riga di
+   lettura, individuata con un IntersectionObserver e un rootMargin
+   che alza quella riga al 35% dal bordo superiore.
+
+   Il click su una voce porta alla sezione con scroll fluido; sotto
+   prefers-reduced-motion diventa un salto netto. La nav è una vera
+   lista di link in-page con aria-current sulla voce attiva: chi usa
+   la tastiera o uno screen reader naviga come su un sommario di carta.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    scrollerLabel: 'Saggio lungo con indice sticky',
+    tocLabel: 'Indice della pagina',
+    sections: [
+      { id: 'apertura',  label: 'L’apertura',     title: 'L’apertura', paras: [
+        'Una pagina lunga comincia con una promessa: vale la pena restare. L’indice qui di fianco non serve a impressionare, serve a rassicurare — dice quante tappe ci sono e quale stai percorrendo adesso.',
+        'La voce evidenziata non è "quella più in alto sullo schermo". È quella che stai davvero leggendo: la sezione che occupa la riga di lettura, un terzo sotto il bordo.',
+      ] },
+      { id: 'ritmo',     label: 'Il ritmo',       title: 'Il ritmo', paras: [
+        'Scorri piano e l’indice ti segue piano. Non anticipa, non si agita: l’evidenziazione si sposta quando l’occhio è davvero sulla sezione nuova, non un attimo prima.',
+        'È un IntersectionObserver a fare il lavoro, non un listener di scroll che misura tutto a ogni frame. L’osservatore vive sul compositor; il main thread resta libero per la lettura.',
+      ] },
+      { id: 'misura',    label: 'La misura',      title: 'La misura', paras: [
+        'Un indice onesto sta in una colonna senza scroll. Se le voci diventano troppe, il segno non è "ingrandisci l’indice": è "dividi l’articolo". La forma dell’indice misura la forma del testo.',
+        'Qui le sezioni sono cinque, e cinque è già un buon numero per una lettura di dieci minuti: abbastanza tappe per orientarsi, non così tante da diventare rumore.',
+      ] },
+      { id: 'tastiera',  label: 'La tastiera',    title: 'La tastiera', paras: [
+        'Ogni voce è un link vero, con focus visibile. Con Tab li percorri in ordine; con Invio salti alla sezione. L’indice si lascia usare con il mouse e con la tastiera senza che nessuno dei due modi sembri un ripensamento.',
+        'La voce attiva porta aria-current="location": lo screen reader annuncia "posizione corrente" mentre scorri. Il colore è il secondo segnale, non il primo.',
+      ] },
+      { id: 'congedo',   label: 'Il congedo',     title: 'Il congedo', paras: [
+        'Arrivati in fondo, l’indice ha esaurito il suo compito. Ti ha tenuto compagnia senza mai mettersi davanti al testo. Questo è il modo migliore per misurare se un componente è onesto: ci pensi solo quando lo cerchi.',
+        'Non c’è festeggiamento per essere arrivati qui. La fine di una lettura lunga è un gesto privato: l’indice si limita a segnare l’ultima tappa e tace.',
+      ] },
+    ],
+  },
+  en: {
+    scrollerLabel: 'Long essay with a sticky table of contents',
+    tocLabel: 'Page contents',
+    sections: [
+      { id: 'apertura',  label: 'The opening',    title: 'The opening', paras: [
+        'A long page begins with a promise: it’s worth staying. The index alongside isn’t there to impress, it’s there to reassure — it tells you how many stops there are and which one you’re on right now.',
+        'The highlighted entry isn’t "the one at the top of the screen". It’s the one you’re actually reading: the section sitting on the reading line, a third below the edge.',
+      ] },
+      { id: 'ritmo',     label: 'The rhythm',     title: 'The rhythm', paras: [
+        'Scroll slowly and the index follows slowly. It doesn’t anticipate, it doesn’t fidget: the highlight moves when your eye is genuinely on the new section, not a moment before.',
+        'An IntersectionObserver does the work, not a scroll listener measuring everything every frame. The observer lives on the compositor; the main thread stays free for reading.',
+      ] },
+      { id: 'misura',    label: 'The measure',    title: 'The measure', paras: [
+        'An honest index fits in one column without scrolling. When the entries grow too many, the sign isn’t "enlarge the index": it’s "split the article". The shape of the index measures the shape of the text.',
+        'Here the sections are five, and five is already a good number for a ten-minute read: enough stops to find your way, not so many they become noise.',
+      ] },
+      { id: 'tastiera',  label: 'The keyboard',   title: 'The keyboard', paras: [
+        'Each entry is a real link, with visible focus. With Tab you move through them in order; with Enter you jump to the section. The index lets itself be used by mouse and keyboard without either feeling like an afterthought.',
+        'The active entry carries aria-current="location": a screen reader announces "current location" as you scroll. Colour is the second signal, not the first.',
+      ] },
+      { id: 'congedo',   label: 'The farewell',   title: 'The farewell', paras: [
+        'Once you reach the end, the index has done its job. It kept you company without ever getting in front of the text. That’s the best way to measure whether a component is honest: you only think of it when you look for it.',
+        'There’s no celebration for getting here. The end of a long read is a private gesture: the index simply marks the last stop and falls silent.',
+      ] },
+    ],
+  },
+} as const;
+
+const c = COPY[locale];
+---
+
+<div class="stoc">
+  <div class="stoc__scroller" data-scroller tabindex="0" aria-label={c.scrollerLabel}>
+    <div class="stoc__grid">
+      <nav class="stoc__toc" aria-label={c.tocLabel}>
+        <ol class="stoc__list">
+          {c.sections.map((s, i) => (
+            <li class="stoc__item">
+              <a
+                class="stoc__link"
+                href={`#${s.id}`}
+                data-target={s.id}
+                aria-current={i === 0 ? 'location' : undefined}
+              >
+                <span class="stoc__dot" aria-hidden="true"></span>
+                <span class="stoc__label">{s.label}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <article class="stoc__article">
+        {c.sections.map((s) => (
+          <section id={s.id} class="stoc__section" data-section={s.id}>
+            <h4>{s.title}</h4>
+            {s.paras.map((p) => <p>{p}</p>)}
+          </section>
+        ))}
+      </article>
+    </div>
+  </div>
+</div>
+
+<style>
+  .stoc {
+    inline-size: min(40rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .stoc__scroller {
+    block-size: 26rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+  .stoc__scroller:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .stoc__grid {
+    display: grid;
+    grid-template-columns: minmax(7rem, 9rem) 1fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-md) var(--space-2xl);
+  }
+  @media (max-width: 32rem) {
+    .stoc__grid { grid-template-columns: 1fr; }
+    .stoc__toc { display: none; }
+  }
+
+  .stoc__toc {
+    position: sticky;
+    inset-block-start: 0;
+    align-self: start;
+    padding-block-start: var(--space-2xs);
+    background-color: var(--surface-raised);
+  }
+
+  .stoc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-inline-start: 1px solid var(--border);
+    display: grid;
+    gap: 0.1rem;
+  }
+  .stoc__item { position: relative; }
+
+  .stoc__link {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.35rem 0 0.35rem var(--space-sm);
+    margin-inline-start: -1px;
+    border-inline-start: 1px solid transparent;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .stoc__link:hover { color: var(--ink); }
+  .stoc__link:focus-visible {
+    outline: none;
+    color: var(--ink-strong);
+    border-inline-start-color: var(--accent);
+    box-shadow: var(--halo-focus);
+    border-radius: var(--radius-xs);
+  }
+
+  .stoc__dot {
+    inline-size: 0.35rem;
+    block-size: 0.35rem;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.4;
+    transition: opacity var(--dur-fast) var(--ease-out-soft),
+                transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  .stoc__link[aria-current='location'] {
+    color: var(--ink-strong);
+    border-inline-start-color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+  .stoc__link[aria-current='location'] .stoc__dot {
+    opacity: 1;
+    color: var(--accent);
+    transform: scale(1.25);
+  }
+
+  .stoc__article {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .stoc__section {
+    margin-block-end: var(--space-xl);
+    scroll-margin-block-start: var(--space-sm);
+  }
+  .stoc__section h4 {
+    margin: 0 0 var(--space-2xs);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .stoc__section p {
+    margin: 0 0 var(--space-sm);
+    max-inline-size: 40ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stoc__scroller { scroll-behavior: auto; }
+    .stoc__dot, .stoc__link { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.stoc').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const sections = Array.from(el.querySelectorAll<HTMLElement>('.stoc__section'));
+      const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.stoc__link'));
+
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const setActive = (id: string) => {
+        links.forEach((a) => {
+          if (a.dataset.target === id) a.setAttribute('aria-current', 'location');
+          else a.removeAttribute('aria-current');
+        });
+      };
+
+      // Scroll-spy: la voce attiva è la sezione con la maggior parte di sé
+      // sopra la riga di lettura (35% dal bordo superiore dello scroller).
+      const ratios = new Map<string, number>();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            const id = (e.target as HTMLElement).dataset.section;
+            if (id) ratios.set(id, e.isIntersecting ? e.intersectionRatio : 0);
+          });
+          let bestId: string | null = null;
+          let bestRatio = 0;
+          ratios.forEach((r, id) => {
+            if (r > bestRatio) { bestRatio = r; bestId = id; }
+          });
+          if (bestId) setActive(bestId);
+        },
+        {
+          root: scroller,
+          threshold: [0.05, 0.25, 0.5, 0.75],
+          rootMargin: '-35% 0px -50% 0px',
+        }
+      );
+      sections.forEach((s) => observer.observe(s));
+
+      // Click → scroll fluido dentro lo scroller (salto netto sotto reduced motion).
+      links.forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = a.dataset.target;
+          if (!id) return;
+          const target = el.querySelector<HTMLElement>(`#${id}`);
+          if (!target) return;
+          const top = target.offsetTop - 8;
+          scroller.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+          setActive(id);
+        });
+      });
+
+      // Teardown su navigazione SPA: stacca l’osservatore.
+      const teardown = () => {
+        observer.disconnect();
+        document.removeEventListener('astro:before-swap', teardown);
+      };
+      document.addEventListener('astro:before-swap', teardown);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

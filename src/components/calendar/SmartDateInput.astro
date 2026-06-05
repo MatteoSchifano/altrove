@@ -1,0 +1,259 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SmartDateInput — capire "domani" senza fingere di capire tutto.
+
+   Chiedere una data con tre menu a tendina (giorno/mese/anno) è
+   tecnicamente corretto e umanamente ostile: nessuno pensa "15 /
+   settembre / 2026", pensa "venerdì prossimo". Questo campo accetta
+   il linguaggio naturale di base — "domani", "venerdì prossimo",
+   "+3 giorni", "fra 2 settimane" — e mostra subito la data che ha
+   capito, così l’utente conferma con gli occhi prima di inviare.
+
+   La parte difficile non è capire: è essere ONESTI quando NON si
+   capisce. Un parser che indovina a caso ("interpreto qualcosa,
+   nel dubbio oggi") è peggio di uno che dice "non ho capito": la
+   data sbagliata silenziosa è una trappola. Qui, se l’input non
+   combacia con nessun pattern noto, lo diciamo chiaro — niente
+   fallback inventato. La fiducia si costruisce ammettendo i limiti.
+
+   L’eco della data interpretata usa Intl.DateTimeFormat (giorno
+   della settimana incluso, perché "ah, è un venerdì" è metà del
+   valore). Niente librerie di parsing: una manciata di regole
+   esplicite, ognuna riconoscibile.
+
+   IMPORTANTE: nessun new Date() nel frontmatter. "Oggi" è una data
+   di riferimento fissa passata al client; tutta l’aritmetica delle
+   date vive nel <script>.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Quando?',
+    placeholder: 'es. domani, venerdì prossimo, +3 giorni',
+    hint: 'Scrivi in parole. Capisco "oggi", "domani", "+N giorni", "fra N settimane", i giorni della settimana.',
+    understood: 'Ho capito:',
+    unknown: 'Non ho capito questa data — prova "domani" o "+3 giorni".',
+    empty: 'In attesa…',
+  },
+  en: {
+    label: 'When?',
+    placeholder: 'e.g. tomorrow, next friday, +3 days',
+    hint: 'Type it in words. I understand “today”, “tomorrow”, “+N days”, “in N weeks”, the weekdays.',
+    understood: 'Got it:',
+    unknown: 'I didn’t understand that date — try “tomorrow” or “+3 days”.',
+    empty: 'Waiting…',
+  },
+} as const;
+const c = COPY[locale];
+const bcp = locale === 'it' ? 'it-IT' : 'en-US';
+
+// "Oggi" di riferimento FISSO (no new Date() server).
+const TODAY_ISO = '2026-09-11';
+---
+
+<form
+  class="sdi"
+  data-locale={bcp}
+  data-today={TODAY_ISO}
+  data-understood={c.understood}
+  data-unknown={c.unknown}
+  data-empty={c.empty}
+  novalidate
+>
+  <label class="sdi__label" for={`sdi-${locale}`}>{c.label}</label>
+  <input
+    id={`sdi-${locale}`}
+    class="sdi__input"
+    type="text"
+    inputmode="text"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder={c.placeholder}
+    aria-describedby={`sdi-hint-${locale} sdi-echo-${locale}`}
+  />
+  <p class="sdi__hint" id={`sdi-hint-${locale}`}>{c.hint}</p>
+  <p
+    class="sdi__echo tabular"
+    id={`sdi-echo-${locale}`}
+    data-sdi-echo
+    data-state="empty"
+    aria-live="polite"
+  >{c.empty}</p>
+</form>
+
+<style>
+  .sdi {
+    inline-size: min(24rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .sdi__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .sdi__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .sdi__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .sdi__input:hover { border-color: var(--border-strong); }
+  .sdi__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .sdi__hint {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+  }
+
+  .sdi__echo {
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    font-variant-numeric: tabular-nums;
+    min-block-size: 1.4em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  /* Tre stati, tre canali — testo + segno + colore, mai solo colore. */
+  .sdi__echo::before {
+    font-family: var(--font-mono);
+    font-weight: var(--weight-bold);
+  }
+  .sdi__echo[data-state='empty'] { color: var(--ink-subtle); }
+  .sdi__echo[data-state='empty']::before { content: '·'; color: var(--ink-subtle); }
+  .sdi__echo[data-state='ok'] { color: var(--ink-strong); }
+  .sdi__echo[data-state='ok']::before { content: '✓'; color: var(--accent-ink); }
+  .sdi__echo[data-state='unknown'] { color: var(--ink-muted); }
+  .sdi__echo[data-state='unknown']::before { content: '?'; color: var(--accent-ink); }
+</style>
+
+<script>
+  type Parsed = { date: Date } | null;
+
+  function bind() {
+    document.querySelectorAll<HTMLFormElement>('.sdi').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bcp = root.dataset.locale ?? 'it-IT';
+      const isIt = bcp === 'it-IT';
+      const input = root.querySelector<HTMLInputElement>('.sdi__input')!;
+      const echo = root.querySelector<HTMLElement>('[data-sdi-echo]')!;
+      const understood = root.dataset.understood ?? '';
+      const unknown = root.dataset.unknown ?? '';
+      const empty = root.dataset.empty ?? '';
+
+      const [ty, tm, td] = (root.dataset.today ?? '2026-09-11').split('-').map(Number);
+      const today = new Date(ty, tm - 1, td);
+
+      const echoFmt = new Intl.DateTimeFormat(bcp, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+      const addDays = (base: Date, n: number) =>
+        new Date(base.getFullYear(), base.getMonth(), base.getDate() + n);
+
+      // Nomi dei giorni nella locale, indicizzati 0..6 (domenica..sabato),
+      // generati da Intl così non scriviamo "lunedì/monday" a mano.
+      const dayNames: string[] = [];
+      const dnFmt = new Intl.DateTimeFormat(bcp, { weekday: 'long' });
+      for (let i = 0; i < 7; i++) {
+        // 2026-03-01 è domenica → i giorni in ordine 0..6
+        dayNames.push(dnFmt.format(new Date(2026, 2, 1 + i)).toLowerCase());
+      }
+
+      const norm = (s: string) =>
+        s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+      const parse = (raw: string): Parsed => {
+        const s = norm(raw);
+        if (!s) return null;
+
+        // oggi / today
+        if (s === 'oggi' || s === 'today') return { date: today };
+        // domani / tomorrow
+        if (s === 'domani' || s === 'tomorrow') return { date: addDays(today, 1) };
+        // dopodomani / day after tomorrow
+        if (s === 'dopodomani' || s === 'day after tomorrow') return { date: addDays(today, 2) };
+        // ieri / yesterday
+        if (s === 'ieri' || s === 'yesterday') return { date: addDays(today, -1) };
+
+        // +N / -N giorni|days
+        let m = s.match(/^([+-]?\d+)\s*(giorni|giorno|days?|d)$/);
+        if (m) return { date: addDays(today, parseInt(m[1], 10)) };
+
+        // fra/in N settimane|weeks
+        m = s.match(/^(?:fra|tra|in)\s+(\d+)\s*(settimane|settimana|weeks?)$/);
+        if (m) return { date: addDays(today, parseInt(m[1], 10) * 7) };
+
+        // fra/in N giorni|days
+        m = s.match(/^(?:fra|tra|in)\s+(\d+)\s*(giorni|giorno|days?)$/);
+        if (m) return { date: addDays(today, parseInt(m[1], 10)) };
+
+        // [prossimo] <giorno> / next <weekday> / <weekday>
+        const cleaned = s
+          .replace(/^(prossimo|prossima)\s+/, '')
+          .replace(/^next\s+/, '')
+          .replace(/\s+(prossimo|prossima)$/, '');
+        const idx = dayNames.indexOf(cleaned);
+        if (idx >= 0) {
+          // il prossimo giorno-della-settimana a partire da domani
+          const cur = today.getDay();
+          let delta = (idx - cur + 7) % 7;
+          if (delta === 0) delta = 7; // "venerdì" quando oggi è venerdì → fra 7
+          return { date: addDays(today, delta) };
+        }
+
+        return null; // onestà: non capito ≠ indovinato
+      };
+
+      const reflect = () => {
+        const raw = input.value;
+        if (!raw.trim()) {
+          echo.dataset.state = 'empty';
+          echo.textContent = empty;
+          return;
+        }
+        const res = parse(raw);
+        if (res) {
+          echo.dataset.state = 'ok';
+          echo.textContent = `${understood} ${echoFmt.format(res.date)}`;
+        } else {
+          echo.dataset.state = 'unknown';
+          echo.textContent = unknown;
+        }
+      };
+
+      input.addEventListener('input', reflect);
+      // Invio non deve ricaricare la pagina (è dentro un <form>).
+      root.addEventListener('submit', (e) => { e.preventDefault(); reflect(); });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

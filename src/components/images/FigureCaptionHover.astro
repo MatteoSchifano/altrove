@@ -1,0 +1,200 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FigureCaptionHover — la trama che si scopre, non si nasconde.
+
+   Editorialmente è elegante far comparire la didascalia al
+   passaggio: l’immagine respira da sola, e la voce arriva solo
+   quando la cerchi. Il rischio è renderla hover-only — invisibile
+   a chi usa la tastiera, allo screen reader, al touch. L’onestà è
+   nella distinzione: nascondiamo la didascalia *visivamente*
+   (opacity/transform), MAI dal flusso dell’accessibilità. Resta
+   nel DOM, leggibile dallo screen reader, e riappare anche al
+   :focus-within e su touch (tap che apre, niente hover fantasma).
+
+   Niente file: l’immagine è un gradient SVG con aspect-ratio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    alt: 'Ritratto astratto: una figura di spalle verso una finestra calda.',
+    title: 'Controluce, interno',
+    caption: 'La figura è di spalle apposta — l’anonimato lascia spazio a chi guarda di mettersi nei suoi panni.',
+    reveal: 'Mostra la trama',
+    hide: 'Nascondi la trama',
+  },
+  en: {
+    alt: 'Abstract portrait: a figure seen from behind facing a warm window.',
+    title: 'Backlight, interior',
+    caption: 'The figure faces away on purpose — anonymity leaves room for the viewer to step into their shoes.',
+    reveal: 'Show the story',
+    hide: 'Hide the story',
+  },
+} as const;
+const c = COPY[locale];
+
+const scene = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 280 200'>
+  <defs>
+    <radialGradient id='win' cx='0.7' cy='0.4' r='0.8'>
+      <stop offset='0' stop-color='#f7e2bb'/>
+      <stop offset='0.5' stop-color='#d9a86f'/>
+      <stop offset='1' stop-color='#3a2840'/>
+    </radialGradient>
+  </defs>
+  <rect width='280' height='200' fill='url(#win)'/>
+  <rect x='168' y='30' width='70' height='110' rx='4' fill='#fbedc8' opacity='0.55'/>
+  <ellipse cx='108' cy='150' rx='44' ry='58' fill='#241726'/>
+  <ellipse cx='108' cy='86' rx='24' ry='26' fill='#241726'/>
+</svg>`)}`;
+const uid = `fch-${locale}`;
+---
+
+<div class="fch" data-reveal={c.reveal} data-hide={c.hide}>
+  <figure class="fch__figure" data-open="false">
+    <div class="fch__media">
+      <img src={scene} alt={c.alt} />
+    </div>
+    <figcaption class="fch__caption" id={`${uid}-cap`}>
+      <span class="fch__title">{c.title}</span>
+      <span class="fch__text">{c.caption}</span>
+    </figcaption>
+    <button
+      type="button"
+      class="fch__toggle"
+      aria-expanded="false"
+      aria-controls={`${uid}-cap`}
+      data-toggle
+    >
+      <span class="fch__toggle-label">{c.reveal}</span>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+  </figure>
+</div>
+
+<style>
+  .fch {
+    inline-size: min(26rem, 100%);
+  }
+
+  .fch__figure {
+    position: relative;
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    background: var(--surface-sunken);
+  }
+
+  .fch__media {
+    inline-size: 100%;
+    aspect-ratio: 7 / 5;
+  }
+  .fch__media img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* La didascalia è nascosta VISIVAMENTE, non dall’accessibilità:
+     resta nel DOM e nello screen-reader. opacity/transform, mai
+     display:none o visibility:hidden. */
+  .fch__caption {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    padding: var(--space-lg) var(--space-md) var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: oklch(0.98 0.01 var(--hue-warm));
+    background: linear-gradient(to top, oklch(0 0 0 / 0.82), oklch(0 0 0 / 0.3) 60%, transparent);
+    opacity: 0;
+    transform: translateY(0.6rem);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+  .fch__title {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: oklch(0.92 0.02 var(--hue-accent));
+  }
+  .fch__text {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* Tre vie alla stessa trama: hover, focus dentro la figura, e
+     lo stato esplicito data-open per touch/tastiera. */
+  .fch__figure:hover .fch__caption,
+  .fch__figure:focus-within .fch__caption,
+  .fch__figure[data-open='true'] .fch__caption {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .fch__toggle {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.65rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-overlay);
+    color: var(--ink-strong);
+    font: inherit;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fch__toggle:hover { background-color: var(--surface-raised); }
+  .fch__toggle:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .fch__toggle svg {
+    inline-size: 0.7rem;
+    block-size: 0.7rem;
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .fch__figure[data-open='true'] .fch__toggle svg { transform: rotate(180deg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fch__caption,
+    .fch__toggle svg { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.fch').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const figure = root.querySelector<HTMLElement>('.fch__figure')!;
+      const toggle = root.querySelector<HTMLButtonElement>('[data-toggle]')!;
+      const label = toggle.querySelector<HTMLElement>('.fch__toggle-label')!;
+      const revealText = root.dataset.reveal ?? label.textContent ?? '';
+      const hideText = root.dataset.hide ?? revealText;
+
+      toggle.addEventListener('click', () => {
+        const next = figure.dataset.open !== 'true';
+        figure.dataset.open = String(next);
+        toggle.setAttribute('aria-expanded', String(next));
+        label.textContent = next ? hideText : revealText;
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

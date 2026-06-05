@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-12"
+number: "12"
+title: "The anatomy of a tab"
+excerpt: "A tab doesn't pick a value: it changes the context under your feet. The real problem isn't where to put the indicator, but how to move someone into another panel without making them lose track of where they were."
+date: "June 26, 2026"
+releaseDate: "2026-06-26"
+readMinutes: 11
+tags: ["components", "motion", "keyboard"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import UnderlineTabs from '../../../components/tabs/UnderlineTabs.astro';
+import PillTabs from '../../../components/tabs/PillTabs.astro';
+import CountTabs from '../../../components/tabs/CountTabs.astro';
+import ScrollSnapTabs from '../../../components/tabs/ScrollSnapTabs.astro';
+import ViewTransitionTabs from '../../../components/tabs/ViewTransitionTabs.astro';
+
+The chapter on the toggle ended with a sharp distinction: the switch picks *between two positions*, the segmented control *among a few equal-ranked alternatives*. It seemed settled, and yet the tab — which to a distracted glance looks a great deal like a segmented control — opens a different chapter. The difference isn't graphics, it's function. A segmented control picks a *value* and that value stays right there, under the same content: a list's density, a chart's unit. A tab changes the *context*: under each one is a different panel of content, and pressing it means "take me elsewhere".
+
+This is the question for the whole chapter: how do you change context without disorienting? Because moving someone to another panel is dead easy — just hide one and show another. The hard part is doing it so the user knows, at every moment, where they are, where they can go, and where they were before. A badly made tab set isn't ugly: it's *disorienting*. It shows the right panel but erases the sense of place, and the user finds themselves elsewhere with no memory of how they got there.
+
+Continuity is built on two rails. The first is semantics: not a radio group in disguise, but the real ARIA tabs pattern — `role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, the ←/→ arrows with Home/End, the roving tabindex that keeps a single tab in the Tab order. The second is motion: an indicator that *slides* between positions instead of flickering, so the eye follows one thing moving and never loses the point. Five demos, five ways of holding these two rails together — from the bar that flows to the panel that dissolves with the View Transitions API.
+
+## The indicator that flows
+
+The first tab set is also the most common: labels in a row, an underline bar beneath the active one. The point isn't the bar itself, but *how* it moves when you change tab.
+
+<Demo title="Underline that flows · full ARIA tabs" tag="12.a">
+  <UnderlineTabs locale="en" />
+  <div slot="note">
+    <p>Click a tab, or focus it and use <kbd>←</kbd>/<kbd>→</kbd>, <kbd>Home</kbd>, <kbd>End</kbd>: the underline doesn't *appear* under the new label, it *flows* there. Underneath is a FLIP-style technique — we measure the active tab's position and width and write them into two custom properties (<code>--ind-x</code>, <code>--ind-w</code>), then a CSS transition on <code>transform</code> and <code>inline-size</code> does the rest. A single bar that moves, not four that flicker: it's a position indicator, and indicators slide. This is what sets a tab apart from a segmented control: under each label here is a different <code>tabpanel</code>, not a value — which is why the semantics is the ARIA tabs pattern, with <code>aria-controls</code> from the tab to its panel.</p>
+    <p>Continuity is all in that movement: the eye follows the travelling underline and grasps *from where to where* it moved, without re-orienting from scratch. But the panel itself doesn't re-animate: already-seen content swaps instantly, because re-animating what you've already read is nervousness, not elegance. The playground rule — animate once, never re-animate — holds here too: the underline carries the transition, the text stays put. And with <code>prefers-reduced-motion</code> the underline doesn't travel: it's simply already under the chosen tab. Same final state, no journey.</p>
+  </div>
+</Demo>
+
+## The pill, reused to change context
+
+The second tab set borrows a mechanic we've already seen — the sliding pill from the segmented control — and puts it to a different job. It's a useful exercise precisely because the form is nearly identical and the meaning isn't.
+
+<Demo title="Pill tabs · the segmented lesson, a different contract" tag="12.b">
+  <PillTabs locale="en" />
+  <div slot="note">
+    <p>The pill slides <em>behind</em> the active tab, exactly as in chapter 09's segmented control: same trick, a <code>--idx</code> custom property translating a fixed-width background element (100%/N), no measuring in JS. But the contract changed under the skin. There they were <code>&lt;input type="radio"&gt;</code> picking a value; here they're <code>role="tab"</code> opening panels. Confusing the two is the disorienting mistake: a pill that looks like it's choosing "day / week / month" as a filter, while it actually reloads a whole context — or the reverse. The dense, compact form fits where the underline bar would feel too airy, but the promise must be honest about what happens when you press it.</p>
+    <p>The keyboard is the same as every tab in this chapter: <kbd>←</kbd>/<kbd>→</kbd> cycle the selection, <kbd>Home</kbd> and <kbd>End</kbd> jump to the extremes, and the roving tabindex keeps a single tab reachable with <kbd>Tab</kbd> — the others leave the order and are reached with the arrows, as the ARIA tabs pattern wants. Switching range, the panel doesn't re-animate: the pill carries the continuity, the content swaps clean. And with <code>prefers-reduced-motion</code> the pill doesn't slide, it's already behind the chosen tab: the final state is identical, only the journey disappears.</p>
+  </div>
+</Demo>
+
+## The number that doesn't jump
+
+The third tab set adds a piece of service information: a count beside the label, like "Inbox 24". It tells you how much sits behind the tab before you even open it — but a changing number tests a typographic detail.
+
+<Demo title="Count tabs · tabular-nums so the number doesn't jump" tag="12.c">
+  <CountTabs locale="en" />
+  <div slot="note">
+    <p>The count is the tab's real pull: it says "there's something here waiting for you" without your having to open it to find out. But if the digits aren't fixed-pitch, a row going from <code>9</code> to <code>10</code> — or two tabs with <code>3</code> and <code>24</code> — shifts by a hair, and that jolt is noise. Hence chapter 06's rule: <code>tabular-nums</code> wherever a number changes or is compared in a column, "so when it goes from 9 to 10 it doesn't flinch". The digit varies, the width doesn't. The number is also inside the <code>aria-label</code>, so a screen reader announces "Inbox, 24 items", not the label and number stuck together.</p>
+    <p>Honesty is in the zero. The "Archive" tab is at <code>0</code>, and it fakes no red badge over nothing: the count is muted, written in thin grey, because zero is a calm truth, not an alarm. And colour is never the only channel — the digit <code>0</code> still says it, legible even for someone who can't tell grey from the accent. There's no motion to disable here: no animation, so <code>prefers-reduced-motion</code> has nothing to remove. And that's fine — not everything must move, and a tab that simply informs with precision is already respect.</p>
+  </div>
+</Demo>
+
+## When there are too many tabs
+
+The fourth tab set tackles the awkward case: more labels than fit in a row. The wrong reflex is to shrink the text or wrap them; the honest answer is to let them scroll — but *declaring* that there's more.
+
+<Demo title="Scroll-snap tabs · overflow indicators at the edges" tag="12.d">
+  <ScrollSnapTabs locale="en" />
+  <div slot="note">
+    <p>Drag the row horizontally, or navigate with <kbd>←</kbd>/<kbd>→</kbd>: the tabs scroll and each one "clicks" gently to the edge (<code>scroll-snap-type: x proximity</code>), so you're never left with a label cut in half. The most common usability bug of a scrollable bar is <em>silence</em>: nothing says it continues to the right, and half the tabs are never found. Here a fade on each side lights up <em>only</em> when there's genuinely more to scroll on that side — it's an affordance signal driven by the real scroll (<code>scrollLeft</code> vs <code>scrollWidth</code>), not a fixed decoration.</p>
+    <p>Navigating with the arrows, the active tab is brought back into view on its own with <code>scrollIntoView</code>: it never slips off-screen, even if it's the last in the row. And this is where <code>prefers-reduced-motion</code> meets scrolling: the scroll toward the tab uses <code>behavior: 'smooth'</code> only when movement is welcome; with reduced motion it becomes a hard jump (<code>'auto'</code>), same destination without the fluid journey. The fades stay — they're not motion, they're information: they say "there's more", and that information serves everyone, still or moving.</p>
+  </div>
+</Demo>
+
+## The panel that dissolves
+
+The last tab set moves the motion from the indicator to the *panel*. So far the bar or the pill carried the continuity while the contents swapped instantly; here the panel itself exits and enters, with the View Transitions API orchestrating the handover.
+
+<Demo title="View Transition tabs · document.startViewTransition + fallback" tag="12.e">
+  <ViewTransitionTabs locale="en" />
+  <div slot="note">
+    <p>Switch tab: the old panel fades out while the new one enters, and we didn't write the cross-fade. <code>document.startViewTransition</code> captures the panel's "before" and "after" and interpolates on its own — no hand-written keyframes to coordinate one's exit with the other's entrance. We stay faithful to the playground's timing law: things leave faster than they enter, and indeed <code>::view-transition-old</code> lasts less than <code>::view-transition-new</code>. The panel carries the motion, but the underline indicator stays to say where you are: the two don't step on each other.</p>
+    <p>The delicate point is that a View Transition is a <em>progressive enhancement</em>, never a requirement. The state swap — <code>hidden</code>, <code>aria-selected</code>, roving tabindex — lives in its own function; the transition is just the packaging around it. Where the API doesn't exist, you call that function and that's it: same panel, same final state, just without the dissolve. And with <code>prefers-reduced-motion</code> the transition's <code>@keyframes</code> are disabled explicitly — because collapsing durations to 1ms isn't always enough for named animations, they must be switched off by hand. The swap happens anyway, instantly: motion is packaging, never substance.</p>
+  </div>
+</Demo>
+
+---
+
+Five tab sets, one question: how do you change context without disorienting? The answer was never "with the right animation". It was, every time, *keeping still what orients while changing what informs*. The flowing underline says from where to where you moved; the pill reuses a known mechanic without cheating on the contract; the count informs with digits that don't jump; the scroll-snap declares there's more instead of hiding it; the View Transition packages the handover without making it a requirement. And under it all, unchanging, the ARIA tabs pattern: the keyboard that works, the position that's announced, the panel the browser knows to bind to its tab. A tab's graphics are the last thing; the first is the promise never to lose track of where you were.
+
+The next chapter stays among containers but changes object: from the row of panels to the single box that gathers them. *The anatomy of a card* — is a card just a rectangle with a border, or is there a grammar of hierarchy, affordance and clickable zones that decides whether you invite people in or push them away?

@@ -1,0 +1,228 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   CountTabs — tab con un conteggio inline, tipo «Posta in
+   arrivo 24».
+
+   Il numero accanto all’etichetta è un’informazione di servizio:
+   dice quanto c’è dietro la tab prima ancora di aprirla. Ma un
+   numero che cambia — arrivano due mail, ne archivi una — fa
+   ballare la riga se le cifre non sono a passo fisso. Da qui la
+   regola del cap. 06: `tabular-nums` ovunque un numero cambi o
+   vada confrontato in colonna, "così quando passa da 9 a 10 non
+   sussulta". La cifra varia, la larghezza no.
+
+   Due onestà in più:
+     • il conteggio è dato reale, non gonfiato per fare scena (se
+       sono 0, è 0 — e una tab a 0 lo dice spenta, non urla un
+       badge rosso su niente);
+     • il numero è racchiuso in aria-label così lo screen reader
+       legge "Posta in arrivo, 24 elementi", non "Posta in arrivo
+       ventiquattro" appiccicato.
+
+   Resta il pattern ARIA tabs: tablist/tab/tabpanel, aria-selected,
+   frecce ←/→ + Home/End, roving tabindex. Cambiando pannello, il
+   contenuto già visto non si ri-anima.
+
+   Niente movimento da disabilitare qui: nessuna animazione, quindi
+   reduced motion non ha nulla da togliere — e va bene così, non
+   tutto deve muoversi.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Casella',
+    countLabel: (n: number) => `${n} element${n === 1 ? 'o' : 'i'}`,
+    tabs: [
+      { id: 'inbox', tab: 'Posta in arrivo', count: 24, body: 'Ventiquattro messaggi non letti. Il numero è il vero richiamo della tab: dice "qui c’è qualcosa che ti aspetta" senza che tu debba aprire per scoprirlo.' },
+      { id: 'sent', tab: 'Inviati', count: 8, body: 'Otto messaggi spediti di recente. Il conteggio qui è meno urgente — è memoria, non richiamo — ma resta utile per orientarsi senza contare a mano.' },
+      { id: 'drafts', tab: 'Bozze', count: 3, body: 'Tre bozze in sospeso. Allineando le cifre con tabular-nums, il 3 e il 24 occupano lo stesso passo: la riga non si sposta quando un conteggio cambia.' },
+      { id: 'archive', tab: 'Archivio', count: 0, body: 'Niente di archiviato per ora. Una tab a zero non finge un badge: il conteggio è spento, perché lo zero è una verità tranquilla, non un allarme.' },
+    ],
+  },
+  en: {
+    label: 'Mailbox',
+    countLabel: (n: number) => `${n} item${n === 1 ? '' : 's'}`,
+    tabs: [
+      { id: 'inbox', tab: 'Inbox', count: 24, body: 'Twenty-four unread messages. The number is the tab’s real pull: it says "there’s something here waiting for you" without you having to open it to find out.' },
+      { id: 'sent', tab: 'Sent', count: 8, body: 'Eight recently sent messages. The count here is less urgent — it’s memory, not a pull — but still useful to orient yourself without counting by hand.' },
+      { id: 'drafts', tab: 'Drafts', count: 3, body: 'Three drafts pending. By aligning the digits with tabular-nums, the 3 and the 24 take the same step: the row doesn’t shift when a count changes.' },
+      { id: 'archive', tab: 'Archive', count: 0, body: 'Nothing archived for now. A zero tab fakes no badge: the count is muted, because zero is a calm truth, not an alarm.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const initial = 0;
+const uid = `cnt-${locale}`;
+---
+
+<div class="cnt" data-initial={String(initial)}>
+  <span class="cnt__heading">{c.label}</span>
+  <div class="cnt__list" role="tablist" aria-label={c.label}>
+    {c.tabs.map((t, i) => (
+      <button
+        type="button"
+        class="cnt__tab"
+        role="tab"
+        id={`${uid}-tab-${t.id}`}
+        aria-controls={`${uid}-panel-${t.id}`}
+        aria-selected={i === initial ? 'true' : 'false'}
+        aria-label={`${t.tab}, ${c.countLabel(t.count)}`}
+        tabindex={i === initial ? '0' : '-1'}
+        data-idx={String(i)}
+      >
+        <span class="cnt__name">{t.tab}</span>
+        <span
+          class:list={['cnt__count', 'tabular', { 'cnt__count--zero': t.count === 0 }]}
+          aria-hidden="true"
+        >{t.count}</span>
+      </button>
+    ))}
+  </div>
+  {c.tabs.map((t, i) => (
+    <div
+      class="cnt__panel"
+      role="tabpanel"
+      id={`${uid}-panel-${t.id}`}
+      aria-labelledby={`${uid}-tab-${t.id}`}
+      tabindex="0"
+      hidden={i !== initial}
+    >
+      <p>{t.body}</p>
+    </div>
+  ))}
+</div>
+
+<style>
+  .cnt {
+    inline-size: min(36rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .cnt__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .cnt__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .cnt__tab {
+    appearance: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    background: transparent;
+    padding: 0.55rem 0.75rem;
+    margin-block-end: -1px;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .cnt__tab:hover { color: var(--ink); }
+  .cnt__tab[aria-selected='true'] {
+    color: var(--accent-ink);
+    border-block-end-color: var(--accent);
+  }
+  .cnt__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  /* Il conteggio: pastiglia discreta, cifre a passo fisso. */
+  .cnt__count {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--ink);
+    background-color: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    padding: 0.05rem 0.4rem;
+    min-inline-size: 1.5rem;
+    text-align: center;
+  }
+  .cnt__tab[aria-selected='true'] .cnt__count {
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  /* Zero: spento, non un allarme. Il colore non è l’unico canale —
+     resta la cifra "0" a dire la verità. */
+  .cnt__count--zero {
+    color: var(--ink-subtle);
+    background-color: transparent;
+    font-weight: var(--weight-regular);
+  }
+
+  .cnt__panel {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    border-radius: var(--radius-sm);
+  }
+  .cnt__panel[hidden] { display: none; }
+  .cnt__panel:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .cnt__panel p { margin: 0; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.cnt').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.cnt__tab'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.cnt__panel'));
+      if (!tabs.length) return;
+
+      let current = Number(root.dataset.initial ?? '0');
+
+      const set = (idx: number, focus: boolean) => {
+        current = idx;
+        tabs.forEach((tab, i) => {
+          const selected = i === idx;
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+          tab.tabIndex = selected ? 0 : -1;
+          if (panels[i]) panels[i].hidden = !selected;
+        });
+        if (focus) tabs[idx]?.focus();
+      };
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => set(i, false));
+        tab.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          set(next, true);
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

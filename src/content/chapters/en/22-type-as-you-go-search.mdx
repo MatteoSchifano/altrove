@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-22"
+number: "22"
+title: "Type-as-you-go search"
+excerpt: "A search that answers while you type looks like magic, but it's stagecraft: debounce, tokens that invalidate stale responses, a threshold below which the spinner must not appear. It all happens between one keystroke and the next, where the user isn't looking."
+date: "September 4, 2026"
+releaseDate: "2026-09-04"
+readMinutes: 12
+tags: ["components", "interaction", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import DebouncedSearch from '../../../components/search/DebouncedSearch.astro';
+import MatchHighlight from '../../../components/search/MatchHighlight.astro';
+import GroupedSuggestions from '../../../components/search/GroupedSuggestions.astro';
+import NoResultsSuggest from '../../../components/search/NoResultsSuggest.astro';
+import ComboboxNav from '../../../components/search/ComboboxNav.astro';
+
+Type-as-you-go search — results that appear while you type, without pressing Enter — is one of the interactions that look simplest and are among the trickiest. From the outside it's a single thing: I type, and the list updates. But between one keystroke and the next there's a small invisible stagecraft, and that's exactly this chapter's question: *what happens between every key pressed?* The answer decides whether the experience is calm or nervous, honest or anxiety-inducing.
+
+The risk isn't that it won't work — it almost always works, even done badly. The risk is noise: a request per letter, results that flicker and rewrite themselves, a spinner that appears and disappears on every breath, a slow response for “sear” overwriting the already-arrived one for “search”. These are all faults of *stagecraft*, not logic. And they're solved with three tools that return in every demo: the debounce that waits for a pause, the token that invalidates stale responses, the threshold of decency below which no loader shows.
+
+Throughout the chapter the data is static and lives inside the component; latency is simulated with `setTimeout`, and request cancellation with a monotonic token acting as an `AbortController`. No real network — but the stagecraft is exactly the one a real network would need. Five demos, five pieces of the craft: the timing, the highlighting, the grouping, the honest empty state, and keyboard navigation.
+
+## The timing between one key and the next
+
+The first piece is the most hidden and the most important: *when* you query, and *when* you show that you're querying. Get this wrong and any search turns noisy, however lovely the results.
+
+<Demo title="Search with debounce, token and threshold of decency" tag="22.a">
+  <DebouncedSearch locale="en" />
+  <div slot="note">
+    <p>Type fast and watch what <em>doesn't</em> happen: no request fires for every letter. The debounce (~250ms) waits for your fingers to pause a moment, then queries once. And the spinner appears <em>only</em> if the wait exceeds ~400ms — the “threshold of decency” from chapter 02: for a snappy response you see nothing, because a loader that lives 120ms is just flicker, “gratuitous unkindness”. Latency here is fake and deliberately variable, so sometimes the loader shows and sometimes it doesn't: proof that the threshold is a decision, not an accident.</p>
+    <p>The subtlest fault is invisible to the naked eye: requests leave in order but don't return in order. “sear” can answer after “search” and overwrite the right result with a stale one. The defense is a monotonic token: every new query increments it, and a response that comes back with a superseded token is <em>ignored</em>. It's the poor man's <code>AbortController</code> — the only rule that guarantees the screen always ends up showing the last thing you typed, not the last thing that returned from the network. The result count is announced via <code>aria-live</code>, so the search exists too for someone who can't see the list change.</p>
+  </div>
+</Demo>
+
+## Showing why a result is there
+
+Once the results arrive, there's a second honesty question: *why* does this result match my query? Highlighting the slice of text that matched isn't decoration — it's the explanation of the result, made visible.
+
+<Demo title="Match highlighting with semantic mark" tag="22.b">
+  <MatchHighlight locale="en" />
+  <div slot="note">
+    <p>Type “anat” and in the result the matching substring lights up. The right tag is <code>&lt;mark&gt;</code>, not a coloured <code>&lt;span&gt;</code>: <code>&lt;mark&gt;</code> carries meaning — “portion relevant to the current context” — and some screen readers announce it. Colour is the <em>second</em> channel, tag and weight are the first: someone who can't tell yellow apart still reads that that part is marked. The match is also accent-insensitive — “citta” finds “città” — but the displayed text stays the real one, accents included: it highlights without rewriting.</p>
+    <p>There's a security trap underneath. The highlight is <em>never</em> built by concatenating HTML strings around the query: that would be an injection waiting to happen, because the query is user text. You work on DOM nodes — split the string into match/non-match segments and create real <code>&lt;mark&gt;</code> and text nodes. The query becomes <code>textContent</code>, never markup. It's the same discipline as the inputs chapter: convenience isn't worth a hole, and the native way to build nodes is also the safe one.</p>
+  </div>
+</Demo>
+
+## A list that becomes a map
+
+When results come from different sources — chapters, tags, people — a flat list mixes them and forces the eye to sort them itself. Grouping them by type turns the list into a map: the user understands *where* they're looking before even reading the entries.
+
+<Demo title="Suggestions grouped by type, with headings" tag="22.c">
+  <GroupedSuggestions locale="en" />
+  <div slot="note">
+    <p>Search “a” and the results split into logical columns: Chapters, Tags, People, each with its heading. The order of the groups is <em>fixed</em> — the hierarchy mustn't dance on every key — and empty groups disappear entirely: a heading with no entries below is an empty drawer that lies about having content. The sorting cuts cognitive load: the eye jumps to the type it cares about instead of reading an undifferentiated column.</p>
+    <p>On accessibility, the group heading is a sign, not a choice: it's <code>aria-hidden</code>, and the group carries the type name via <code>role="group"</code> + <code>aria-label</code>, so the screen reader announces “Chapters group” without turning the title into a fake selectable option. The entries are <code>role="option"</code> inside a <code>role="listbox"</code>. Here the listbox is presentational only — full keyboard navigation is the last demo's job — but the semantic structure is already the right one, ready to carry the keyboard when needed.</p>
+  </div>
+</Demo>
+
+## The empty that isn't a dead end
+
+The “no results” state is the most fragile moment of a search: it's easy to leave the user facing a wall. But almost always behind the wall there's a door — a typo, an extra letter, a synonym.
+
+<Demo title="No results that offers honest alternatives" tag="22.d">
+  <NoResultsSuggest locale="en" />
+  <div slot="note">
+    <p>Type “toogle” with the extra O: instead of a flat “nothing”, the panel offers “did you mean… <em>toggle</em>?”, and the correction is a real <code>&lt;button&gt;</code> — you reach it with the keyboard, press it with Enter, and the search restarts corrected. The alternative is found with edit distance (Levenshtein) between the query and each known entry: if something sits one or two edits away, it's offered. It's the difference between a search that slams the door and one that walks you to the handle.</p>
+    <p>But there's an honesty line not to cross. If <em>nothing</em> is close enough, you don't invent a suggestion just to fill the void: you stay honest all the way — “no results, try another word”. Offering a distant alternative only to avoid leaving the page empty would be a suggestion that lies, and it undermines trust in <em>every</em> later suggestion. The threshold grows with the query's length (one error per ~4 letters, never beyond two): a “did you mean” earns its line only when it's genuinely likely.</p>
+  </div>
+</Demo>
+
+## The search you drive from the keyboard
+
+The last demo gathers the whole chapter into the pattern that makes search usable *without* a mouse: the full ARIA combobox. It's not a power-user fancy — it's what lets a screen reader announce “menu open, four options, option one of four highlighted”.
+
+<Demo title="Full ARIA combobox, keyboard-navigable" tag="22.e">
+  <ComboboxNav locale="en" />
+  <div slot="note">
+    <p>Type a few letters and the listbox opens with the <em>first relevant result already highlighted</em>: so Enter picks the most likely thing at once, without even pressing ↓. From there the keyboard does it all — <kbd>↓</kbd>/<kbd>↑</kbd> move the highlight (cycling at the edges), <kbd>Home</kbd>/<kbd>End</kbd> jump to first and last, <kbd>Enter</kbd> selects, <kbd>Esc</kbd> closes. The heart of the pattern is that DOM focus <em>stays in the input</em> while the highlight travels: you keep typing, and <code>aria-activedescendant</code> tells the screen reader which option is active without moving focus out from under your fingers.</p>
+    <p>The ARIA contract is complete: the input is <code>role="combobox"</code> with <code>aria-expanded</code> and <code>aria-controls</code> pointing at the <code>role="listbox"</code>, every entry is <code>role="option"</code> with a stable id. The highlight doesn't rely on colour alone: the active option also has a different type weight, and the match is underlined, not just coloured. It's the chapter's synthesis: the invisible stagecraft of demo 22.a, the honest empty of 22.d, the safe highlighting of 22.b — all inside a control a person can use entirely with the keyboard and the screen reader, from start to finish.</p>
+  </div>
+</Demo>
+
+---
+
+Five demos, one idea: type-as-you-go search lives almost entirely in the space between one key and the next, where the user isn't looking. The debounce that waits for a pause, the token that throws away superseded responses, the threshold that stays silent until the wait is real, the highlight that explains, the grouping that orients, the empty that offers, the keyboard that guides — none of these pieces shows on its own, and that's exactly why they work. A good search doesn't look clever: it just seems to understand, and it does so by working in silence while you think about what you're searching for, not how to search for it.
+
+The next chapter stays on inputs but changes object, tackling one of the most mistreated controls on the web: the calendar. *How do you ask for a date without hating the browser?* — between the native field nobody loves and the custom date-picker that breaks the keyboard, there's an honest road, and it's worth walking.

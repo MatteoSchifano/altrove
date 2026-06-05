@@ -1,0 +1,329 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   EventTimeline — il tempo come colonna, non come tabella.
+
+   Un registro di eventi (uno storico, un commit-log, un audit
+   trail) non è una griglia di celle: è una *linea* che scende, con
+   nodi appesi a una spina dorsale. Quella linea verticale fa un
+   lavoro che nessuna colonna "data" farebbe — dice, prima ancora di
+   leggere, che gli eventi sono in sequenza e che il sopra viene
+   prima del sotto.
+
+   Perché un <ol> e <time>, non dei <div>?
+     • <ol> = "questi hanno un ordine", e lo screen reader conta
+       "elemento 1 di 6". La sequenza è semantica, non solo grafica.
+     • <time datetime> = la data è leggibile dalla macchina (e
+       formattabile dal browser) senza ambiguità di fuso o lingua.
+   La spina e i nodi sono ::before puramente decorativi
+   (aria-hidden implicito via pseudo-elementi): l’albero accessibile
+   resta una lista pulita.
+
+   Niente new Date() nel frontmatter: le date sono campioni fissi,
+   l’etichetta relativa ("2 giorni fa") la calcola un piccolo script
+   client, idempotente, dopo il mount.
+
+   Reduced motion: l’entrata dei nodi è solo una rifinitura; le
+   durate-token collassano a 1ms, lo stato finale è identico.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Kind = 'commit' | 'deploy' | 'review' | 'merge';
+
+interface Event {
+  iso: string;
+  label: string; // data leggibile, pre-formattata (no new Date nel build)
+  kind: Kind;
+  title: string;
+  detail: string;
+}
+
+const COPY = {
+  it: {
+    heading: 'Storico del rilascio',
+    kinds: {
+      commit: 'commit',
+      deploy: 'deploy',
+      review: 'revisione',
+      merge: 'merge',
+    } as Record<Kind, string>,
+    events: [
+      {
+        iso: '2026-09-15T09:12:00',
+        label: '15 set, 09:12',
+        kind: 'commit',
+        title: 'Prima bozza del componente',
+        detail: 'Markup semantico e token, niente ancora di interattivo.',
+      },
+      {
+        iso: '2026-09-15T14:40:00',
+        label: '15 set, 14:40',
+        kind: 'review',
+        title: 'Revisione di accessibilità',
+        detail: 'Annotati focus order e annunci dello screen reader.',
+      },
+      {
+        iso: '2026-09-16T10:05:00',
+        label: '16 set, 10:05',
+        kind: 'commit',
+        title: 'Reduced motion e stati finali',
+        detail: 'Il movimento si toglie, lo stato resta.',
+      },
+      {
+        iso: '2026-09-17T16:30:00',
+        label: '17 set, 16:30',
+        kind: 'merge',
+        title: 'Unito nel ramo principale',
+        detail: 'Squash di sei commit in uno solo, leggibile.',
+      },
+      {
+        iso: '2026-09-18T08:00:00',
+        label: '18 set, 08:00',
+        kind: 'deploy',
+        title: 'In produzione',
+        detail: 'Rilascio del venerdì, come da calendario.',
+      },
+    ] as Event[],
+    rel: {
+      now: 'adesso',
+      mins: (n: number) => `${n} min fa`,
+      hours: (n: number) => (n === 1 ? '1 ora fa' : `${n} ore fa`),
+      days: (n: number) => (n === 1 ? 'ieri' : `${n} giorni fa`),
+    },
+  },
+  en: {
+    heading: 'Release history',
+    kinds: {
+      commit: 'commit',
+      deploy: 'deploy',
+      review: 'review',
+      merge: 'merge',
+    } as Record<Kind, string>,
+    events: [
+      {
+        iso: '2026-09-15T09:12:00',
+        label: 'Sep 15, 09:12',
+        kind: 'commit',
+        title: 'First draft of the component',
+        detail: 'Semantic markup and tokens, nothing interactive yet.',
+      },
+      {
+        iso: '2026-09-15T14:40:00',
+        label: 'Sep 15, 14:40',
+        kind: 'review',
+        title: 'Accessibility review',
+        detail: 'Noted focus order and screen-reader announcements.',
+      },
+      {
+        iso: '2026-09-16T10:05:00',
+        label: 'Sep 16, 10:05',
+        kind: 'commit',
+        title: 'Reduced motion and final states',
+        detail: 'The motion goes, the state stays.',
+      },
+      {
+        iso: '2026-09-17T16:30:00',
+        label: 'Sep 17, 16:30',
+        kind: 'merge',
+        title: 'Merged into the main branch',
+        detail: 'Six commits squashed into one readable change.',
+      },
+      {
+        iso: '2026-09-18T08:00:00',
+        label: 'Sep 18, 08:00',
+        kind: 'deploy',
+        title: 'Shipped to production',
+        detail: 'A Friday release, right on schedule.',
+      },
+    ] as Event[],
+    rel: {
+      now: 'just now',
+      mins: (n: number) => `${n} min ago`,
+      hours: (n: number) => (n === 1 ? '1 hour ago' : `${n} hours ago`),
+      days: (n: number) => (n === 1 ? 'yesterday' : `${n} days ago`),
+    },
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<section class="ev" aria-label={c.heading}>
+  <h4 class="ev__heading">{c.heading}</h4>
+
+  <ol class="ev__list" role="list">
+    {c.events.map((e, i) => (
+      <li class="ev__item" data-kind={e.kind} style={`--i:${i}`}>
+        <span class="ev__node" aria-hidden="true"></span>
+        <div class="ev__body">
+          <div class="ev__meta">
+            <span class="ev__kind">{c.kinds[e.kind]}</span>
+            <time class="ev__time tabular" datetime={e.iso} data-iso={e.iso}>{e.label}</time>
+          </div>
+          <p class="ev__title">{e.title}</p>
+          <p class="ev__detail">{e.detail}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .ev {
+    inline-size: min(30rem, 100%);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .ev__heading {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .ev__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ev__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-md);
+
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .ev__item:last-child { padding-block-end: 0; }
+
+  /* La spina dorsale: una linea continua che collega i nodi. Parte
+     dal centro del nodo e scende fino al nodo successivo. */
+  .ev__item::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.85rem;
+    inset-inline-start: 0.34rem;
+    inline-size: 2px;
+    block-size: calc(100% - 0.5rem);
+    background-color: var(--border);
+  }
+  .ev__item:last-child::before { display: none; }
+
+  /* Il nodo: un punto sulla linea. Il deploy è pieno d’accento (è
+     l’evento "che conta"); gli altri sono cerchi vuoti. Forma + colore,
+     non solo colore. */
+  .ev__node {
+    position: relative;
+    z-index: 1;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    margin-block-start: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    border: 2px solid var(--border-strong);
+  }
+  .ev__item[data-kind='deploy'] .ev__node {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .ev__item[data-kind='merge'] .ev__node {
+    border-color: var(--accent-ink);
+  }
+
+  .ev__body { min-inline-size: 0; }
+
+  .ev__meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    flex-wrap: wrap;
+  }
+  .ev__kind {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+  }
+  .ev__time {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+  }
+  /* L’etichetta relativa la appende lo script: stessa riga, fra parentesi. */
+  .ev__time[data-rel]::after {
+    content: ' · ' attr(data-rel);
+    color: var(--ink-muted);
+  }
+
+  .ev__title {
+    margin: 0.1rem 0 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .ev__detail {
+    margin: 0.1rem 0 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+    max-inline-size: 46ch;
+  }
+
+  /* Entrata: i nodi salgono una volta, in cascata corta. */
+  .ev__item {
+    animation: ev-in var(--dur-slow) var(--ease-out-soft) forwards;
+    animation-delay: calc(var(--i) * 60ms);
+  }
+  @keyframes ev-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ev__item {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ev').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      // Etichetta relativa onesta, calcolata sul client (mai new Date nel
+      // build). Ancorata a una "adesso" fissa coerente col capitolo, così
+      // i campioni restano leggibili anche dopo la data di rilascio.
+      const now = new Date('2026-09-18T09:00:00').getTime();
+      const rel = (iso: string): string => {
+        const t = new Date(iso).getTime();
+        const min = Math.round((now - t) / 60000);
+        if (min < 1) return 'now';
+        if (min < 60) return `${min}m`;
+        const h = Math.round(min / 60);
+        if (h < 24) return `${h}h`;
+        const d = Math.round(h / 24);
+        return `${d}d`;
+      };
+
+      root.querySelectorAll<HTMLTimeElement>('.ev__time[data-iso]').forEach((el) => {
+        const iso = el.dataset.iso;
+        if (iso) el.dataset.rel = rel(iso);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

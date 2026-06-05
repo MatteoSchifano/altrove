@@ -1,0 +1,361 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   NoResultsSuggest — il vuoto che non è un vicolo cieco.
+
+   «Nessun risultato» è il momento più fragile di una ricerca: è
+   facile lasciare l’utente davanti a un muro. Ma quasi sempre dietro
+   il muro c’è una porta — un refuso, una lettera di troppo, un
+   sinonimo. Uno stato di vuoto onesto non si limita a dire «niente»:
+   propone la strada più vicina («forse intendevi…?»), senza fingere
+   un successo che non c’è.
+
+   Come si trova l’alternativa, qui, senza rete e senza dizionario:
+     - distanza di edit (Levenshtein) fra la query e ogni voce nota;
+     - se esiste una voce abbastanza vicina (1–2 modifiche), la si
+       propone come correzione cliccabile;
+     - se nulla è vicino, si è onesti fino in fondo: nessun
+       suggerimento inventato, solo un invito a riformulare. Mai
+       proporre un’alternativa lontana solo per riempire il vuoto:
+       sarebbe un suggerimento che mente.
+
+   Accessibilità: lo stato è annunciato via aria-live; la correzione
+   proposta è un <button> reale (tastiera, focus, Invio gratis), non
+   un testo finto-cliccabile.
+
+   Reduced motion: il pannello appare senza traslazione.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Cerca un capitolo',
+    placeholder: 'prova a sbagliare: «toogle», «scrol»…',
+    hint: 'Sbaglia di una lettera: ti propone la correzione.',
+    empty: 'Scrivi il nome di un capitolo.',
+    foundOne: 'risultato',
+    foundMany: 'risultati',
+    noneTitle: 'Nessun risultato',
+    didYouMean: 'Forse intendevi',
+    deadEndTitle: 'Nessun risultato',
+    deadEnd: 'Niente di simile fra i capitoli. Prova con un’altra parola.',
+  },
+  en: {
+    label: 'Search a chapter',
+    placeholder: 'try a typo: “toogle”, “scrol”…',
+    hint: 'Mistype by one letter: it offers the correction.',
+    empty: 'Type a chapter name.',
+    foundOne: 'result',
+    foundMany: 'results',
+    noneTitle: 'No results',
+    didYouMean: 'Did you mean',
+    deadEndTitle: 'No results',
+    deadEnd: 'Nothing similar among the chapters. Try another word.',
+  },
+} as const;
+const c = COPY[locale];
+
+const DATA = [
+  'toggle',
+  'toast',
+  'scroll',
+  'skeleton',
+  'numeri',
+  'ricerca',
+  'calendario',
+  'tipografia',
+];
+---
+
+<div class="nrs">
+  <label class="nrs__label" for="nrs-input">{c.label}</label>
+  <input
+    id="nrs-input"
+    class="nrs__input"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder={c.placeholder}
+    aria-describedby="nrs-hint"
+  />
+  <p class="nrs__hint" id="nrs-hint">{c.hint}</p>
+
+  <p class="nrs__status" role="status" aria-live="polite">{c.empty}</p>
+
+  <div
+    class="nrs__panel"
+    data-empty={c.empty}
+    data-one={c.foundOne}
+    data-many={c.foundMany}
+    data-none-title={c.noneTitle}
+    data-did-you-mean={c.didYouMean}
+    data-dead-title={c.deadEndTitle}
+    data-dead={c.deadEnd}
+    data-pool={JSON.stringify(DATA)}
+  >
+  </div>
+</div>
+
+<style>
+  .nrs {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .nrs__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .nrs__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .nrs__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .nrs__input:hover { border-color: var(--border-strong); }
+  .nrs__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .nrs__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .nrs__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .nrs__panel {
+    margin-block-start: var(--space-2xs);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .nrs__item {
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+
+  /* Stato vuoto: il pannello che propone invece di sbattere la porta */
+  .nrs__none {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    animation: nrs-enter var(--dur-normal) var(--ease-out-soft) both;
+  }
+  @keyframes nrs-enter {
+    from { opacity: 0; transform: translateY(0.35rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .nrs__none-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+
+  .nrs__none-body {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-normal);
+  }
+
+  /* La correzione è un bottone vero: tastiera e focus gratis */
+  .nrs__suggest {
+    appearance: none;
+    align-self: flex-start;
+    margin-block-start: 0.1rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--accent);
+    background-color: transparent;
+    color: var(--accent-ink);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .nrs__suggest:hover { background-color: var(--accent-soft); }
+  .nrs__suggest:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nrs__none { animation: none; }
+  }
+</style>
+
+<script>
+  type Pool = string[];
+
+  const fold = (s: string) =>
+    s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+  // Distanza di Levenshtein: quante modifiche (inserimenti, rimozioni,
+  // sostituzioni) servono per trasformare a in b. È il metro con cui
+  // decidiamo se una voce è «abbastanza vicina» da proporla.
+  const editDistance = (a: string, b: string): number => {
+    const m = a.length;
+    const n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i);
+    let curr = new Array<number>(n + 1);
+    for (let i = 1; i <= m; i++) {
+      curr[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      }
+      [prev, curr] = [curr, prev];
+    }
+    return prev[n];
+  };
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.nrs').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('.nrs__input');
+      const status = root.querySelector<HTMLElement>('.nrs__status');
+      const panel = root.querySelector<HTMLElement>('.nrs__panel');
+      if (!input || !panel || !status) return;
+
+      let pool: Pool = [];
+      try { pool = JSON.parse(panel.dataset.pool ?? '[]'); } catch { pool = []; }
+
+      const tEmpty = panel.dataset.empty ?? '';
+      const tOne = panel.dataset.one ?? '';
+      const tMany = panel.dataset.many ?? '';
+      const tNoneTitle = panel.dataset.noneTitle ?? '';
+      const tDidYouMean = panel.dataset.didYouMean ?? '';
+      const tDeadTitle = panel.dataset.deadTitle ?? '';
+      const tDead = panel.dataset.dead ?? '';
+
+      // Cerca la voce più vicina entro una soglia onesta: la tolleranza
+      // cresce con la lunghezza della query (1 errore per ~4 lettere),
+      // ma mai oltre 2. Sotto soglia → nessuna proposta: meglio il
+      // silenzio di un suggerimento sbagliato.
+      const nearest = (q: string): string | null => {
+        const fq = fold(q);
+        const limit = Math.min(2, Math.max(1, Math.floor(fq.length / 4)));
+        let best: string | null = null;
+        let bestDist = Infinity;
+        for (const item of pool) {
+          const d = editDistance(fq, fold(item));
+          if (d < bestDist) { bestDist = d; best = item; }
+        }
+        return best !== null && bestDist <= limit ? best : null;
+      };
+
+      const renderNone = (q: string) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'nrs__none';
+
+        const suggestion = nearest(q);
+        const title = document.createElement('p');
+        title.className = 'nrs__none-title';
+        wrap.appendChild(title);
+
+        if (suggestion) {
+          title.textContent = tNoneTitle;
+          const body = document.createElement('p');
+          body.className = 'nrs__none-body';
+          body.textContent = `${tDidYouMean}…`;
+          wrap.appendChild(body);
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'nrs__suggest';
+          btn.textContent = suggestion;
+          btn.addEventListener('click', () => {
+            input.value = suggestion;
+            input.focus();
+            render();
+          });
+          wrap.appendChild(btn);
+        } else {
+          // Onestà fino in fondo: nessuna alternativa inventata.
+          title.textContent = tDeadTitle;
+          const body = document.createElement('p');
+          body.className = 'nrs__none-body';
+          body.textContent = tDead;
+          wrap.appendChild(body);
+        }
+        panel.appendChild(wrap);
+        status.textContent = tNoneTitle;
+      };
+
+      const render = () => {
+        const q = input.value.trim();
+        panel.replaceChildren();
+
+        if (q === '') {
+          status.textContent = tEmpty;
+          return;
+        }
+
+        const needle = fold(q);
+        const results = pool.filter((x) => fold(x).includes(needle));
+
+        if (results.length === 0) {
+          renderNone(q);
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        for (const r of results) {
+          const item = document.createElement('div');
+          item.className = 'nrs__item';
+          item.textContent = r;
+          frag.appendChild(item);
+        }
+        panel.appendChild(frag);
+
+        const noun = results.length === 1 ? tOne : tMany;
+        status.textContent = `${results.length} ${noun}`;
+      };
+
+      input.addEventListener('input', render);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

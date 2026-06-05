@@ -1,0 +1,263 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   AnchoredDropdown — il menu che nasce attaccato al suo bottone.
+
+   La domanda del capitolo: come si offre una scelta senza
+   nascondere il contesto? Un dropdown risponde restando *ancorato*
+   al trigger — non vola al centro, non copre la pagina: cresce da
+   sotto il bottone che l’ha aperto, così l’occhio non perde mai il
+   filo di dove si trovava.
+
+   Due API native, finalmente mature, fanno quasi tutto da sole:
+     • Popover API (popover + popovertarget): apertura, chiusura
+       con Esc, light-dismiss al click fuori, e — gratis — il menu
+       sale nel "top layer", sopra ogni overflow:hidden. Niente
+       z-index war, niente portal a mano.
+     • CSS Anchor Positioning (anchor-name + position-anchor):
+       il pannello si posiziona rispetto al trigger via CSS puro,
+       senza un solo getBoundingClientRect in un loop di scroll.
+
+   Fallback dignitoso: dove l’anchor positioning non c’è, un piccolo
+   @supports lascia il pannello in flusso assoluto sotto il bottone
+   (position: absolute nel wrapper relativo). Stesso esito, una riga
+   di CSS in meno di magia.
+
+   A11y: il trigger è aria-expanded/aria-haspopup; il menu ha
+   role="menu" coi suoi role="menuitem". Esc chiude (gestito dalla
+   Popover API), e al toggle ripristiniamo il focus sul trigger.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    trigger: 'Esporta',
+    hint: 'Si apre sotto al bottone; Esc chiude.',
+    items: [
+      { id: 'pdf', label: 'Esporta in PDF' },
+      { id: 'csv', label: 'Esporta in CSV' },
+      { id: 'md', label: 'Copia come Markdown' },
+      { id: 'link', label: 'Crea link condivisibile' },
+    ],
+    done: (l: string) => `Azione: ${l}`,
+  },
+  en: {
+    trigger: 'Export',
+    hint: 'Opens under the button; Esc closes.',
+    items: [
+      { id: 'pdf', label: 'Export as PDF' },
+      { id: 'csv', label: 'Export as CSV' },
+      { id: 'md', label: 'Copy as Markdown' },
+      { id: 'link', label: 'Create shareable link' },
+    ],
+    done: (l: string) => `Action: ${l}`,
+  },
+} as const;
+const c = COPY[locale];
+const panelId = `adrop-panel-${locale}`;
+---
+
+<div class="adrop">
+  <button
+    class="adrop__trigger"
+    type="button"
+    popovertarget={panelId}
+    aria-haspopup="menu"
+    aria-expanded="false"
+  >
+    <span>{c.trigger}</span>
+    <svg class="adrop__chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 6l4 4 4-4"/>
+    </svg>
+  </button>
+
+  <div class="adrop__panel" id={panelId} popover="auto" role="menu" aria-label={c.trigger}>
+    {c.items.map((it) => (
+      <button class="adrop__item" type="button" role="menuitem" data-label={it.label}>
+        {it.label}
+      </button>
+    ))}
+  </div>
+
+  <p class="adrop__hint">{c.hint}</p>
+  <p class="adrop__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .adrop {
+    inline-size: min(22rem, 100%);
+    position: relative; /* àncora del fallback non-anchor */
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .adrop__trigger {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+    /* CSS Anchor Positioning — dove supportato */
+    anchor-name: --adrop-anchor;
+  }
+  .adrop__trigger:hover { background-color: var(--surface); border-color: var(--border-strong); }
+  .adrop__trigger:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .adrop__trigger[aria-expanded='true'] { border-color: var(--border-strong); background-color: var(--surface); }
+  .adrop__chev {
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    color: var(--ink-muted);
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .adrop__trigger[aria-expanded='true'] .adrop__chev { transform: rotate(180deg); }
+
+  /* Il pannello. Di default position:fixed (top layer del popover) —
+     lo ancoriamo via CSS dove l’API c’è. */
+  .adrop__panel {
+    margin: 0;
+    inline-size: 14rem;
+    padding: var(--space-3xs);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  /* Stato del popover: :popover-open è il selettore nativo. */
+  .adrop__panel { display: none; }
+  .adrop__panel:popover-open { display: flex; }
+
+  /* Posizionamento ancorato (progressive enhancement). */
+  @supports (position-anchor: --x) {
+    .adrop__panel {
+      position-anchor: --adrop-anchor;
+      inset: auto;
+      inset-block-start: anchor(bottom);
+      inset-inline-start: anchor(start);
+      margin-block-start: 0.4rem;
+    }
+  }
+  /* Fallback: nessun anchor positioning → posizione assoluta nel
+     wrapper relativo, comunque sotto il trigger. */
+  @supports not (position-anchor: --x) {
+    .adrop__panel {
+      position: absolute;
+      inset-block-start: 3rem;
+      inset-inline-start: 0;
+    }
+  }
+
+  /* Entrata ~220ms / uscita gestita dall’hide istantaneo del popover.
+     Animiamo solo l’apertura, che è quando l’occhio cerca la nuova
+     superficie. */
+  @keyframes adrop-in {
+    from { opacity: 0; transform: translateY(-0.35rem) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .adrop__panel:popover-open {
+    animation: adrop-in var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .adrop__item {
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+    padding: 0.5rem 0.65rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .adrop__item:hover { background-color: var(--surface-sunken); }
+  .adrop__item:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .adrop__hint {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .adrop__panel:popover-open { animation-duration: 1ms; }
+    .adrop__chev { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.adrop').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const trigger = root.querySelector<HTMLButtonElement>('.adrop__trigger')!;
+      const panel = root.querySelector<HTMLElement>('.adrop__panel')!;
+      const items = Array.from(root.querySelectorAll<HTMLButtonElement>('.adrop__item'));
+      const live = root.querySelector<HTMLElement>('.adrop__live')!;
+
+      // La Popover API emette `toggle` con newState 'open'|'closed':
+      // ci sincronizziamo aria-expanded e il focus.
+      panel.addEventListener('toggle', (e) => {
+        const ev = e as ToggleEvent;
+        const open = ev.newState === 'open';
+        trigger.setAttribute('aria-expanded', String(open));
+        if (open) {
+          // focus al primo voce per la tastiera
+          requestAnimationFrame(() => items[0]?.focus());
+        }
+      });
+
+      // Frecce per scorrere le voci, Home/End ai capi.
+      panel.addEventListener('keydown', (e) => {
+        const idx = items.indexOf(document.activeElement as HTMLButtonElement);
+        if (idx === -1) return;
+        let next = idx;
+        if (e.key === 'ArrowDown') next = (idx + 1) % items.length;
+        else if (e.key === 'ArrowUp') next = (idx - 1 + items.length) % items.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = items.length - 1;
+        else return;
+        e.preventDefault();
+        items[next]?.focus();
+      });
+
+      // Click su una voce: esegue (demo) e chiude. Riportiamo il focus
+      // al trigger esplicitamente, così non si perde dopo la scelta.
+      items.forEach((item) => {
+        item.addEventListener('click', () => {
+          live.textContent = item.dataset.label ?? '';
+          panel.hidePopover();
+          trigger.focus();
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

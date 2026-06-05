@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-20"
+number: "20"
+title: "Images in editorial design"
+excerpt: "An image sometimes carries information and sometimes is only breath, and almost all the work is in not confusing the two: where the photo says something you annotate it and open it, where it just lets the page breathe you leave it silent."
+date: "August 21, 2026"
+releaseDate: "2026-08-21"
+readMinutes: 11
+tags: ["editorial", "images", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import PositionedCaption from '../../../components/images/PositionedCaption.astro';
+import FocusGallery from '../../../components/images/FocusGallery.astro';
+import HonestLightbox from '../../../components/images/HonestLightbox.astro';
+import FigureCaptionHover from '../../../components/images/FigureCaptionHover.astro';
+import HotspotImage from '../../../components/images/HotspotImage.astro';
+
+The last chapters worked on text and the rhythm of the page; this one stops on the thing that, in editorial design, takes up more room than anything and gets talked about least as an *interaction*: the image. The starting question is just one, and it cuts through the rest: when is an image **information** and when is it **breath**? They look like the same object — a rectangle with something inside — but they ask for opposite treatments. A diagram, a document-photo, a detail to be read: there the image *says* something, and it should be annotated, enlarged, captioned. A chapter opener, a backdrop, a pause between two blocks of text: there the image *doesn't say*, it lets you take a breath, and every label we stick on it is noise.
+
+Confusing the two is the most common editorial mistake. You see breath treated as information — mandatory captions under every decoration, alt-text describing a texture — and information treated as breath — the photo that should have been read left mute, with no handle. The difference isn't in the image: it's in the **promise** we make it keep. The five demos below are five ways of keeping that promise: where to put the voice, how to give focus to a single photo, how to enlarge one without making the eye change page, how to hide the story without really hiding it, and how to annotate a specific detail.
+
+And as always, no image files: every "photo" here is a gradient or a small SVG with the `aspect-ratio` fixed. It keeps the discussion on behaviour — the frame, the caption, the motion — and off the subject. The pattern is identical with real images: just swap the source.
+
+## Where to put the voice
+
+The first decision about an information-image isn't which filter to give it: it's **where to put the caption**. The same photo changes meaning depending on whether the voice sits below, beside or over it — and each of the three positions promises something different.
+
+<Demo title="Positioned caption · below, beside, overlay" tag="20.a">
+  <PositionedCaption locale="en" />
+  <div slot="note">
+    <p>Three positions, three relationships. <strong>Below</strong>, the caption is a distinct note: the image stays intact, the voice is clearly separate, the classic editorial case for a document-photo. <strong>Beside</strong>, it becomes a margin that talks as an equal — good when the note is as long as the image is important. <strong>Overlay</strong>, the voice merges with the scene, and is the riskiest: you have to guarantee contrast over <em>any</em> pixel beneath, because a bright sky eats white text. That's why it isn't just the text colour, there's the gradient scrim: the contrast is designed, not hoped for.</p>
+    <p>The structure underneath never changes: it's always a <code>&lt;figure&gt;</code> with a real <code>&lt;figcaption&gt;</code>, whatever the position. That's the difference between a caption and writing-over-the-image: the first is semantically tied to the figure, a screen reader reads it as its own, it survives copy-paste; the second is orphan text propped up there. Moving the voice is a matter of <em>layout</em>, not markup — and the honest markup stays the same, constant, under all three guises.</p>
+  </div>
+</Demo>
+
+## Giving focus to a single one
+
+A gallery isn't a neutral grid. When you look at one photo, the others should step aside — not vanish, but dim, because they remain context. It's the photographer's gesture of focusing: the subject becomes sharp, the background blurs. A gallery that keeps all thumbnails at the same intensity leaves you with nowhere to rest the eye.
+
+<Demo title="Gallery with focus mode · one sharp, the others dimmed" tag="20.b">
+  <FocusGallery locale="en" />
+  <div slot="note">
+    <p>The focused thumbnail enlarges, recovers saturation and takes a marked border; the neighbours dim but don't disappear — they stay there, legible, as peripheral context. The honest point is that focus isn't declared by colour <em>alone</em>: there's the size, the border, and a word — "in focus" — plus <code>aria-current</code> that a screen reader announces. Someone who can't tell the saturation apart still reads where the attention is. Three channels for the same signal, never just one.</p>
+    <p>And the keyboard is first-class, not an afterthought: the arrows move the focus, a <em>roving tabindex</em> keeps exactly one element tabbable at a time, so the gallery is a single stop in <kbd>Tab</kbd>, not five. The dimming of the neighbours uses <code>opacity</code> and <code>filter</code>, never <code>display:none</code>: they stay in the flow, stay clickable, stay read. Under <code>prefers-reduced-motion</code> the enlargement doesn't travel — the focus is simply already there. Same final state, no slide.</p>
+  </div>
+</Demo>
+
+## Enlarging without changing page
+
+When a detail needs a close look you need a lightbox. But an honest lightbox doesn't make a box *appear* from nowhere: it takes the same image you touched and makes it **grow** until it fills the screen. The continuity is the care — the eye follows the object, it doesn't "change page".
+
+<Demo title="Lightbox with morph · the thumbnail becomes the window" tag="20.c">
+  <HonestLightbox locale="en" />
+  <div slot="note">
+    <p>On click, the thumbnail isn't replaced by a modal: it <em>becomes</em> the large image. We do it with the View Transitions API — the same <code>view-transition-name</code> on the thumbnail and on the full-screen image, and the browser interpolates the morph between the two positions. The box it lands in is a native <code>&lt;dialog&gt;</code>, which hands over the focus trap and <kbd>Esc</kbd> to close for free. On closing, the morph runs backwards: the window becomes a thumbnail again, the eye walks it back to where it was.</p>
+    <p>The morph is a <em>progressive enhancement</em>, not a requirement: where the API is missing, or under reduced motion, the dialog opens anyway — only without the growth, with a measured fade (entrance ~280ms, a faster exit, because things leave more quickly than they enter). Same final state, with or without the journey. And above it all is the detail that's always forgotten: on closing, the focus <strong>returns to the button</strong> that opened the lightbox, it isn't lost at the top of the document. Opening something is half the work; putting attention back when you close is the other half.</p>
+  </div>
+</Demo>
+
+## Hiding the story without hiding it
+
+Sometimes the caption is a *story*, not a note: the why behind the shot, nice to discover on hover rather than read up front. Revealing the voice on hover is elegant — the image breathes on its own and speaks only when you look for it. But it's also the most frequent accessibility trap: a hover-only caption is mute to the keyboard, to the screen reader, to touch.
+
+<Demo title="Caption that reveals · on hover and on focus, never hover-only" tag="20.d">
+  <FigureCaptionHover locale="en" />
+  <div slot="note">
+    <p>The distinction that saves everything is between "hidden from the eyes" and "hidden from accessibility". Here the caption is hidden <em>visually</em> — <code>opacity</code> and <code>transform</code>, never <code>display:none</code> or <code>visibility:hidden</code> — so it stays in the DOM and the screen reader always reads it, hover or not. It reappears in three ways, not one: on mouse-over, on <code>:focus-within</code> (you enter the figure with the keyboard and the story shows), and with an explicit button that opens it and keeps it open — the only way that truly works on touch, where hover doesn't exist.</p>
+    <p>That button isn't redundancy: it's <em>the</em> accessible way, with hover and focus as extra conveniences for those who can use them. It carries <code>aria-expanded</code> saying whether the story is open, and the label switches between "show" and "hide" so the state is legible even without seeing the animation. The rule, identical to the rest of the playground: a graceful effect can't take information away from anyone. If the story lives only in hover, for half the people it simply doesn't exist.</p>
+  </div>
+</Demo>
+
+## Annotating a detail
+
+The last case is the information-image taken to its pointed extreme: not a caption for the whole photo, but a note *here*, on this precise detail. Hot-spots are the honest way to do it — small points on the image that, when touched, open a localized explanation.
+
+<Demo title="Annotated hot-spots · points that open a note, by keyboard" tag="20.e">
+  <HotspotImage locale="en" />
+  <div slot="note">
+    <p>Each point is a real <code>&lt;button&gt;</code>, numbered and labelled, not a <code>&lt;div&gt;</code> with a hover tooltip. The difference is all in what survives: the button is reachable with <kbd>Tab</kbd>, activates with <kbd>Enter</kbd> or <kbd>Space</kbd>, works on the first tap on mobile, and announces its own name to the screen reader. The tooltip-on-div dies in all three cases. The note that opens is a small popover anchored to the point, and <code>aria-expanded</code> says whether it's open or closed: the state information isn't entrusted to the animation alone.</p>
+    <p>One point open at a time — attention is dosed, you don't open a chorus of overlapping notes. It closes by clicking outside or with <kbd>Esc</kbd>, and <kbd>Esc</kbd> returns the focus to the point you had opened, it doesn't throw it away. The points are positioned in percentages over the image, so they stay where they belong at any size, and the number inside the dot is in <code>tabular-nums</code> because a pointed label must never flinch. It's the image that, instead of one voice for the whole scene, offers many small ones — each anchored to what it explains.</p>
+  </div>
+</Demo>
+
+---
+
+Five ways, one single question beneath: does this image *say* or does it *let you breathe*? If it says, we give it handles — a well-placed caption, a focus that lifts it from the others, an enlargement that doesn't disorient, a pointed note where it's needed. If it lets you breathe, we leave it in peace: no mandatory labels, no annotations on a texture. The whole editorial craft of the image is in not swapping the two cases — in not making what should stay silent speak, and in not silencing what had something to say. And when we do make it speak, we give it a voice reachable by everyone: the caption the screen reader reads, the point the keyboard opens, the focus that comes home.
+
+With this, **Phase C** closes — the one on editorial design and the breath of the page. The next chapter changes register again: from the image you look at to the object you grab. *Drag and drop* — how you hold a thing in your hand while you move it, and how you tell the user, while it's still in flight, where they'll be able to set it down.

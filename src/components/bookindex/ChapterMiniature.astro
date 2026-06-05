@@ -1,0 +1,206 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ChapterMiniature — la miniatura fatta di parole, non di pixel.
+
+   Come si "anteprima" un capitolo in un indice? Il riflesso facile
+   è lo screenshot: una fotografia della pagina rimpicciolita. Ma uno
+   screenshot mente due volte. Primo: a quella scala il testo è una
+   macchia grigia illeggibile — sembra contenuto, non lo è. Secondo:
+   invecchia. Cambia il tema, cambia un margine, e la foto resta
+   ferma a ieri; va rigenerata, o mostra una bugia.
+
+   La miniatura onesta di un testo è… il testo. In piccolo, ma vero:
+   occhiello, titolo, lede, in scala tipografica ridotta. È leggibile
+   (almeno il titolo), è sempre aggiornata (è il contenuto stesso), e
+   rispetta il tema perché usa i token, non un PNG cotto.
+
+   La regola tipografica nascosta: rimpicciolendo NON si scala tutto
+   uniformemente. Il titolo grande, in miniatura, vuole un filo di
+   peso in meno per non impastarsi; il lede vuole una riga corta
+   (measure-tight) per non diventare una colonna di una parola. La
+   gerarchia si conserva con i rapporti, non con uno zoom.
+
+   È un <a> intero attorno alla card (tutta cliccabile), con un
+   aria-label che riassume cosa apre — perché un lettore di schermo
+   non "vede" la miniatura, deve sentirne il senso in una frase.
+
+   Reduced motion: il sollevamento all’hover è solo un’ombra e una
+   traslazione minima; le durate-token vanno a 1ms e resta lo stato.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Mini = { number: string; eyebrow: string; title: string; lede: string; href: string };
+
+const COPY = {
+  it: {
+    aria: (n: string, t: string) => `Apri il capitolo ${n}: ${t}`,
+    items: [
+      {
+        number: '09',
+        eyebrow: 'Componenti',
+        title: 'Anatomia di un toggle',
+        lede: 'Un bottone si preme e torna. Uno switch si impegna in una posizione e ci resta.',
+        href: '#',
+      },
+      {
+        number: '19',
+        eyebrow: 'Editoriale',
+        title: 'L’indice del libro',
+        lede: 'Un sito che parla di sé, come si orienta al suo interno?',
+        href: '#',
+      },
+    ] as Mini[],
+  },
+  en: {
+    aria: (n: string, t: string) => `Open chapter ${n}: ${t}`,
+    items: [
+      {
+        number: '09',
+        eyebrow: 'Components',
+        title: 'The anatomy of a toggle',
+        lede: 'A button is pressed and springs back. A switch commits to a position and stays.',
+        href: '#',
+      },
+      {
+        number: '19',
+        eyebrow: 'Editorial',
+        title: 'The book’s index',
+        lede: 'A site that talks about itself — how does it find its way around inside?',
+        href: '#',
+      },
+    ] as Mini[],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="mini">
+  {c.items.map((item) => (
+    <a class="mini__card" href={item.href} aria-label={c.aria(item.number, item.title)}>
+      <span class="mini__page" aria-hidden="true">
+        <span class="mini__meta">
+          <span class="mini__num tabular">{item.number}</span>
+          <span class="mini__eyebrow">{item.eyebrow}</span>
+        </span>
+        <span class="mini__title">{item.title}</span>
+        <span class="mini__lede">{item.lede}</span>
+        <span class="mini__rules">
+          <span class="mini__rule"></span>
+          <span class="mini__rule"></span>
+          <span class="mini__rule mini__rule--short"></span>
+        </span>
+      </span>
+    </a>
+  ))}
+</div>
+
+<style>
+  .mini {
+    inline-size: min(36rem, 100%);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  .mini__card {
+    display: block;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    padding: var(--space-sm);
+    transition: transform var(--dur-fast) var(--ease-out-snug),
+                box-shadow var(--dur-fast) var(--ease-out-soft),
+                border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .mini__card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+  .mini__card:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+    border-color: var(--accent);
+  }
+
+  /* La "pagina" in miniatura: stesso impaginato di un capitolo reale,
+     ma a scala ridotta. La gerarchia vive nei rapporti, non nello zoom. */
+  .mini__page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    aspect-ratio: 3 / 4;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .mini__meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-block-end: 0.1rem;
+  }
+  .mini__num {
+    font-size: var(--text-2xs);
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+  }
+  .mini__eyebrow {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  /* Titolo: in miniatura vuole un filo di peso in meno per non impastarsi */
+  .mini__title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--ink-strong);
+    text-wrap: balance;
+  }
+
+  /* Lede: riga corta, due righe poi sfuma — è respiro, non corpo intero */
+  .mini__lede {
+    font-size: var(--text-2xs);
+    line-height: var(--leading-snug);
+    color: var(--ink-muted);
+    max-inline-size: var(--measure-tight);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+
+  /* Le "righe" finte: suggeriscono il corpo del testo senza fingere
+     parole leggibili — un grigio onesto, non lorem ipsum a 4px. */
+  .mini__rules {
+    margin-block-start: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    padding-block-start: 0.4rem;
+  }
+  .mini__rule {
+    block-size: 0.18rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border);
+  }
+  .mini__rule--short { inline-size: 55%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mini__card { transition: box-shadow var(--dur-fast) var(--ease-out-soft); }
+    .mini__card:hover { transform: none; }
+  }
+</style>

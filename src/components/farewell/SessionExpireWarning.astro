@@ -1,0 +1,325 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SessionExpireWarning — l’avviso di scadenza sessione che
+   rassicura invece di minacciare.
+
+   La scadenza della sessione è quasi sempre presentata come una
+   minaccia ("verrai disconnesso!") con un countdown rosso che fa
+   ansia. Ma l’utente non ha fatto nulla di male: il tempo è solo
+   passato. Il tono onesto è quello di chi avvisa con gentilezza —
+   "siamo qui, vuoi restare?" — e offre un pulsante che estende la
+   sessione senza punire chi non risponde.
+
+   Demo contenuta: una sessione finta scade in pochi secondi; il
+   countdown è gentile (aria-live polite, niente allarmismo), e
+   "Resta connesso" la riattiva. Se scade, si offre comunque di
+   riprendere — nessun vicolo cieco. Cifre con tabular-nums.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    start: 'Avvia una sessione (scade in 12s)',
+    active: 'Sessione attiva',
+    safe: 'Lavora pure: ti avviseremo per tempo.',
+    warnLead: 'La tua sessione si chiuderà tra',
+    seconds: 'secondi',
+    warnTail: 'per inattività. Nessuna fretta: puoi restare con un tocco.',
+    stay: 'Resta connesso',
+    extended: 'Bentornato. Hai ancora tutto il tempo che ti serve.',
+    expiredTitle: 'Sessione chiusa, in tutta calma',
+    expiredBody: 'Ti abbiamo disconnesso per sicurezza. I tuoi dati sono al sicuro: riprendi quando vuoi.',
+    resume: 'Riprendi da dove eri',
+  },
+  en: {
+    start: 'Start a session (expires in 12s)',
+    active: 'Session active',
+    safe: 'Carry on: we’ll warn you in good time.',
+    warnLead: 'Your session will close in',
+    seconds: 'seconds',
+    warnTail: 'for inactivity. No rush: one tap keeps you here.',
+    stay: 'Stay signed in',
+    extended: 'Welcome back. You still have all the time you need.',
+    expiredTitle: 'Session closed, calmly',
+    expiredBody: 'We signed you out for safety. Your data is safe: pick up whenever you like.',
+    resume: 'Resume where you were',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="sew" data-state="idle">
+  <button class="sew__start" type="button" data-start>{c.start}</button>
+
+  <div class="sew__panel" data-panel hidden>
+    <!-- stato attivo: rassicurante -->
+    <div class="sew__active" data-active>
+      <span class="sew__badge">
+        <span class="sew__badge-dot" aria-hidden="true"></span>
+        {c.active}
+      </span>
+      <p class="sew__active-text">{c.safe}</p>
+    </div>
+
+    <!-- stato avviso: gentile, aria-live polite -->
+    <div class="sew__warn" data-warn hidden role="status" aria-live="polite">
+      <p class="sew__warn-text">
+        {c.warnLead} <span class="sew__count tabular" data-count>0</span> {c.seconds} {c.warnTail}
+      </p>
+      <div class="sew__bar" aria-hidden="true"><span class="sew__fill" data-fill></span></div>
+      <button class="sew__stay" type="button" data-stay>{c.stay}</button>
+    </div>
+
+    <!-- stato scaduto: commiato calmo, mai vicolo cieco -->
+    <div class="sew__expired" data-expired hidden role="status">
+      <h4 class="sew__expired-title">{c.expiredTitle}</h4>
+      <p class="sew__expired-body">{c.expiredBody}</p>
+      <button class="sew__resume" type="button" data-resume>{c.resume}</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sew {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .sew__start {
+    align-self: flex-start;
+    padding: 0.7rem 1.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition:
+      transform var(--dur-fast) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .sew__start:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .sew__start:active { transform: translateY(0); }
+  .sew__start:focus-visible { outline: none; box-shadow: var(--shadow-md), var(--halo-focus); }
+  .sew[data-state='active'] .sew__start,
+  .sew[data-state='warn'] .sew__start,
+  .sew[data-state='expired'] .sew__start { display: none; }
+
+  .sew__panel {
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-md);
+  }
+  .sew__panel[hidden] { display: none; }
+
+  .sew__active[hidden],
+  .sew__warn[hidden],
+  .sew__expired[hidden] { display: none; }
+
+  /* ── attivo ── */
+  .sew__active { display: flex; flex-direction: column; gap: var(--space-2xs); }
+  .sew__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    align-self: flex-start;
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .sew__badge-dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: oklch(0.7 0.14 145);
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(0.7 0.14 145) 18%, transparent);
+    animation: sew-pulse 1600ms ease-in-out infinite;
+  }
+  @keyframes sew-pulse {
+    50% { box-shadow: 0 0 0 6px color-mix(in oklab, oklch(0.7 0.14 145) 22%, transparent); }
+  }
+  .sew__active-text {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── avviso ── */
+  .sew__warn { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .sew__warn-text {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .sew__count {
+    color: var(--ink-strong);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+  }
+  .sew__bar {
+    inline-size: 100%;
+    block-size: 3px;
+    background-color: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .sew__fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    background-color: oklch(0.75 0.16 75);
+    border-radius: inherit;
+    transition: inline-size 1s linear;
+  }
+  .sew__stay {
+    align-self: flex-start;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .sew__stay:hover { opacity: 0.92; }
+  .sew__stay:active { transform: scale(0.97); }
+  .sew__stay:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* ── scaduto ── */
+  .sew__expired { display: flex; flex-direction: column; gap: var(--space-2xs); }
+  .sew__expired-title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .sew__expired-body {
+    margin: 0 0 var(--space-2xs);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .sew__resume {
+    align-self: flex-start;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .sew__resume:hover { border-color: var(--border-strong); }
+  .sew__resume:active { transform: scale(0.97); }
+  .sew__resume:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sew__badge-dot { animation: none; }
+    .sew__fill { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sew').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const startBtn = el.querySelector<HTMLButtonElement>('[data-start]')!;
+      const panel = el.querySelector<HTMLElement>('[data-panel]')!;
+      const activeView = el.querySelector<HTMLElement>('[data-active]')!;
+      const warnView = el.querySelector<HTMLElement>('[data-warn]')!;
+      const expiredView = el.querySelector<HTMLElement>('[data-expired]')!;
+      const count = el.querySelector<HTMLElement>('[data-count]')!;
+      const fill = el.querySelector<HTMLElement>('[data-fill]')!;
+      const stayBtn = el.querySelector<HTMLButtonElement>('[data-stay]')!;
+      const resumeBtn = el.querySelector<HTMLButtonElement>('[data-resume]')!;
+
+      // sessione finta breve: 8s tranquilli + 5s di avviso gentile
+      const CALM_MS = 8000;
+      const WARN_S = 5;
+
+      let calmTimer: number | undefined;
+      let tickTimer: number | undefined;
+      let remaining = WARN_S;
+
+      const clearTimers = () => {
+        if (calmTimer !== undefined) { clearTimeout(calmTimer); calmTimer = undefined; }
+        if (tickTimer !== undefined) { clearInterval(tickTimer); tickTimer = undefined; }
+      };
+
+      const show = (which: 'active' | 'warn' | 'expired') => {
+        el.dataset.state = which;
+        activeView.hidden = which !== 'active';
+        warnView.hidden = which !== 'warn';
+        expiredView.hidden = which !== 'expired';
+      };
+
+      const enterWarn = () => {
+        remaining = WARN_S;
+        count.textContent = String(remaining);
+        fill.style.transition = 'none';
+        fill.style.inlineSize = '100%';
+        void fill.offsetHeight;
+        fill.style.transition = `inline-size ${WARN_S}s linear`;
+        fill.style.inlineSize = '0%';
+        show('warn');
+        stayBtn.focus();
+
+        tickTimer = window.setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearTimers();
+            count.textContent = '0';
+            show('expired');
+            resumeBtn.focus();
+            return;
+          }
+          count.textContent = String(remaining);
+        }, 1000);
+      };
+
+      const startSession = () => {
+        clearTimers();
+        panel.hidden = false;
+        show('active');
+        calmTimer = window.setTimeout(enterWarn, CALM_MS);
+      };
+
+      startBtn.addEventListener('click', startSession);
+
+      // estende la sessione: torna calma, nessuna punizione
+      stayBtn.addEventListener('click', () => {
+        clearTimers();
+        show('active');
+        startBtn.focus();
+        calmTimer = window.setTimeout(enterWarn, CALM_MS);
+      });
+
+      resumeBtn.addEventListener('click', startSession);
+
+      // teardown: timer fermati se il nodo sparisce
+      document.addEventListener('astro:before-swap', clearTimers, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

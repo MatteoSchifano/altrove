@@ -1,0 +1,341 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   DebouncedSearch — cosa succede tra ogni tasto premuto.
+
+   La ricerca as-you-type sembra semplice: scrivi, e i risultati
+   appaiono. Ma fra una battitura e l’altra c’è una piccola regia
+   che decide se l’esperienza è calma o nevrotica. Tre regole.
+
+     1. Debounce (~250ms). Non si interroga a ogni tasto: si aspetta
+        che le dita si fermino un attimo. Senza, si manda una
+        richiesta per «r», una per «ri», una per «ric»… e si paga
+        in lavoro sprecato e in risultati che lampeggiano.
+
+     2. Cancellazione del risultato precedente. Le richieste partono
+        in ordine ma non sempre tornano in ordine: «ric» può
+        rispondere dopo «ricerca». Un token monotòno invalida le
+        risposte vecchie — l’ultima query digitata è l’unica che ha
+        diritto di scrivere a schermo.
+
+     3. La soglia di pudore (~400ms). Lo spinner appare solo se
+        l’attesa supera i 400ms. Per una risposta lampo non si mostra
+        nulla: un loader che vive 120ms è solo sfarfallio, “cattiveria
+        gratuita”.
+
+   Qui i dati sono statici e la latenza è simulata con setTimeout:
+   nessuna rete vera. Ma la regia — debounce, token, soglia — è
+   esattamente quella che serve con una rete vera.
+
+   Reduced motion: lo spinner non ruota (lo dice il token), l’entrata
+   dei risultati collassa allo stato finale. Nessuno stato si nasconde.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Cerca nel playground',
+    placeholder: 'es. toggle, scroll, numeri…',
+    hint: 'Si interroga quando le dita si fermano, non a ogni tasto.',
+    idle: 'Scrivi per cercare.',
+    searching: 'Sto cercando…',
+    countOne: 'risultato',
+    countMany: 'risultati',
+    forQuery: 'per',
+  },
+  en: {
+    label: 'Search the playground',
+    placeholder: 'e.g. toggle, scroll, numbers…',
+    hint: 'It queries when your fingers pause, not on every key.',
+    idle: 'Type to search.',
+    searching: 'Searching…',
+    countOne: 'result',
+    countMany: 'results',
+    forQuery: 'for',
+  },
+} as const;
+const c = COPY[locale];
+
+/* Dati statici: i capitoli del playground. La latenza è finta. */
+const DATA = [
+  'Anatomia di un toggle',
+  'Anatomia di un toast',
+  'La ricerca as-you-type',
+  'Lo scroll che racconta',
+  'I numeri che non sussultano',
+  'Lo stato vuoto che accoglie',
+  'Il bottone che risponde prima della rete',
+  'La micro-tipografia',
+];
+---
+
+<div class="dsearch" data-locale={locale}>
+  <label class="dsearch__label" for="dsearch-input">{c.label}</label>
+  <div class="dsearch__field">
+    <svg class="dsearch__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </svg>
+    <input
+      id="dsearch-input"
+      class="dsearch__input"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder={c.placeholder}
+      aria-describedby="dsearch-hint"
+    />
+    <span class="dsearch__spinner" aria-hidden="true" hidden>
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle class="dsearch__spinner-track" cx="12" cy="12" r="9" stroke-width="2.5" />
+        <circle class="dsearch__spinner-head" cx="12" cy="12" r="9" stroke-width="2.5" stroke-linecap="round" />
+      </svg>
+    </span>
+  </div>
+  <p class="dsearch__hint" id="dsearch-hint">{c.hint}</p>
+
+  <p class="dsearch__status" role="status" aria-live="polite">{c.idle}</p>
+
+  <ul
+    class="dsearch__list"
+    data-on={c.searching}
+    data-idle={c.idle}
+    data-one={c.countOne}
+    data-many={c.countMany}
+    data-for={c.forQuery}
+    data-pool={JSON.stringify(DATA)}
+  >
+  </ul>
+</div>
+
+<style>
+  .dsearch {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .dsearch__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .dsearch__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .dsearch__icon {
+    position: absolute;
+    inset-inline-start: 0.85rem;
+    inline-size: 1.1rem;
+    block-size: 1.1rem;
+    color: var(--ink-subtle);
+    pointer-events: none;
+  }
+
+  .dsearch__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 2.75rem 0.75rem 2.6rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .dsearch__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .dsearch__input:hover { border-color: var(--border-strong); }
+  .dsearch__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .dsearch__spinner {
+    position: absolute;
+    inset-inline-end: 0.85rem;
+    inline-size: 1.2rem;
+    block-size: 1.2rem;
+    color: var(--accent);
+  }
+  .dsearch__spinner svg {
+    inline-size: 100%;
+    block-size: 100%;
+    animation: dsearch-spin var(--dur-slower) linear infinite;
+  }
+  .dsearch__spinner-track { stroke: color-mix(in oklab, var(--accent) 22%, transparent); }
+  .dsearch__spinner-head {
+    stroke: var(--accent);
+    stroke-dasharray: 56.5;
+    stroke-dashoffset: 42; /* arco visibile ~1/4 */
+    transform-origin: center;
+    transform: rotate(-90deg);
+  }
+  @keyframes dsearch-spin { to { transform: rotate(360deg); } }
+
+  .dsearch__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .dsearch__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .dsearch__list {
+    list-style: none;
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .dsearch__item {
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    /* entrata ~220ms, out-soft: si posa e basta */
+    animation: dsearch-enter var(--dur-normal) var(--ease-out-soft) both;
+  }
+  @keyframes dsearch-enter {
+    from { opacity: 0; transform: translateY(0.35rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dsearch__spinner svg { animation: none; }
+    .dsearch__item { animation: none; }
+  }
+</style>
+
+<script>
+  type Pool = string[];
+
+  const DEBOUNCE_MS = 250; // si aspetta che le dita si fermino
+  const SHAME_MS = 400;    // soglia di pudore: niente loader sotto questa
+  const MIN_LAT = 90;      // latenza simulata minima (a volte sotto soglia)
+  const MAX_LAT = 700;     // latenza simulata massima (sopra soglia → spinner)
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.dsearch').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('.dsearch__input');
+      const spinner = root.querySelector<HTMLElement>('.dsearch__spinner');
+      const status = root.querySelector<HTMLElement>('.dsearch__status');
+      const list = root.querySelector<HTMLUListElement>('.dsearch__list');
+      if (!input || !list || !status) return;
+
+      let pool: Pool = [];
+      try { pool = JSON.parse(list.dataset.pool ?? '[]'); } catch { pool = []; }
+
+      const tOn = list.dataset.on ?? 'Searching…';
+      const tIdle = list.dataset.idle ?? '';
+      const tOne = list.dataset.one ?? 'result';
+      const tMany = list.dataset.many ?? 'results';
+      const tFor = list.dataset.for ?? 'for';
+
+      let debounce: number | null = null;
+      let shameTimer: number | null = null;
+      let latencyTimer: number | null = null;
+      // Token monotòno: ogni query nuova lo incrementa; le risposte
+      // vecchie (token inferiore) vengono ignorate. È l’AbortController
+      // dei poveri — e l’unica difesa contro le risposte fuori ordine.
+      let token = 0;
+
+      const showSpinner = (on: boolean) => {
+        if (!spinner) return;
+        spinner.hidden = !on;
+      };
+
+      const clearTimers = () => {
+        if (shameTimer != null) { clearTimeout(shameTimer); shameTimer = null; }
+        if (latencyTimer != null) { clearTimeout(latencyTimer); latencyTimer = null; }
+      };
+
+      const render = (q: string, results: Pool) => {
+        list.replaceChildren();
+        const frag = document.createDocumentFragment();
+        for (const r of results) {
+          const li = document.createElement('li');
+          li.className = 'dsearch__item';
+          li.textContent = r;
+          frag.appendChild(li);
+        }
+        list.appendChild(frag);
+        const n = results.length;
+        const noun = n === 1 ? tOne : tMany;
+        status.textContent = q ? `${n} ${noun} ${tFor} “${q}”` : tIdle;
+      };
+
+      // Ricerca finta: filtro statico + latenza simulata via setTimeout.
+      const runQuery = (q: string, myToken: number) => {
+        const latency = Math.round(MIN_LAT + Math.random() * (MAX_LAT - MIN_LAT));
+
+        // Lo spinner appare solo se superiamo la soglia di pudore.
+        shameTimer = window.setTimeout(() => {
+          if (myToken === token) showSpinner(true);
+        }, SHAME_MS);
+
+        latencyTimer = window.setTimeout(() => {
+          // Stale-result guard: se è arrivata una query più nuova,
+          // questa risposta non ha diritto di scrivere a schermo.
+          if (myToken !== token) return;
+          clearTimers();
+          showSpinner(false);
+          const needle = q.toLowerCase();
+          const results = pool.filter((x) => x.toLowerCase().includes(needle));
+          render(q, results);
+        }, latency);
+      };
+
+      input.addEventListener('input', () => {
+        const q = input.value.trim();
+        if (debounce != null) clearTimeout(debounce);
+
+        // Query vuota: nessuna richiesta, si torna allo stato di riposo.
+        if (q === '') {
+          token++;          // invalida ogni risposta in volo
+          clearTimers();
+          showSpinner(false);
+          list.replaceChildren();
+          status.textContent = tIdle;
+          return;
+        }
+
+        debounce = window.setTimeout(() => {
+          // Nuova query → nuovo token → le vecchie risposte muoiono.
+          token++;
+          clearTimers();
+          status.textContent = tOn;
+          runQuery(q, token);
+        }, DEBOUNCE_MS);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

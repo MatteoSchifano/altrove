@@ -1,0 +1,392 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ReorderList — riordinare una lista, ma senza tradire la tastiera.
+
+   Il drag-and-drop è famoso per essere inaccessibile: nasce come
+   gesto del mouse e, se ci si ferma lì, chi naviga da tastiera o
+   con uno screen reader resta fuori. La tesi di tutto il capitolo è
+   che questo non è un destino — è una scelta. Ogni trascinamento
+   qui ha un *gemello da tastiera* e una voce che annuncia cosa sta
+   succedendo.
+
+   Il puntatore usa i Pointer Events (niente HTML5 drag, niente
+   drag-image del browser): premi su una maniglia, l’item si solleva,
+   e una *linea di rilascio* compare TRA gli elementi, esattamente
+   dove cadrà. La linea è il modello: dice "qui", non "su questo".
+
+   La tastiera fa la stessa cosa senza il gesto: dai il focus a un
+   item, premi ↑/↓ per spostarlo di una posizione, e una regione
+   aria-live="polite" pronuncia "spostato in posizione 2 di 5". Il
+   colore e la linea sono per chi vede; l’annuncio è per chi ascolta.
+   Nessuno dei due è un di più: sono lo stesso significato in due
+   lingue diverse.
+
+   Motion: il ricomporsi della lista usa FLIP (misura prima, sposta,
+   inverti, lascia animare), guardato da matchMedia — sotto
+   prefers-reduced-motion gli item si trovano già al loro posto,
+   senza viaggio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Ordine di lettura',
+    hint: 'Trascina la maniglia, oppure dai il focus a una riga e usa ↑/↓.',
+    handle: 'Trascina per riordinare',
+    items: [
+      'Bozza dell’introduzione',
+      'Raccolta delle fonti',
+      'Prima revisione',
+      'Controllo dei link',
+      'Pubblicazione',
+    ],
+    // {0}=titolo {1}=pos {2}=tot
+    picked: '{0}, preso. Posizione {1} di {2}. Usa le frecce per spostarlo.',
+    moved: '{0}, spostato in posizione {1} di {2}.',
+    dropped: '{0}, rilasciato in posizione {1} di {2}.',
+  },
+  en: {
+    label: 'Reading order',
+    hint: 'Drag the handle, or focus a row and use ↑/↓.',
+    handle: 'Drag to reorder',
+    items: [
+      'Intro draft',
+      'Gathering sources',
+      'First revision',
+      'Link check',
+      'Publish',
+    ],
+    picked: '{0}, picked up. Position {1} of {2}. Use the arrows to move it.',
+    moved: '{0}, moved to position {1} of {2}.',
+    dropped: '{0}, dropped at position {1} of {2}.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div
+  class="rl"
+  data-msg-picked={c.picked}
+  data-msg-moved={c.moved}
+  data-msg-dropped={c.dropped}
+>
+  <div class="rl__head">
+    <span class="rl__label">{c.label}</span>
+    <span class="rl__hint">{c.hint}</span>
+  </div>
+
+  <ul class="rl__list" role="list">
+    {c.items.map((item, i) => (
+      <li class="rl__item" data-idx={String(i)}>
+        <button
+          type="button"
+          class="rl__handle"
+          aria-label={`${c.handle} — ${item}`}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none">
+            <circle cx="6" cy="4" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="4" r="1.1" fill="currentColor" />
+            <circle cx="6" cy="8" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="8" r="1.1" fill="currentColor" />
+            <circle cx="6" cy="12" r="1.1" fill="currentColor" />
+            <circle cx="10" cy="12" r="1.1" fill="currentColor" />
+          </svg>
+        </button>
+        <span class="rl__title">{item}</span>
+      </li>
+    ))}
+  </ul>
+
+  <span class="rl__live" role="status" aria-live="polite"></span>
+</div>
+
+<style>
+  .rl {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .rl__head { display: flex; flex-direction: column; gap: 0.15rem; }
+  .rl__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .rl__hint { font-size: var(--text-xs); color: var(--ink-muted); }
+
+  .rl__list {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .rl__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    /* Il transform è gestito da FLIP via JS; lo dichiariamo qui solo
+       per avere una transizione pronta quando JS la abilita. */
+    will-change: transform;
+  }
+  /* L’item sollevato dal puntatore: staccato dal flusso, segue il dito */
+  .rl__item[data-lift] {
+    position: relative;
+    z-index: var(--z-raised);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(var(--lift-y, 0));
+    transition: none;
+  }
+  .rl__item[data-lift] .rl__handle { cursor: grabbing; }
+
+  .rl__handle {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.25rem;
+    margin-inline-start: -0.25rem;
+    display: inline-flex;
+    color: var(--ink-subtle);
+    cursor: grab;
+    border-radius: var(--radius-sm);
+    touch-action: none; /* il drag non deve scrollare la pagina */
+    flex-shrink: 0;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .rl__handle svg { inline-size: 1rem; block-size: 1rem; }
+  .rl__handle:hover { color: var(--ink); }
+  .rl__handle:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+    color: var(--accent-ink);
+  }
+
+  .rl__title { flex: 1; }
+
+  /* La linea di rilascio: appare TRA gli item, dove cadrà l’oggetto.
+     È posizionata in assoluto e mossa via --drop-y. */
+  .rl__line {
+    position: absolute;
+    inset-inline: 0;
+    block-size: 2px;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    transform: translateY(var(--drop-y, 0));
+    pointer-events: none;
+    z-index: var(--z-raised);
+  }
+  .rl__line::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: -2px;
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    transform: translateY(-50%);
+  }
+
+  .rl__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+  type Cleanup = () => void;
+
+  const fmt = (t: string, ...a: string[]) =>
+    t.replace(/\{(\d+)\}/g, (_, n) => a[Number(n)] ?? '');
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.rl').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const list = root.querySelector<HTMLElement>('.rl__list');
+      const live = root.querySelector<HTMLElement>('.rl__live');
+      if (!list || !live) return;
+
+      const msgPicked = root.dataset.msgPicked ?? '';
+      const msgMoved = root.dataset.msgMoved ?? '';
+      const msgDropped = root.dataset.msgDropped ?? '';
+
+      const reduce = () =>
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const items = () =>
+        Array.from(list.querySelectorAll<HTMLElement>('.rl__item'));
+
+      const titleOf = (el: HTMLElement) =>
+        el.querySelector('.rl__title')?.textContent?.trim() ?? '';
+
+      const announce = (s: string) => { live.textContent = s; };
+
+      // FLIP: misura le posizioni "prima", esegue il riordino DOM passato
+      // come callback, poi inverte e lascia animare. Guardato da matchMedia.
+      const flip = (mutate: () => void) => {
+        const els = items();
+        if (reduce()) { mutate(); return; }
+        const first = new Map<HTMLElement, number>();
+        els.forEach((el) => first.set(el, el.getBoundingClientRect().top));
+        mutate();
+        items().forEach((el) => {
+          const before = first.get(el);
+          if (before == null) return;
+          const after = el.getBoundingClientRect().top;
+          const dy = before - after;
+          if (!dy) return;
+          el.style.transition = 'none';
+          el.style.transform = `translateY(${dy}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = `transform var(--dur-fast) var(--ease-out-soft)`;
+            el.style.transform = '';
+          });
+        });
+      };
+
+      // Sposta l’item all’indice `to` (0..n), ricalcolando via DOM.
+      const moveTo = (el: HTMLElement, to: number) => {
+        const els = items();
+        const clamped = Math.max(0, Math.min(els.length - 1, to));
+        const ref = els[clamped];
+        if (ref === el) return clamped;
+        flip(() => {
+          if (clamped > els.indexOf(el)) ref.after(el);
+          else ref.before(el);
+        });
+        return clamped;
+      };
+
+      // ── Tastiera: ↑/↓ spostano la riga col focus ──
+      list.addEventListener('keydown', (e: KeyboardEvent) => {
+        const handle = (e.target as HTMLElement)?.closest<HTMLElement>('.rl__handle');
+        if (!handle) return;
+        const el = handle.closest<HTMLElement>('.rl__item');
+        if (!el) return;
+        let delta = 0;
+        if (e.key === 'ArrowUp') delta = -1;
+        else if (e.key === 'ArrowDown') delta = 1;
+        else return;
+        e.preventDefault();
+        const total = items().length;
+        const at = moveTo(el, items().indexOf(el) + delta);
+        handle.focus();
+        announce(fmt(msgMoved, titleOf(el), String(at + 1), String(total)));
+      });
+
+      // ── Puntatore: solleva, mostra la linea di rilascio, riordina ──
+      let line: HTMLElement | null = null;
+      let dragging: HTMLElement | null = null;
+      let startY = 0;
+      let startTop = 0;
+      let targetIdx = 0;
+      let activeHandle: HTMLElement | null = null;
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging || !line) return;
+        const dy = e.clientY - startY;
+        dragging.style.setProperty('--lift-y', `${dy}px`);
+
+        // Calcola tra quali item siamo: la linea va al gap più vicino.
+        const others = items().filter((el) => el !== dragging);
+        const listRect = list.getBoundingClientRect();
+        const pointer = startTop + dy + dragging.offsetHeight / 2;
+        let idx = others.length;
+        for (let i = 0; i < others.length; i++) {
+          const r = others[i].getBoundingClientRect();
+          if (pointer < r.top - listRect.top + r.height / 2) { idx = i; break; }
+        }
+        targetIdx = idx;
+        // posiziona la linea sul bordo superiore dell’item idx (o sotto l’ultimo)
+        let y: number;
+        if (idx < others.length) {
+          const r = others[idx].getBoundingClientRect();
+          y = r.top - listRect.top - 3;
+        } else {
+          const last = others[others.length - 1].getBoundingClientRect();
+          y = last.bottom - listRect.top + 1;
+        }
+        line.style.setProperty('--drop-y', `${y}px`);
+      };
+
+      const endDrag = (e: PointerEvent) => {
+        if (!dragging) return;
+        const el = dragging;
+        const handle = activeHandle;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+        try { handle?.releasePointerCapture(e.pointerId); } catch {}
+
+        el.style.removeProperty('--lift-y');
+        delete el.dataset.lift;
+        if (line) { line.remove(); line = null; }
+
+        const total = items().length;
+        const at = moveTo(el, targetIdx);
+        dragging = null;
+        activeHandle = null;
+        announce(fmt(msgDropped, titleOf(el), String(at + 1), String(total)));
+      };
+
+      list.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        const handle = (e.target as HTMLElement)?.closest<HTMLElement>('.rl__handle');
+        if (!handle) return;
+        const el = handle.closest<HTMLElement>('.rl__item');
+        if (!el) return;
+        e.preventDefault();
+        dragging = el;
+        activeHandle = handle;
+        startY = e.clientY;
+        startTop = el.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        targetIdx = items().indexOf(el);
+        el.dataset.lift = '';
+        try { handle.setPointerCapture(e.pointerId); } catch {}
+
+        line = document.createElement('span');
+        line.className = 'rl__line';
+        list.appendChild(line);
+        line.style.setProperty('--drop-y', `${startTop - 3}px`);
+
+        const total = items().length;
+        announce(fmt(msgPicked, titleOf(el), String(targetIdx + 1), String(total)));
+
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', endDrag);
+        document.addEventListener('pointercancel', endDrag);
+      });
+
+      const cleanup: Cleanup = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+      };
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

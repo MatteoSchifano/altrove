@@ -1,0 +1,345 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ReadingBookmark — il segnaposto, onesto su dove sei rimasto.
+
+   Chi legge dieci minuti a volte se ne va e torna. Un segnaposto
+   gli restituisce il punto: salva in localStorage dove la lettura
+   si era interrotta e, alla riapertura, offre di riprendere da lì.
+
+   L’onestà è tutta qui: il segnaposto mostra DOVE sei rimasto, non
+   finge un progresso. Non scrive "67% completato" come se avessi
+   capito quel 67%; dice "ti eri fermato qui", e lascia a te la
+   scelta di tornarci o ricominciare. È un nastro fra le pagine,
+   non un voto. Salva quando lasci (non in continuazione), ripristina
+   solo su richiesta esplicita, e dichiara con franchezza quando il
+   browser non gli concede memoria. Il ripristino è uno scroll
+   fluido, salto netto sotto prefers-reduced-motion.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    scrollerLabel: 'Articolo lungo con segnaposto',
+    title: 'Il nastro fra le pagine',
+    resumeFromHere: 'Ti eri fermato qui',
+    resumeBtn: 'Riprendi da qui',
+    dismissBtn: 'Ricomincia',
+    saved: 'Segnaposto messo',
+    cleared: 'Segnaposto tolto',
+    noStorage: 'Questo browser non mi lascia ricordare: niente segnaposto, ma la lettura resta tutta qui.',
+    markHint: 'Scorri un po’, poi metti il segnaposto dove sei.',
+    markBtn: 'Metti il segnaposto qui',
+    paras: [
+      'Un segnaposto di carta non bara: non ti dice che hai capito metà libro, ti dice solo a che pagina eri. Questo fa lo stesso. Salva la posizione, non un punteggio.',
+      'Scorri un po’ e premi "Metti il segnaposto qui". Da quel momento il browser ricorda l’altezza esatta a cui eri — non in continuazione, ma quando lo decidi tu o quando lasci la pagina.',
+      'Alla riapertura non riparte da solo: comparirebbe arrogante. Ti offre di riprendere, e basta. Tornare al punto è una tua scelta, non un automatismo che ti scippa il controllo dello scroll.',
+      'La differenza con una barra di progresso è sottile ma decisiva: la barra dice "quanto manca", il segnaposto dice "dove sei rimasto". Il primo è una misura, il secondo è una memoria.',
+      'Se il browser nega la memoria — modalità privata, storage pieno, permessi — il componente lo dice chiaro invece di fingere. Un segnaposto che mente sarebbe peggio di nessun segnaposto.',
+      'Sei in fondo. Metti il segnaposto qui, ricarica la pagina con la mente: lo ritroverai ad aspettarti, esattamente dove l’avevi lasciato. Né un pixel più avanti, né uno indietro.',
+    ],
+  },
+  en: {
+    scrollerLabel: 'Long article with a bookmark',
+    title: 'The ribbon between the pages',
+    resumeFromHere: 'You stopped here',
+    resumeBtn: 'Resume from here',
+    dismissBtn: 'Start over',
+    saved: 'Bookmark placed',
+    cleared: 'Bookmark removed',
+    noStorage: 'This browser won’t let me remember: no bookmark, but the reading is all still here.',
+    markHint: 'Scroll a little, then drop the bookmark where you are.',
+    markBtn: 'Place the bookmark here',
+    paras: [
+      'A paper bookmark doesn’t cheat: it doesn’t tell you you’ve understood half the book, it just tells you which page you were on. This does the same. It saves the position, not a score.',
+      'Scroll a little and press "Place the bookmark here". From then on the browser remembers the exact height you were at — not continuously, but when you decide or when you leave the page.',
+      'On reopening it doesn’t jump back on its own: that would feel arrogant. It offers to resume, and nothing more. Returning to the spot is your choice, not an automatism that snatches the scroll from you.',
+      'The difference from a progress bar is subtle but decisive: the bar says "how much is left", the bookmark says "where you stopped". The first is a measure, the second is a memory.',
+      'If the browser denies memory — private mode, full storage, permissions — the component says so plainly instead of pretending. A bookmark that lies would be worse than none.',
+      'You’re at the bottom. Drop the bookmark here, reload the page in your mind: you’ll find it waiting, exactly where you left it. Not a pixel ahead, not one behind.',
+    ],
+  },
+} as const;
+
+const c = COPY[locale];
+const STORE_KEY = 'altrove:reading-bookmark:15e';
+---
+
+<div
+  class="bm"
+  data-store={STORE_KEY}
+  data-saved={c.saved}
+  data-cleared={c.cleared}
+  data-nostorage={c.noStorage}
+>
+  <div class="bm__banner" data-banner hidden>
+    <span class="bm__banner-text">
+      <span class="bm__banner-label">{c.resumeFromHere}</span>
+      <span class="bm__banner-pos tabular" data-pos></span>
+    </span>
+    <span class="bm__banner-actions">
+      <button type="button" class="bm__btn bm__btn--solid" data-resume>{c.resumeBtn}</button>
+      <button type="button" class="bm__btn bm__btn--ghost" data-dismiss>{c.dismissBtn}</button>
+    </span>
+  </div>
+
+  <div class="bm__scroller" data-scroller tabindex="0" aria-label={c.scrollerLabel}>
+    <article class="bm__article">
+      <h4>{c.title}</h4>
+      {c.paras.map((p) => <p>{p}</p>)}
+    </article>
+  </div>
+
+  <div class="bm__bar">
+    <button type="button" class="bm__btn bm__btn--solid" data-mark>{c.markBtn}</button>
+    <p class="bm__status" data-status role="status" aria-live="polite">{c.markHint}</p>
+  </div>
+</div>
+
+<style>
+  .bm {
+    inline-size: min(34rem, 100%);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bm__banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs) var(--space-sm);
+    padding: var(--space-2xs) var(--space-md);
+    background-color: var(--accent-soft);
+    border-block-end: 1px solid var(--border);
+  }
+  .bm__banner-text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5ch;
+    font-size: var(--text-xs);
+  }
+  .bm__banner-label {
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+  .bm__banner-pos {
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+  }
+  .bm__banner-actions {
+    display: inline-flex;
+    gap: var(--space-2xs);
+  }
+
+  .bm__scroller {
+    block-size: 22rem;
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-lg);
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    position: relative;
+  }
+  .bm__scroller:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .bm__article {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 42ch;
+  }
+  .bm__article h4 {
+    margin: 0 0 var(--space-2xs);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .bm__article p {
+    margin: 0 0 var(--space-md);
+  }
+
+  .bm__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2xs) var(--space-md);
+    padding: var(--space-2xs) var(--space-md);
+    border-block-start: 1px solid var(--border);
+    background-color: var(--surface);
+  }
+  .bm__status {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    flex: 1 1 12ch;
+  }
+
+  .bm__btn {
+    font: inherit;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    border-radius: var(--radius-pill);
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color var(--dur-fast) var(--ease-out-soft),
+                color var(--dur-fast) var(--ease-out-soft),
+                box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .bm__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .bm__btn--solid {
+    color: var(--accent-on);
+    background-color: var(--accent);
+  }
+  .bm__btn--solid:hover {
+    background-color: color-mix(in oklab, var(--accent), var(--accent-ink) 18%);
+  }
+  .bm__btn--ghost {
+    color: var(--ink);
+    background-color: transparent;
+    border-color: var(--border-strong);
+  }
+  .bm__btn--ghost:hover {
+    background-color: var(--surface-sunken);
+    color: var(--ink-strong);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bm__scroller { scroll-behavior: auto; }
+    .bm__btn { transition: none; }
+  }
+</style>
+
+<script>
+  interface Bookmark {
+    top: number;
+    pct: number;
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.bm').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const key = el.dataset.store ?? 'altrove:reading-bookmark';
+      const savedMsg = el.dataset.saved ?? '';
+      const clearedMsg = el.dataset.cleared ?? '';
+      const noStorageMsg = el.dataset.nostorage ?? '';
+
+      const scroller = el.querySelector<HTMLElement>('[data-scroller]')!;
+      const banner = el.querySelector<HTMLElement>('[data-banner]')!;
+      const posEl = el.querySelector<HTMLElement>('[data-pos]')!;
+      const status = el.querySelector<HTMLElement>('[data-status]')!;
+      const markBtn = el.querySelector<HTMLButtonElement>('[data-mark]')!;
+      const resumeBtn = el.querySelector<HTMLButtonElement>('[data-resume]')!;
+      const dismissBtn = el.querySelector<HTMLButtonElement>('[data-dismiss]')!;
+
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      // Onestà sul fronte storage: se non c’è, dillo, non fingere.
+      const storage: Storage | null = (() => {
+        try {
+          const t = '__bm_probe__';
+          window.localStorage.setItem(t, '1');
+          window.localStorage.removeItem(t);
+          return window.localStorage;
+        } catch {
+          return null;
+        }
+      })();
+
+      const ratioNow = (): number => {
+        const max = scroller.scrollHeight - scroller.clientHeight;
+        return max <= 0 ? 0 : Math.min(1, Math.max(0, scroller.scrollTop / max));
+      };
+
+      const read = (): Bookmark | null => {
+        if (!storage) return null;
+        try {
+          const raw = storage.getItem(key);
+          if (!raw) return null;
+          const data = JSON.parse(raw) as Bookmark;
+          if (typeof data.top !== 'number') return null;
+          return data;
+        } catch {
+          return null;
+        }
+      };
+
+      // Mostra DOVE sei rimasto ("circa al N%"), non un progresso fittizio.
+      const showBanner = (bm: Bookmark) => {
+        posEl.textContent = `~ ${Math.round(bm.pct * 100)}%`;
+        banner.hidden = false;
+      };
+      const hideBanner = () => { banner.hidden = true; };
+
+      // Se non c’è memoria, dichiaralo e disattiva il salvataggio.
+      if (!storage) {
+        status.textContent = noStorageMsg;
+        markBtn.disabled = true;
+        markBtn.setAttribute('aria-disabled', 'true');
+        return;
+      }
+
+      // All’avvio: se esiste un segnaposto, offri di riprendere (non saltare).
+      const existing = read();
+      if (existing) showBanner(existing);
+
+      const save = () => {
+        const bm: Bookmark = { top: scroller.scrollTop, pct: ratioNow() };
+        try {
+          storage.setItem(key, JSON.stringify(bm));
+        } catch {
+          /* niente */
+        }
+      };
+
+      markBtn.addEventListener('click', () => {
+        save();
+        const bm = read();
+        if (bm) {
+          showBanner(bm);
+          status.textContent = savedMsg;
+        }
+      });
+
+      resumeBtn.addEventListener('click', () => {
+        const bm = read();
+        if (!bm) return;
+        scroller.scrollTo({ top: bm.top, behavior: reduce ? 'auto' : 'smooth' });
+        scroller.focus({ preventScroll: true });
+      });
+
+      dismissBtn.addEventListener('click', () => {
+        try { storage.removeItem(key); } catch { /* niente */ }
+        hideBanner();
+        status.textContent = clearedMsg;
+      });
+
+      // Salva quando lasci la pagina, non in continuazione.
+      const onLeave = () => {
+        if (scroller.scrollTop > 0) save();
+      };
+      window.addEventListener('pagehide', onLeave);
+      document.addEventListener('astro:before-swap', onLeave);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-14"
+number: "14"
+title: "Anatomia di un divider"
+excerpt: "Una linea che separa è la decisione più piccola di una pagina, e per questo la più trascurata. Eppure scegliere fra una regola disegnata e un po’ d’aria che accade è scegliere come suona il silenzio fra due blocchi."
+date: "10 luglio 2026"
+releaseDate: "2026-07-10"
+readMinutes: 9
+tags: ["componenti", "tipografia", "layout"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import HonestRule from '../../../components/dividers/HonestRule.astro';
+import LabeledDivider from '../../../components/dividers/LabeledDivider.astro';
+import VerticalDivider from '../../../components/dividers/VerticalDivider.astro';
+import IconBreath from '../../../components/dividers/IconBreath.astro';
+import RhythmDivider from '../../../components/dividers/RhythmDivider.astro';
+
+Il divider è il componente che nessuno difende. Una linea, grigia, fra due cose: cosa c'è da progettare? Eppure è proprio la sua umiltà a renderlo interessante. Quando finiamo di parlare di toast, dialog e form — gli oggetti che chiedono attenzione — resta la domanda più quieta di tutte: come si separano due blocchi di contenuto senza dire niente? La linea è l'unico componente il cui scopo è *non* farsi notare, e farlo male è facilissimo.
+
+La domanda guida del capitolo è quasi un koan: «il silenzio nella pagina si disegna o si lascia accadere?». Perché ci sono due modi opposti di separare. Uno è *disegnare* la cesura — tracciare una riga, mettere un glifo, alzare un muro. L'altro è *lasciarla accadere* — togliere ogni segno e fidarsi dello spazio bianco, che separa benissimo da solo. Tutto il capitolo gioca su questa tensione: quanta linea serve davvero, e quanta è solo paura del vuoto.
+
+Cinque dimostrazioni, dal divider più letterale al divider come puro ritmo. E come sempre la semantica viene prima della grafica: l'HTML conosce già il separatore — l'`<hr>`, il `role="separator"` con la sua orientazione — e il nostro compito è vestirlo senza spogliarlo, non sostituirlo con un `<div>` muto perché il default è brutto.
+
+## La regola onesta
+
+Il primo è il divider nella sua forma nuda: una regola orizzontale. Il browser ne ha già una, l'`<hr>`, ma la disegna come negli anni Novanta — incassata, con margini casuali. La tentazione è buttarla via. La lezione è vestirla.
+
+<Demo title="L’<hr> curato · vestire la semantica, non sostituirla" tag="14.a">
+  <HonestRule locale="it" />
+  <div slot="note">
+    <p>A sinistra il default del browser: un border incassato, grigio, con margini che nessuno ha scelto. A destra lo stesso `<hr>` — non un `<div>` — con il border azzerato, un solo filo sottile preso da token e lo spazio attorno deciso. La differenza è tutta cosmetica, e questo è il punto: la semantica non si tocca. Lo screen reader continua ad annunciare «separatore», l'outline del documento lo capisce, la tastiera lo salta. L'errore comune è proprio rinunciare a tutto questo per un `<div class="divider">` solo perché il default è sgradevole.</p>
+    <p>C'è anche una lezione sullo spazio: una regola è fatta per metà di linea e per metà del vuoto che ci mette attorno. Margini stretti la fanno sembrare un taglio; margini generosi la fanno sembrare una pausa. Il colore non è l'unico canale — la separazione si legge dalla linea *e* dallo spazio, così regge anche per chi non distingue bene le tinte. La regola onesta non grida: si limita a esserci dove serve, e a sparire dal pensiero subito dopo.</p>
+  </div>
+</Demo>
+
+## Il divider che parla
+
+A volte la cesura deve dire una parola. «Oppure», fra due vie di accesso: entra con l'email, o continua con la passkey. La riga da sola non basta — serve un'etichetta al centro, con un filo per lato. È il divider che separa *offrendo una scelta*.
+
+<Demo title="Divider con etichetta · “oppure” fra due login" tag="14.b">
+  <LabeledDivider locale="it" />
+  <div slot="note">
+    <p>Il pattern è ovunque, e quasi sempre costruito male: tre `<div>` e una `<span>`, graficamente perfetti e semanticamente muti. Qui invece la cesura è un `role="separator"` con `aria-orientation="horizontal"` e un'etichetta accessibile, mentre le due righe ai lati sono pura decorazione — `aria-hidden`, perché la parola «oppure» basta da sola. La struttura è un flex a tre colonne: riga elastica · parola · riga elastica, così le linee si allungano da sé qualunque sia la larghezza.</p>
+    <p>La parolina al centro è un segnale, non un ornamento: dice che le due strade sono *alternative pari-grado*, non un passaggio obbligato. Per questo il divider con etichetta vive bene fra un bottone primario e un'alternativa più discreta — racconta «questa, o quella» senza mettere le due in conflitto. Toglile l'etichetta e diventa una linea qualsiasi; toglile la semantica e diventa un disegno. Tenere entrambe costa tre attributi, e li vale tutti.</p>
+  </div>
+</Demo>
+
+## Il taglio fra micro-azioni
+
+La regola finora è stata orizzontale. Ma c'è un posto dove il divider si rizza in verticale: la barra di azioni, dove pochi verbi vicini — Rispondi, Inoltra, Archivia — vogliono un filo che li separi senza allontanarli.
+
+<Demo title="Divider verticale · role=separator, aria-orientation vertical" tag="14.c">
+  <VerticalDivider locale="it" />
+  <div slot="note">
+    <p>Un separatore verticale non è un `<hr>`: quel tag nasce orizzontale. La risposta onesta è `role="separator"` con `aria-orientation="vertical"`, che lo screen reader riconosce per quello che è. Il dettaglio che si dimentica sempre è l'*inset*: il filo non arriva ai bordi della barra, ha un piccolo respiro sopra e sotto. Un filo che tocca i margini «taglia» il gruppo in due; un filo più corto lo «separa» soltanto — la stessa differenza fra una recisione e una virgola.</p>
+    <p>Anche qui la separazione è geometrica, non cromatica: la barra resta leggibile come gruppo anche se il filo scomparisse, perché lo dicono già la spaziatura e l'allineamento. Il divider verticale è il caso in cui è più forte la tentazione di esagerare — alzarlo, scurirlo, distanziarlo — e quasi sempre la versione giusta è la più timida: un filo di un pixel, con un po' d'aria ai capi, che ricorda all'occhio dove finisce un'azione e ne comincia un'altra.</p>
+  </div>
+</Demo>
+
+## Il respiro
+
+Una linea piena, a volte, è troppo netta: taglia dove vorresti solo far tirare il fiato. Qui il divider si fa più gentile — una linea spezzata da un piccolo glifo al centro, tre punti, un respiro fra due blocchi.
+
+<Demo title="Divider con icona · il glifo come pausa, non come muro" tag="14.d">
+  <IconBreath locale="it" />
+  <div slot="note">
+    <p>Tre puntini al centro di una linea interrotta: il glifo addolcisce la cesura. Dice «qui si tira il fiato» invece di «qui finisce» — la differenza fra una soglia e un muro. È il separatore giusto fra due sezioni che sono parenti, non estranee: una fine di capitolo, un cambio di scena, il punto in cui un pensiero lascia spazio al successivo. La linea piena sarebbe troppo decisa; il glifo la ammorbidisce senza cancellarla.</p>
+    <p>L'onestà sta nella distinzione fra struttura e ornamento. La cesura è un `role="separator"` vero, che chi naviga di struttura sente; ma l'icona è puro fronzolo decorativo — un glifo che non aggiunge significato — quindi `aria-hidden`. Lo screen reader percepisce la pausa, non il disegnino. E metà del lavoro non è il glifo: è lo spazio generoso sopra e sotto. Il respiro è nell'aria attorno; il puntino è solo il segno che lo invita.</p>
+  </div>
+</Demo>
+
+## Il ritmo, e il vuoto
+
+L'ultima dimostrazione porta la domanda guida al limite. Finora abbiamo *disegnato* il silenzio: linee, glifi, fili. Ma il separatore più quieto non si disegna affatto — è lo spazio bianco, che separa benissimo da solo. Quando una linea serve, e quando è solo paura del vuoto?
+
+<Demo title="Il divider come ritmo · full-bleed, prosa, e il vuoto come separatore" tag="14.e">
+  <RhythmDivider locale="it" />
+  <div slot="note">
+    <p>Lo switch alterna due ritmi della stessa linea. *Full-bleed*: la regola attraversa tutto lo stage e recide il flusso con autorità — è il taglio fra sezioni grandi. *Larghezza-prosa*: la stessa linea, ma allineata al testo e larga quanto lui, separa *dentro* la lettura senza spezzare la colonna. Stessa `<hr>`, due gesti diversi; cambia solo dove arriva la linea, e con essa quanto «vuoto» resta nella pagina — il numero a destra rende visibile quel rapporto, di solito invisibile.</p>
+    <p>Ma il blocco più importante è quello senza linea. Togli la regola, lascia solo aria fra due paragrafi, e la separazione *continua a leggersi*: l'occhio sa dove finisce un pensiero e ne comincia un altro. La linea era un'opzione, non un obbligo. È la risposta al koan — il silenzio si può disegnare, ma spesso basta lasciarlo accadere. La cesura senza segno resta un `role="separator"` per chi naviga di struttura, così l'aria che vede l'occhio è dichiarata anche a chi non la vede. E la sola animazione, la linea che si allarga, sotto `prefers-reduced-motion` collassa a un istante: stesso ritmo finale, nessun viaggio.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque modi di separare, un'unica intuizione: il divider non è una linea, è una *quantità di silenzio*, e la linea è solo uno dei modi per dosarla. La regola onesta che si veste senza tradirsi, l'etichetta che offre una scelta, il filo verticale che separa senza tagliare, il glifo che fa tirare il fiato, il vuoto che basta da solo — ognuno risponde alla stessa domanda con un volume diverso. E la risposta più ricorrente, in un playground che insegue il togliere, è che la separazione migliore spesso non si disegna: si lascia accadere. Una pagina ben spaziata ha pochissime linee, perché non ne ha bisogno.
+
+Con questo si chiude la Fase B: dagli oggetti che si toccano ai messaggi che arrivano, fino al silenzio che li tiene distanti. Il prossimo capitolo cambia scala e guarda l'insieme: *la pagina lunga* — come si tiene compagnia a chi legge per dieci minuti, fra ritmo, soste e il filo che non si deve mai spezzare.

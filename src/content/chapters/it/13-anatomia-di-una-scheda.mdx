@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-13"
+number: "13"
+title: "Anatomia di una scheda"
+excerpt: "La card sembra il componente più innocuo del web: un rettangolo con un bordo. Ma quel rettangolo deve dire in che ordine leggere, dove si clicca, quanto c'è sotto e cosa è onesto contare. Cinque card, cinque mestieri diversi nascosti nella stessa forma."
+date: "3 luglio 2026"
+releaseDate: "2026-07-03"
+readMinutes: 11
+tags: ["componenti", "layout", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import EditorialCard from '../../../components/cards/EditorialCard.astro';
+import StatCard from '../../../components/cards/StatCard.astro';
+import QuickActionCard from '../../../components/cards/QuickActionCard.astro';
+import ExpandableCard from '../../../components/cards/ExpandableCard.astro';
+import CardStack from '../../../components/cards/CardStack.astro';
+
+La card è il componente che tutti credono di saper fare. Un rettangolo, un bordo, un'ombra leggera, dentro ci metti qualcosa. Sembra il mattone più innocuo del web — e proprio per questo è quello che si sbaglia più spesso, perché la forma è così familiare da nascondere quante decisioni contiene. Una card non è un contenitore: è un *oggetto che dichiara una gerarchia*. Dice in che ordine leggere ciò che racchiude, dove finisce il bersaglio cliccabile, quanto c'è sotto la superficie, e — quando riferisce un numero — se quel numero sta dicendo la verità.
+
+La domanda che apre il capitolo è apposta ingenua: «la card è solo un rettangolo con bordo?». No. Sotto lo stesso profilo si nascondono mestieri diversi. La card editoriale ordina una lettura. La card statistica riferisce un dato senza gonfiarlo. La card-azione vuole essere tutta cliccabile senza rompere la selezione del testo. La card che si espande deve crescere dove sta, non strappare la pagina con un modal. La pila di card promette che ce n'è dell'altro, e deve mantenerlo per chi naviga da tastiera.
+
+Cinque card, cinque problemi che la forma non lascia vedere. E come sempre niente librerie: l'HTML conosce già il link, il bottone, la lista, l'immagine con la sua proporzione. Il nostro lavoro è disporli in modo che il rettangolo dica la verità su cosa contiene e come lo si tocca.
+
+## La card che ordina una lettura
+
+La prima è la più classica: immagine, occhiello, titolo, lede. Sembra solo impaginazione, ma è qui che si decide la gerarchia — e dove un dettaglio tecnico, l'immagine, può far sobbalzare tutto il resto.
+
+<Demo title="Card editoriale · gerarchia e stato derivato con :has()" tag="13.a">
+  <EditorialCard locale="it" />
+  <div slot="note">
+    <p>L'immagine non è un file: è un placeholder a gradient con <code>aspect-ratio</code> fisso. La differenza non è estetica, è di onestà verso il layout: la <em>forma</em> dell'immagine esiste prima del suo contenuto, così quando la foto vera arriverà non spingerà giù il titolo a metà lettura — niente di quel salto improvviso (il famigerato <em>layout shift</em>) che fa perdere il segno. Sopra, la gerarchia è esplicita: occhiello in maiuscoletto monospaziato, titolo che pesa, lede che spiega. L'occhio sa subito da dove partire.</p>
+    <p>Lo stato di hover è <em>derivato</em>, non incollato. Invece di legare l'effetto a «<code>:hover</code> sul titolo» o «<code>:hover</code> sull'immagine» — che si accenderebbero a pezzi — la card usa <code>:has(.link:hover)</code>: «se contieni il link su cui c'è il puntatore, illuminati come un tutt'uno». Titolo, freccia e bordo reagiscono insieme, perché è la card a essere il bersaglio, non le sue parti scollegate. E con <code>prefers-reduced-motion</code> le transizioni collassano: l'illuminazione c'è, il viaggio no.</p>
+  </div>
+</Demo>
+
+## La card che riferisce un numero
+
+Una card può anche solo dire un dato. Quando lo fa, il numero è il protagonista — e il modo in cui entra in scena è una piccola prova di onestà.
+
+<Demo title="Card statistica · count-up onesto, dati che non gonfiano" tag="13.b">
+  <StatCard locale="it" />
+  <div slot="note">
+    <p>Il numero sale da zero al valore reale quando la card entra nel viewport: una sola volta, con easing <em>out</em> — parte veloce, arriva calmo — in circa 900ms. Mai <em>in-out</em>, che sembra esitante; mai ri-animare se l'utente scrolla via e torna. Le cifre sono in <code>tabular-nums</code>: hanno tutte la stessa larghezza, così mentre salgono non sussultano e una colonna di numeri non balla. Il conteggio dà al dato un attimo di scena, non lo trasforma in spettacolo.</p>
+    <p>E i dati dicono la verità. 84% è 84%, non «99 per fare scena»; la media recensioni <em>scende</em> di un decimo, e quel calo si riferisce — col segno <code>▼</code> prima che col colore — invece di sparire. Il colore è sempre il secondo segnale, mai l'unico. Sotto <code>prefers-reduced-motion</code> il numero appare già finale: lo decide un controllo esplicito in JS su <code>matchMedia</code>, perché un loop di conteggio non si ferma da solo abbassando una durata. Stesso valore, nessun viaggio.</p>
+  </div>
+</Demo>
+
+## La card che è tutta un bersaglio
+
+Terza: la card-azione, quella di una lista di documenti o di file. Vogliamo che l'intera superficie sia cliccabile — i bersagli grandi si centrano prima — ma senza sacrificare né la selezione del testo né le piccole azioni che vivono dentro.
+
+<Demo title="Card azione rapida · stretched-link e sotto-azioni raggiungibili" tag="13.c">
+  <QuickActionCard locale="it" />
+  <div slot="note">
+    <p>La tentazione è avvolgere tutta la card in un <code>&lt;a&gt;</code>. Rompe due cose: il testo non si seleziona più, e ogni sotto-azione finisce annidata in un link — invalido e inaccessibile. La tecnica onesta è lo <em>stretched-link</em>: un <code>&lt;a&gt;</code> normale sul titolo, con un <code>::after</code> che si estende a coprire la card. Il click sul vuoto cade sul link; il testo resta selezionabile, perché l'overlay è uno pseudo-elemento, non il testo. Una card cliccabile che non ti impedisce di copiarne il nome.</p>
+    <p>Le sotto-azioni — condividi, altre opzioni — si rialzano sopra l'overlay con <code>position: relative</code> e <code>z-index</code>: stanno <em>davanti</em> al link che copre tutto, quindi restano cliccabili e raggiungibili col tab. Ognuna è un <code>&lt;button&gt;</code> vero con la sua <code>aria-label</code>, non un finto bottone. La regola: un bersaglio grande per l'azione principale, bersagli piccoli e indipendenti per le secondarie, e nessuno dei due che mangia l'altro. Niente JS: è tutto stato del browser.</p>
+  </div>
+</Demo>
+
+## La card che cresce dove sta
+
+Quarta: la card che nasconde un dettaglio e lo rivela su richiesta. La risposta pigra sarebbe un modal — ma per un «ne voglio sapere di più» il modal è troppo: strappa il contesto e chiede di essere chiuso. La card può semplicemente crescere.
+
+<Demo title="Card espandibile · cresce in place, niente modal" tag="13.d">
+  <ExpandableCard locale="it" />
+  <div slot="note">
+    <p>Il trigger è un <code>&lt;button aria-expanded&gt;</code> vero, non un <code>:checked</code> nascosto né un <code>&lt;div&gt;</code> con un listener. Lo stato è reale: lo screen reader annuncia «espanso / compresso», la tastiera funziona gratis, il pannello è collegato via <code>aria-controls</code>. La card cresce <em>dove sta</em>, spingendo giù ciò che ha sotto: l'occhio non perde mai il filo, non c'è una superficie scura che cala sulla pagina, niente da chiudere. Il dettaglio entra nel flusso, non lo interrompe.</p>
+    <p>La transizione di altezza è onesta: <code>grid-template-rows</code> che va da <code>0fr</code> a <code>1fr</code>. Il grid misura il contenuto <em>reale</em> e anima fino a lì, esatto. È la differenza con la vecchia scorciatoia della <code>max-height</code> «abbastanza grande»: quella tira a indovinire e, se il contenuto è più corto, l'animazione scatta a metà e arriva male. Sotto <code>prefers-reduced-motion</code> il pannello si apre senza crescere: la durata-token collassa, lo stato finale è lo stesso, sparisce solo il movimento.</p>
+  </div>
+</Demo>
+
+## La card che promette profondità
+
+L'ultima non è una card sola: sono tre, in pila. Una pila dice «ce n'è dell'altro sotto» — e deve dirlo all'occhio con l'ombra e al dito (o al tab) tenendo ogni carta davvero raggiungibile.
+
+<Demo title="Pila di card · profondità OKLCH e ventaglio accessibile" tag="13.e">
+  <CardStack locale="it" />
+  <div slot="note">
+    <p>La profondità la dà l'ombra, e qui l'ombra è costruita in OKLCH con <code>color-mix</code> sull'accent: una tinta calda e percettivamente uniforme, non un nero piatto che sporca. Le carte dietro sono appena più piccole e più in basso — la prospettiva dice «stanno indietro» senza nasconderle. A riposo è una pila compatta; al hover o al focus si <em>ventaglia</em>, le carte si aprono a leggio quel poco che basta a dire «sono tre, distinte». Non un mazzo che esplode: un'apertura misurata.</p>
+    <p>Il punto delicato di ogni stack è l'accessibilità. Ogni card è un <code>&lt;a&gt;</code> reale, nel flusso, in ordine di lettura: il ventaglio è solo <code>transform</code>, non tocca il tab order, così nessuna carta resta sepolta e irraggiungibile. E quando una card riceve il focus la pila si apre da sola — <code>:focus-within</code> — perché la carta a fuoco non deve restare nascosta sotto le altre. Con <code>prefers-reduced-motion</code> il ventaglio sparisce: la pila resta ferma e ordinata, e il focus si vede dal bordo, non dal movimento. Raggiungibile comunque.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque card, un'unica scoperta: il rettangolo è il meno. Quel che fa una card è dichiarare — l'ordine di lettura, il confine del bersaglio, la verità di un numero, dove va il dettaglio in più, quanto c'è sotto la superficie. La card editoriale ordina, la statistica riferisce senza gonfiare, l'azione-rapida si fa tutta cliccabile senza rubarti il testo, l'espandibile cresce invece di strappare, la pila promette profondità e la mantiene anche da tastiera. Bordo e ombra sono l'ultima cosa che si decide. Prima viene la domanda su cosa, davvero, questa scheda sta dicendo a chi la guarda.
+
+Il prossimo capitolo lascia gli oggetti che si toccano e guarda lo spazio fra di loro — il vuoto come materiale di progetto. *Il silenzio nella pagina si disegna o si lascia accadere?* Come lo spazio bianco smette di essere assenza e diventa ritmo, gerarchia, respiro.

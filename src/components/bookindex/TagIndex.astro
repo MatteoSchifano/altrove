@@ -1,0 +1,282 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   TagIndex — l’indice analitico, la pagina dietro la copertina.
+
+   In fondo a un saggio c’è l’indice analitico: ogni voce → le
+   pagine che la trattano. È l’altra metà dell’indice generale.
+   Quello in testa risponde "di cosa parla, nell’ordine"; questo in
+   coda risponde "dove si parla DI questo", saltando l’ordine.
+
+   Qui i tag fanno da voci: tutti i tag del sito, e sotto la lista
+   completa dei capitoli filtrabile. Cliccando un tag, i capitoli
+   che non lo portano si tolgono — stato puramente *locale* (un
+   data-attribute), nessuna navigazione, nessuna query alla content
+   collection. Cliccando di nuovo lo stesso tag, il filtro si toglie
+   e tornano tutti.
+
+   Onestà numerica: accanto a ogni tag il conteggio dei capitoli
+   (tabular-nums, così non sussulta), e quando un filtro è attivo
+   una riga "N di M capitoli" che riferisce, non nasconde. Niente
+   filtro che svuota la lista in silenzio lasciando credere a un bug.
+
+   Accessibilità:
+     • i tag sono <button aria-pressed> in una toolbar (sono filtri
+       a interruttore, non link a pagine);
+     • la lista filtrata è una regione live (aria-live="polite") così
+       il conteggio aggiornato viene annunciato;
+     • i capitoli esclusi sono hidden (fuori dal tab order e dallo
+       screen reader), non solo sbiaditi: il filtro deve filtrare
+       davvero, anche per chi non vede l’opacità.
+
+   Reduced motion: gli elementi che escono lo fanno senza dissolvenza
+   (durate-token → 1ms). Stessa lista finale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Entry = { number: string; title: string; tags: string[] };
+
+const COPY = {
+  it: {
+    aria: 'Filtra per tag',
+    listAria: 'Capitoli filtrati',
+    allLabel: 'Tutti i capitoli',
+    // {n}/{m} sostituiti in JS: n = mostrati, m = totale
+    countTemplate: '{n} di {m} capitoli',
+    entries: [
+      { number: '01', title: 'La pressione del bottone', tags: ['componenti', 'motion'] },
+      { number: '04', title: 'Lo stato vuoto', tags: ['editoriale', 'onestà'] },
+      { number: '09', title: 'Anatomia di un toggle', tags: ['componenti', 'accessibilità', 'motion'] },
+      { number: '14', title: 'I numeri che cambiano', tags: ['onestà', 'accessibilità'] },
+      { number: '19', title: 'L’indice del libro', tags: ['navigazione', 'editoriale', 'accessibilità'] },
+    ] as Entry[],
+  },
+  en: {
+    aria: 'Filter by tag',
+    listAria: 'Filtered chapters',
+    allLabel: 'All chapters',
+    // {n}/{m} replaced in JS: n = shown, m = total
+    countTemplate: '{n} of {m} chapters',
+    entries: [
+      { number: '01', title: 'The press of a button', tags: ['components', 'motion'] },
+      { number: '04', title: 'The empty state', tags: ['editorial', 'honesty'] },
+      { number: '09', title: 'The anatomy of a toggle', tags: ['components', 'accessibility', 'motion'] },
+      { number: '14', title: 'Numbers that change', tags: ['honesty', 'accessibility'] },
+      { number: '19', title: 'The book’s index', tags: ['navigation', 'editorial', 'accessibility'] },
+    ] as Entry[],
+  },
+} as const;
+const c = COPY[locale];
+
+// I tag, in ordine di frequenza decrescente (i più portanti per primi).
+const tagCounts = new Map<string, number>();
+for (const e of c.entries) for (const t of e.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+---
+
+<div class="tix">
+  <div class="tix__bar" role="toolbar" aria-label={c.aria}>
+    {tags.map(([tag, n]) => (
+      <button type="button" class="tix__tag" aria-pressed="false" data-tag={tag}>
+        <span class="tix__tag-name">{tag}</span>
+        <span class="tix__tag-count tabular" aria-hidden="true">{n}</span>
+      </button>
+    ))}
+  </div>
+
+  <p
+    class="tix__status"
+    data-status
+    aria-live="polite"
+    data-all={c.allLabel}
+    data-count-template={c.countTemplate}
+  >{c.allLabel}</p>
+
+  <ul class="tix__list" data-list aria-label={c.listAria}>
+    {c.entries.map((e) => (
+      <li class="tix__entry" data-tags={e.tags.join(' ')}>
+        <span class="tix__num tabular" aria-hidden="true">{e.number}</span>
+        <span class="tix__title">{e.title}</span>
+        <span class="tix__chips" aria-hidden="true">
+          {e.tags.map((t) => <span class="tix__chip" data-chip={t}>{t}</span>)}
+        </span>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .tix {
+    inline-size: min(34rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  /* ── Barra dei tag ── */
+  .tix__bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tix__tag {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-raised);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft),
+                border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .tix__tag:hover { color: var(--ink-strong); border-color: var(--ink-muted); }
+  .tix__tag:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Premuto: accent + un puntino prima del nome (segnale oltre il colore) */
+  .tix__tag[aria-pressed='true'] {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-on);
+    font-weight: var(--weight-medium);
+  }
+  .tix__tag-name { position: relative; }
+  .tix__tag[aria-pressed='true'] .tix__tag-name::before {
+    content: '✓ ';
+  }
+  .tix__tag-count {
+    font-size: var(--text-2xs);
+    opacity: 0.7;
+  }
+
+  .tix__status {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    min-block-size: 1.1em;
+  }
+
+  /* ── Lista capitoli ── */
+  .tix__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    overflow: hidden;
+  }
+  .tix__entry {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    gap: 0.2rem 0.7rem;
+    padding: var(--space-xs) var(--space-sm);
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .tix__entry + .tix__entry { border-block-start: 1px solid var(--border); }
+  /* Capitolo escluso dal filtro: hidden lo toglie dal flusso e dallo
+     screen reader. Filtrare deve filtrare davvero, non solo sbiadire. */
+  .tix__entry[hidden] { display: none; }
+
+  .tix__num {
+    font-size: var(--text-xs);
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+  }
+  .tix__title {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .tix__chips {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-block-start: 0.15rem;
+  }
+  .tix__chip {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  /* Il chip che corrisponde al tag attivo si illumina: dice perché
+     quel capitolo è rimasto nella lista. */
+  .tix__chip[data-matched] {
+    color: var(--accent-on);
+    background-color: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tix__tag, .tix__chip, .tix__entry { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.tix').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tagBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('.tix__tag'));
+      const entries = Array.from(root.querySelectorAll<HTMLElement>('.tix__entry'));
+      const status = root.querySelector<HTMLElement>('[data-status]');
+      const total = entries.length;
+
+      // Stato locale: il tag attualmente selezionato (o nessuno).
+      let active: string | null = null;
+
+      const allLabel = status?.dataset.all ?? '';
+      const countTemplate = status?.dataset.countTemplate ?? '{n} / {m}';
+
+      const render = () => {
+        let shown = 0;
+        entries.forEach((entry) => {
+          const tags = (entry.dataset.tags ?? '').split(' ');
+          const match = active === null || tags.includes(active);
+          entry.hidden = !match;
+          if (match) shown++;
+          // illumina il chip che ha causato il match
+          entry.querySelectorAll<HTMLElement>('.tix__chip').forEach((chip) => {
+            if (active !== null && chip.dataset.chip === active) chip.dataset.matched = '';
+            else delete chip.dataset.matched;
+          });
+        });
+
+        tagBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tag === active)));
+
+        if (status) {
+          status.textContent =
+            active === null
+              ? allLabel
+              : countTemplate.replace('{n}', String(shown)).replace('{m}', String(total));
+        }
+      };
+
+      tagBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag ?? null;
+          // Click sullo stesso tag → si toglie il filtro (interruttore).
+          active = active === tag ? null : tag;
+          render();
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

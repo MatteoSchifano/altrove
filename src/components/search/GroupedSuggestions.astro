@@ -1,0 +1,296 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   GroupedSuggestions — non una lista, ma una mappa.
+
+   Quando i risultati arrivano da fonti diverse — capitoli, tag,
+   persone — una lista piatta li mescola e costringe l’occhio a
+   smistarli da solo. Raggrupparli per tipo, con un’intestazione di
+   gruppo, trasforma l’elenco in una mappa: «questi sono capitoli,
+   questi tag, questi persone». L’utente capisce *dove* sta guardando
+   prima ancora di leggere le singole voci.
+
+   La regia accessibile:
+     - ogni gruppo è un <li role="group"> con aria-label = nome del
+       tipo; le voci dentro sono <li role="option"> raggruppate.
+       (Qui il contenitore è una listbox semplice, non navigabile:
+       la navigazione completa è il mestiere di ComboboxNav, 22.e.)
+     - l’intestazione di gruppo non è un option selezionabile: è un
+       cartello, non una scelta. Per questo è aria-hidden e il gruppo
+       porta l’etichetta via aria-label.
+     - i gruppi vuoti spariscono: un’intestazione senza voci sotto è
+       un cassetto vuoto che mente sulla presenza di contenuto.
+
+   Reduced motion: l’entrata dei gruppi collassa allo stato finale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Cerca ovunque',
+    placeholder: 'es. toggle, motion, anna…',
+    hint: 'I risultati si dividono per tipo: capitoli, tag, persone.',
+    empty: 'Scrivi per cercare fra capitoli, tag e persone.',
+    none: 'Nessun suggerimento per ora.',
+    groups: { chapter: 'Capitoli', tag: 'Tag', person: 'Persone' },
+    countOne: 'suggerimento',
+    countMany: 'suggerimenti',
+  },
+  en: {
+    label: 'Search everywhere',
+    placeholder: 'e.g. toggle, motion, anna…',
+    hint: 'Results split by type: chapters, tags, people.',
+    empty: 'Type to search across chapters, tags and people.',
+    none: 'No suggestions yet.',
+    groups: { chapter: 'Chapters', tag: 'Tags', person: 'People' },
+    countOne: 'suggestion',
+    countMany: 'suggestions',
+  },
+} as const;
+const c = COPY[locale];
+
+/* Pool statico con tipo. L’ordine dei gruppi è fisso (capitoli,
+   tag, persone): la gerarchia non deve ballare a ogni query. */
+const DATA = [
+  { type: 'chapter', text: 'Anatomia di un toggle' },
+  { type: 'chapter', text: 'La ricerca as-you-type' },
+  { type: 'chapter', text: 'Lo scroll che racconta' },
+  { type: 'chapter', text: 'I numeri che non sussultano' },
+  { type: 'tag', text: 'toggle' },
+  { type: 'tag', text: 'motion' },
+  { type: 'tag', text: 'accessibilità' },
+  { type: 'tag', text: 'interazione' },
+  { type: 'person', text: 'Anna Bianchi' },
+  { type: 'person', text: 'Marco Anatra' },
+  { type: 'person', text: 'Giulia Motta' },
+] as const;
+---
+
+<div class="grp">
+  <label class="grp__label" for="grp-input">{c.label}</label>
+  <input
+    id="grp-input"
+    class="grp__input"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder={c.placeholder}
+    aria-describedby="grp-hint"
+    aria-controls="grp-listbox"
+  />
+  <p class="grp__hint" id="grp-hint">{c.hint}</p>
+
+  <p class="grp__status" role="status" aria-live="polite">{c.empty}</p>
+
+  <ul
+    id="grp-listbox"
+    class="grp__listbox"
+    role="listbox"
+    aria-label={c.label}
+    data-empty={c.empty}
+    data-none={c.none}
+    data-one={c.countOne}
+    data-many={c.countMany}
+    data-pool={JSON.stringify(DATA)}
+    data-groups={JSON.stringify(c.groups)}
+    data-order={JSON.stringify(['chapter', 'tag', 'person'])}
+  >
+  </ul>
+</div>
+
+<style>
+  .grp {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .grp__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .grp__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .grp__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .grp__input:hover { border-color: var(--border-strong); }
+  .grp__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .grp__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .grp__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .grp__listbox {
+    list-style: none;
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .grp__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    animation: grp-enter var(--dur-normal) var(--ease-out-soft) both;
+  }
+  @keyframes grp-enter {
+    from { opacity: 0; transform: translateY(0.3rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .grp__heading {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    padding-inline: 0.2rem;
+    margin-block-start: 0.2rem;
+  }
+
+  .grp__options {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .grp__option {
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grp__group { animation: none; }
+  }
+</style>
+
+<script>
+  type Row = { type: string; text: string };
+  type Groups = Record<string, string>;
+
+  const fold = (s: string) =>
+    s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.grp').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('.grp__input');
+      const status = root.querySelector<HTMLElement>('.grp__status');
+      const box = root.querySelector<HTMLUListElement>('.grp__listbox');
+      if (!input || !box || !status) return;
+
+      let pool: Row[] = [];
+      let groups: Groups = {};
+      let order: string[] = [];
+      try { pool = JSON.parse(box.dataset.pool ?? '[]'); } catch { pool = []; }
+      try { groups = JSON.parse(box.dataset.groups ?? '{}'); } catch { groups = {}; }
+      try { order = JSON.parse(box.dataset.order ?? '[]'); } catch { order = []; }
+
+      const tEmpty = box.dataset.empty ?? '';
+      const tNone = box.dataset.none ?? '';
+      const tOne = box.dataset.one ?? '';
+      const tMany = box.dataset.many ?? '';
+
+      const render = () => {
+        const q = input.value.trim();
+        box.replaceChildren();
+
+        if (q === '') {
+          status.textContent = tEmpty;
+          return;
+        }
+
+        const needle = fold(q);
+        const hits = pool.filter((r) => fold(r.text).includes(needle));
+
+        if (hits.length === 0) {
+          status.textContent = tNone;
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        let total = 0;
+        // Ordine dei gruppi fisso; i gruppi vuoti non si disegnano.
+        for (const type of order) {
+          const rows = hits.filter((r) => r.type === type);
+          if (rows.length === 0) continue;
+
+          const group = document.createElement('li');
+          group.className = 'grp__group';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-label', groups[type] ?? type);
+
+          const heading = document.createElement('span');
+          heading.className = 'grp__heading';
+          heading.setAttribute('aria-hidden', 'true'); // è un cartello, non una scelta
+          heading.textContent = groups[type] ?? type;
+          group.appendChild(heading);
+
+          const ul = document.createElement('ul');
+          ul.className = 'grp__options';
+          for (const r of rows) {
+            const opt = document.createElement('li');
+            opt.className = 'grp__option';
+            opt.setAttribute('role', 'option');
+            opt.textContent = r.text;
+            ul.appendChild(opt);
+            total++;
+          }
+          group.appendChild(ul);
+          frag.appendChild(group);
+        }
+        box.appendChild(frag);
+
+        const noun = total === 1 ? tOne : tMany;
+        status.textContent = `${total} ${noun}`;
+      };
+
+      input.addEventListener('input', render);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-15"
+number: "15"
+title: "La pagina lunga"
+excerpt: "Dieci minuti di lettura sono un piccolo viaggio: chi parte vuole sapere dove si trova, quanto manca, e ritrovare il punto se si allontana. Sono i dettagli che tengono compagnia senza mettersi davanti al testo."
+date: "17 luglio 2026"
+releaseDate: "2026-07-17"
+readMinutes: 12
+tags: ["editoriale", "scroll", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import StickyToc from '../../../components/longform/StickyToc.astro';
+import ReadingProgressBar from '../../../components/longform/ReadingProgressBar.astro';
+import FootnotePopover from '../../../components/longform/FootnotePopover.astro';
+import BackToTop from '../../../components/longform/BackToTop.astro';
+import ReadingBookmark from '../../../components/longform/ReadingBookmark.astro';
+
+Il capitolo scorso parlava di componenti che si toccano una volta e finiscono. Questo cambia la scala del tempo: non un gesto da un secondo, ma una lettura da dieci minuti. La domanda diventa diversa — non «come rispondo a un click?», ma «come si tiene compagnia a chi legge per dieci minuti?». Una pagina lunga è un piccolo viaggio, e chi viaggia ha bisogni semplici: sapere dove si trova, quanto manca, ritrovare il punto se si allontana, leggere un inciso senza perdere il filo.
+
+Sono bisogni umili, e per questo facili da trascurare. Quasi tutto il playground rincorre micro-interazioni che durano un battito; qui i dettagli devono *durare*, accompagnare senza stancare, restare utili al primo come al nono minuto. È un tipo di onestà particolare: il rischio non è mentire su uno stato, è fingere progresso, celebrare un traguardo che il lettore non ha ancora raggiunto, rubargli il controllo dello scroll «per aiutarlo».
+
+Cinque dettagli, cinque compagni di lettura. E come sempre niente librerie: il browser conosce già lo scroll-spy con l'IntersectionObserver, le timeline di scroll in CSS, la Popover API, l'ancoraggio, il localStorage. Il nostro lavoro è solo orchestrarli con misura — perché il protagonista resti il testo, e i dettagli sappiano stare un passo indietro.
+
+## L'indice che dice «sei qui»
+
+Il primo compagno è una mappa. In una pagina lunga il lettore perde facilmente il senso di dove si trova: un indice sticky glielo restituisce, e si aggiorna da solo mentre si scorre.
+
+<Demo title="Indice sticky · la sezione corrente si evidenzia da sola" tag="15.a">
+  <StickyToc locale="it" />
+  <div slot="note">
+    <p>Scorri l'articolo a destra e guarda l'indice a sinistra: la voce attiva cambia da sola. Ma la scelta del «cosa è attivo» non è banale — non è la sezione più in alto, è quella che stai <em>davvero</em> leggendo. Un IntersectionObserver con un rootMargin che alza la riga di lettura al 35% dal bordo decide quale sezione occupa lo sguardo, e l'evidenziazione si sposta quando l'occhio è già lì, non un attimo prima. È scroll-spy fatto sul compositor, non un listener che rimisura tutto a ogni frame.</p>
+    <p>L'indice è una vera <code>&lt;nav&gt;</code> con una lista di link in-page, e la voce attiva porta <code>aria-current="location"</code>: lo screen reader annuncia «posizione corrente», il colore è il secondo segnale, non il primo. Il click scorre alla sezione in modo fluido — ma sotto <code>prefers-reduced-motion</code> diventa un salto netto, perché lo smooth-scroll è motion a tutti gli effetti. E quando il viewport si stringe l'indice sparisce: su schermo piccolo lo spazio va al contenuto, non a un sommario che ruba colonne.</p>
+  </div>
+</Demo>
+
+## La barra che dice «quanto manca»
+
+Secondo compagno: l'avanzamento. Una barra sottile in cima risponde alla domanda più frequente di una lettura lunga — quanto resta? — e la risposta migliore è scolpita nel CSS, non calcolata a mano.
+
+<Demo title="Barra di lettura · animation-timeline: scroll() con fallback" tag="15.b">
+  <ReadingProgressBar locale="it" />
+  <div slot="note">
+    <p>Il riempimento della barra è legato allo scroll del contenitore con <code>animation-timeline: scroll()</code>: una timeline di scroll in CSS puro, zero JavaScript per il movimento. Gira sul compositor, e questo cambia tutto — non sussulta, non perde un colpo mentre l'occhio corre, non occupa il main thread. Un <code>@supports (animation-timeline: scroll())</code> apre il percorso nativo; dove ancora manca, un piccolo script col <code>scroll</code> event passivo spinge la stessa barra. Stesso risultato, due strade, e la nativa vince sempre.</p>
+    <p>Il numero percentuale, invece, lo aggiorna il JavaScript, perché il CSS anima la larghezza e non il testo — e usa cifre tabulari, così passando da 9 a 10 la riga non sobbalza. Sotto <code>prefers-reduced-motion</code> non c'è nulla da togliere: questa non è un'animazione temporale, è una mappatura di posizione. Ridurre il movimento non significa nascondere informazione, e la barra resta legata allo scroll esattamente come prima. È la distinzione che il capitolo 02 ripeteva: si toglie il <em>percorso</em>, mai lo <em>stato</em>.</p>
+  </div>
+</Demo>
+
+## La nota che non ti sposta
+
+Terzo compagno: l'inciso. La nota a piè di pagina è una grande invenzione editoriale, ma sullo schermo ha un difetto antico — il salto. Clicchi, finisci in fondo, perdi il punto. Un popover ancorato lo risolve alla radice.
+
+<Demo title="Nota a piè di pagina · Popover API + CSS Anchor Positioning" tag="15.c">
+  <FootnotePopover locale="it" />
+  <div slot="note">
+    <p>Il numerino del richiamo apre una nota lì dove stai leggendo, ancorata al richiamo stesso. Sotto la pelle ci sono due API native che fanno il lavoro pesante: la <strong>Popover API</strong> (<code>popovertarget</code> + <code>popover="auto"</code>) gestisce top layer, light-dismiss e <kbd>Esc</kbd> senza una riga di codice; il <strong>CSS Anchor Positioning</strong> incolla il popover al numero con <code>position-anchor</code> e si gira da solo verso lo spazio libero con <code>position-try-fallbacks</code>. Niente trappola del focus fatta a mano, niente libreria di tooltip.</p>
+    <p>Il richiamo è un <code>&lt;sup&gt;</code> con dentro un vero <code>&lt;button&gt;</code>: la tastiera ci arriva con Tab, lo screen reader lo annuncia come pulsante, e il popover ha <code>role="note"</code>. La cura in più che aggiungiamo a mano è il <em>focus restore</em>: quando la nota si chiude — con la X, con <kbd>Esc</kbd>, o cliccando fuori — il focus torna al richiamo che l'aveva aperta, così la tastiera non resta orfana in cima alla pagina. È la differenza fra un componente che funziona e uno che si lascia usare anche a occhi chiusi.</p>
+  </div>
+</Demo>
+
+## Il pulsante che compare solo se serve
+
+Quarto compagno: la scorciatoia di ritorno. In cima alla pagina un «torna su» è inutile — sei già su. Per questo non deve esserci all'inizio: deve comparire solo quando tornare in cima è diventato un viaggio.
+
+<Demo title="Torna su · appare dopo una soglia di scroll" tag="15.d">
+  <BackToTop locale="it" />
+  <div slot="note">
+    <p>Scorri verso il basso dentro la finestra: all'inizio, in basso a destra, non c'è niente. Il pulsante appare solo dopo il 35% di scroll, la soglia oltre la quale risalire smette di essere una scrollata e diventa un tragitto. Comparire prima sarebbe rumore — un pulsante che dice l'ovvio; comparire dopo è un servizio. E l'apparizione rispetta la legge del capitolo 01: entra in posizione in circa 220 ms, e quando risali sopra la soglia se ne va <em>più in fretta</em> di come è arrivato, perché le cose escono di scena più rapide di come entrano.</p>
+    <p>È un vero <code>&lt;button&gt;</code> con etichetta accessibile, e quando è invisibile viene tolto dal flusso con <code>hidden</code>: così non lo incontri con Tab quando non serve, e ricompare nella tab-order solo da visibile. Il click riporta in cima con scroll fluido — salto netto, di nuovo, sotto <code>prefers-reduced-motion</code> — e poi sposta il focus sul contenuto, non su un pulsante che sta già sparendo. Tutto dentro un finto contenitore scrollabile, perché la demo non muova la pagina vera: il «torna su» onesto è quello che ha davvero una pagina da cui valga la pena tornare.</p>
+  </div>
+</Demo>
+
+## Il segnaposto che non finge progresso
+
+L'ultimo compagno è il più delicato sul piano dell'onestà. Chi legge dieci minuti a volte se ne va e torna: un segnaposto gli restituisce il punto. Ma deve restituire una *posizione*, non spacciare un *progresso*.
+
+<Demo title="Segnaposto · salva in localStorage, onesto su dove sei rimasto" tag="15.e">
+  <ReadingBookmark locale="it" />
+  <div slot="note">
+    <p>Scorri un po', premi «Metti il segnaposto qui»: il browser ricorda in <code>localStorage</code> l'altezza esatta a cui eri — non in continuazione, ma quando lo decidi tu o quando lasci la pagina. Alla riapertura non riparte da solo: comparirebbe arrogante, ti scippa lo scroll. Ti <em>offre</em> di riprendere, con un banner che dice «ti eri fermato qui, circa al N%», e lascia a te la scelta fra tornarci e ricominciare. Il ripristino è uno scroll fluido, salto netto sotto reduced motion.</p>
+    <p>Qui l'onestà è tutta nella differenza fra <strong>posizione</strong> e <strong>progresso</strong>. Una barra dice «quanto manca»; un segnaposto dice «dove sei rimasto» — il primo è una misura, il secondo è una memoria. Per questo non scrive mai «67% completato» come se avessi <em>capito</em> quel 67%: mostra dove eri, non un voto di avanzamento. È un nastro fra le pagine, non una pagella. E quando il browser nega la memoria — modalità privata, storage pieno, permessi negati — il componente lo dichiara con franchezza invece di fingere: un segnaposto che mente sarebbe peggio di nessun segnaposto.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque compagni, un'unica disciplina: accompagnare senza mettersi davanti. L'indice che dice «sei qui», la barra che dice «quanto manca», la nota che non ti sposta, il pulsante che compare solo se serve, il segnaposto che ricorda dove eri senza fingere quanto hai capito. Nessuno di loro è il protagonista — il protagonista è il testo, e dieci minuti di attenzione che merita rispetto. Tenere compagnia a chi legge a lungo non è riempire i margini di gadget: è togliere ogni piccolo attrito del «dove sono, quanto manca, come torno» così in silenzio che il lettore non se ne accorge, e può restare *altrove* con la mente, dentro le parole.
+
+Il prossimo capitolo resta sulla pagina lunga ma cambia sguardo: dall'accompagnare il lettore al *comporre* lo spazio in cui si muove. *La griglia editoriale* — cosa rende una pagina elegante prima ancora di essere bella?

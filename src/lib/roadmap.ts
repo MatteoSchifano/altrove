@@ -156,7 +156,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '10',
     translationKey: 'chapter-10',
     phase: 'B',
-    status: 'next',
+    status: 'published',
     title: { it: 'Anatomia di un toast', en: 'The anatomy of a toast' },
     question: {
       it: 'Come si dà un’informazione senza interrompere?',
@@ -168,7 +168,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '11',
     translationKey: 'chapter-11',
     phase: 'B',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Anatomia di un menu', en: 'The anatomy of a menu' },
     question: {
       it: 'Come si offre una scelta senza nascondere il contesto?',
@@ -180,7 +180,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '12',
     translationKey: 'chapter-12',
     phase: 'B',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Anatomia di una tab', en: 'The anatomy of a tab' },
     question: {
       it: 'Come si cambia contesto senza disorientare?',
@@ -192,7 +192,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '13',
     translationKey: 'chapter-13',
     phase: 'B',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Anatomia di una scheda', en: 'The anatomy of a card' },
     question: {
       it: 'La card è solo un rettangolo con bordo?',
@@ -204,7 +204,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '14',
     translationKey: 'chapter-14',
     phase: 'B',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Anatomia di un divider', en: 'The anatomy of a divider' },
     question: {
       it: 'Il silenzio nella pagina si disegna o si lascia accadere?',
@@ -218,7 +218,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '15',
     translationKey: 'chapter-15',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La pagina lunga', en: 'The long page' },
     question: {
       it: 'Come si tiene compagnia a chi legge per dieci minuti?',
@@ -230,7 +230,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '16',
     translationKey: 'chapter-16',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La griglia editoriale', en: 'The editorial grid' },
     question: {
       it: 'Cosa rende una pagina elegante prima ancora di essere bella?',
@@ -242,7 +242,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '17',
     translationKey: 'chapter-17',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La citazione', en: 'The quotation' },
     question: {
       it: 'Quando si dà la parola a qualcun altro, come la si presenta?',
@@ -254,7 +254,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '18',
     translationKey: 'chapter-18',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La nota a margine', en: 'The side note' },
     question: {
       it: 'Come si dialoga col proprio lettore senza interrompere il filo?',
@@ -266,7 +266,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '19',
     translationKey: 'chapter-19',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'L’indice del libro', en: 'The book’s index' },
     question: {
       it: 'Un sito che parla di sé, come si orienta al suo interno?',
@@ -278,7 +278,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '20',
     translationKey: 'chapter-20',
     phase: 'C',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Le immagini in editoria', en: 'Images in editorial design' },
     question: {
       it: 'Quando un’immagine è informazione e quando è respiro?',
@@ -292,7 +292,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '21',
     translationKey: 'chapter-21',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Il drag e il drop', en: 'Drag and drop' },
     question: {
       it: 'Come si tiene un oggetto in volo?',
@@ -304,7 +304,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '22',
     translationKey: 'chapter-22',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La ricerca tipo-as-you-go', en: 'Type-as-you-go search' },
     question: {
       it: 'Cosa succede tra ogni tasto premuto?',
@@ -316,7 +316,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '23',
     translationKey: 'chapter-23',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Il calendario', en: 'The calendar' },
     question: {
       it: 'Come si chiede una data senza odiare il browser?',
@@ -328,7 +328,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '24',
     translationKey: 'chapter-24',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'La timeline', en: 'The timeline' },
     question: {
       it: 'Il tempo come oggetto visuale, non come tabella.',
@@ -340,7 +340,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '25',
     translationKey: 'chapter-25',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Il gesto', en: 'The gesture' },
     question: {
       it: 'Cosa cambia quando l’interfaccia si tocca, invece di cliccarla?',
@@ -352,7 +352,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '26',
     translationKey: 'chapter-26',
     phase: 'D',
-    status: 'planned',
+    status: 'published',
     title: { it: 'Il commiato', en: 'The farewell' },
     question: {
       it: 'Come si lascia andare un utente?',
@@ -391,16 +391,17 @@ export function mergeWithCollection(
     byKey.set(c.data.translationKey, c);
   }
 
-  return ROADMAP.map((entry) => {
+  const merged = ROADMAP.map((entry) => {
     if (entry.status !== 'published') {
       return { ...entry, href: null, slug: null };
     }
     const found = byKey.get(entry.translationKey);
     if (!found) {
-      // Pubblicato secondo la roadmap ma manca l'MDX nella locale:
-      // degrada a "planned" per coerenza con quel che l'utente vede.
-      // Capita in due casi: (a) traduzione assente in una locale,
-      // (b) il branch corrente è ancora dietro al merge del capitolo.
+      // Pubblicato secondo la roadmap ma l'MDX non è (ancora) visibile in
+      // questa locale. Due cause: (a) traduzione assente, oppure (b) — il
+      // caso ordinario ora — il capitolo non ha ancora passato la sua
+      // porta di rilascio in produzione. Degrada a "planned": niente link,
+      // appare come tappa futura del percorso.
       return { ...entry, status: 'planned' as const, href: null, slug: null };
     }
     const slug = found.id.startsWith(`${locale}/`)
@@ -413,4 +414,12 @@ export function mergeWithCollection(
       readMinutes: found.data.readMinutes,
     };
   }).sort((a, b) => Number(a.number) - Number(b.number));
+
+  // Il primo capitolo non ancora rilasciato è il "prossimo": prende il
+  // pulse nella roadmap. In dev sono tutti pubblicati, quindi non c'è un
+  // "prossimo" — si vede già tutto, ed è giusto così.
+  const next = merged.find((e) => e.status === 'planned');
+  if (next) next.status = 'next';
+
+  return merged;
 }

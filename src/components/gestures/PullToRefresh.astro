@@ -1,0 +1,281 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PullToRefresh — il gesto contenuto, mai padrone della pagina.
+
+   Dentro un contenitore scrollabile: quando si è già in cima e si
+   tira ancora verso il basso, compare un indicatore che segue il
+   dito con resistenza; superata la soglia e al rilascio, parte
+   l’aggiornamento. È il gesto mobile classico — ma qui sta DENTRO
+   il suo riquadro.
+
+   Il punto delicato è il contenimento. `overscroll-behavior: contain`
+   impedisce che lo scroll del contenitore "trabocchi" e trascini la
+   pagina (niente bounce di pagina, niente pull-to-refresh del
+   browser). E il gesto JS si attiva *solo* quando lo scrollTop è 0:
+   appena c’è contenuto sopra, il pull torna a essere normale scroll.
+   Non aggiungiamo MAI handler globali sullo scroll della pagina.
+
+   Onestà: il pull è un acceleratore. Il pulsante "Aggiorna" fa la
+   stessa identica cosa, da tastiera, senza dover sapere che esiste
+   il gesto. Lo spinner non scende mai sotto la soglia del pudore
+   (mostriamo lo stato "in aggiornamento" finché il lavoro finto è in
+   corso, poi un riepilogo onesto).
+
+   Reduced motion: l’indicatore non ruota (animazione disabilitata);
+   il ritorno elastico collassa via token. Il gesto continua a
+   funzionare, sparisce solo il giro decorativo.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    refresh: 'Aggiorna',
+    pull: 'Tira giù per aggiornare',
+    release: 'Rilascia per aggiornare',
+    loading: 'Aggiornamento…',
+    items: ['Bozza salvata', 'Nuovo commento', 'Capitolo pubblicato', 'Menzione ricevuta', 'Backup completato'],
+    fresh: 'Aggiornato ora',
+    hint: 'Tira giù dall’alto della lista — oppure premi Aggiorna. Il gesto resta dentro il riquadro.',
+  },
+  en: {
+    refresh: 'Refresh',
+    pull: 'Pull down to refresh',
+    release: 'Release to refresh',
+    loading: 'Refreshing…',
+    items: ['Draft saved', 'New comment', 'Chapter published', 'Mention received', 'Backup completed'],
+    fresh: 'Updated just now',
+    hint: 'Pull from the top of the list — or press Refresh. The gesture stays inside the frame.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="ptr">
+  <header class="ptr__bar">
+    <span class="ptr__updated tabular" aria-live="polite">{c.fresh}</span>
+    <button type="button" class="ptr__refresh" data-action="refresh">{c.refresh}</button>
+  </header>
+
+  <div class="ptr__scroll" data-state="idle">
+    <div class="ptr__gauge" aria-hidden="true">
+      <svg class="ptr__spinner" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="44" stroke-dashoffset="14" />
+      </svg>
+      <span class="ptr__gauge-label" data-pull={c.pull} data-release={c.release} data-loading={c.loading}>{c.pull}</span>
+    </div>
+    <ul class="ptr__list">
+      {c.items.map((it) => <li class="ptr__item">{it}</li>)}
+    </ul>
+  </div>
+
+  <p class="ptr__hint">{c.hint}</p>
+</div>
+
+<style>
+  .ptr {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    overflow: hidden;
+  }
+
+  .ptr__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-2xs) var(--space-sm);
+    border-block-end: 1px solid var(--border);
+  }
+  .ptr__updated { font-size: var(--text-2xs); color: var(--ink-subtle); }
+
+  .ptr__refresh {
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .ptr__refresh:hover { background-color: var(--surface-sunken); }
+  .ptr__refresh:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .ptr__scroll {
+    position: relative;
+    block-size: 11rem;
+    overflow-y: auto;
+    /* il cuore del contenimento: lo scroll non trabocca sulla pagina */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    /* --pull: distanza tirata oltre il top (px), guidata dal dito */
+    padding-block-start: calc(var(--pull, 0px));
+  }
+  .ptr__scroll:not([data-dragging]) {
+    transition: padding-block-start var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .ptr__gauge {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 0;
+    margin-block-start: calc(var(--pull, 0px) * -1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: var(--ink-muted);
+    font-size: var(--text-2xs);
+    pointer-events: none;
+  }
+  .ptr__spinner { inline-size: 1.1rem; block-size: 1.1rem; max-inline-size: none; }
+
+  /* In aggiornamento: lo spinner gira; l’indicatore resta visibile sopra */
+  .ptr__scroll[data-state='loading'] { padding-block-start: 2.4rem; }
+  .ptr__scroll[data-state='loading'] .ptr__gauge { margin-block-start: -2.4rem; }
+  .ptr__scroll[data-state='loading'] .ptr__spinner { animation: ptr-spin 720ms linear infinite; }
+  @keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+  .ptr__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .ptr__item {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--ink);
+    border-block-end: 1px solid var(--border);
+  }
+  .ptr__item:last-child { border-block-end: 0; }
+
+  .ptr__hint {
+    margin: 0;
+    padding: var(--space-2xs) var(--space-sm) var(--space-xs);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+    border-block-start: 1px solid var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ptr__scroll[data-state='loading'] .ptr__spinner { animation: none; }
+  }
+</style>
+
+<script>
+  const THRESHOLD = 64; // px di pull oltre cui l’azione si arma
+  const MAX_PULL = 96;  // tetto visivo della resistenza
+  const WORK_MS = 900;  // durata del finto aggiornamento (sopra la soglia del pudore)
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ptr').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const scroll = root.querySelector<HTMLElement>('.ptr__scroll');
+      const label = root.querySelector<HTMLElement>('.ptr__gauge-label');
+      const updated = root.querySelector<HTMLElement>('.ptr__updated');
+      const refreshBtn = root.querySelector<HTMLButtonElement>('[data-action="refresh"]');
+      if (!scroll || !label || !updated || !refreshBtn) return;
+
+      const txtPull = label.dataset.pull ?? '';
+      const txtRelease = label.dataset.release ?? '';
+      const txtLoading = label.dataset.loading ?? '';
+      const freshText = updated.textContent ?? '';
+
+      let dragging = false;
+      let startY = 0;
+      let pull = 0;
+      let pointerId: number | null = null;
+      let armed = false;
+
+      const setPull = (v: number) => {
+        pull = v;
+        scroll.style.setProperty('--pull', `${v}px`);
+        const nowArmed = v >= THRESHOLD;
+        if (nowArmed !== armed) {
+          armed = nowArmed;
+          label.textContent = armed ? txtRelease : txtPull;
+        }
+      };
+
+      const finishRefresh = () => {
+        scroll.dataset.state = 'idle';
+        scroll.style.setProperty('--pull', '0px');
+        label.textContent = txtPull;
+        // riepilogo onesto: "aggiornato ora", niente numeri gonfiati
+        updated.textContent = freshText;
+      };
+
+      const startRefresh = () => {
+        if (scroll.dataset.state === 'loading') return;
+        scroll.dataset.state = 'loading';
+        label.textContent = txtLoading;
+        window.setTimeout(finishRefresh, WORK_MS);
+      };
+
+      // ── Gesto: attivo SOLO quando si è già in cima ──
+      const onDown = (e: PointerEvent) => {
+        if (scroll.scrollTop > 0) return;        // c’è contenuto sopra → scroll normale
+        if (scroll.dataset.state === 'loading') return;
+        dragging = true;
+        pointerId = e.pointerId;
+        startY = e.clientY;
+        armed = false;
+      };
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        // se nel frattempo si è scrollato giù, abbandona il pull
+        if (scroll.scrollTop > 0) { onUp(e); return; }
+        const raw = e.clientY - startY;
+        if (raw <= 0) { setPull(0); return; } // verso l’alto → lo scroll normale lavora
+        // resistenza: oltre la soglia, smorza con radice quadrata, con tetto
+        const resisted = raw <= THRESHOLD ? raw : THRESHOLD + Math.sqrt(raw - THRESHOLD) * 5;
+        if (!scroll.dataset.dragging) scroll.dataset.dragging = '';
+        if (scroll.hasPointerCapture?.(e.pointerId) === false) scroll.setPointerCapture(e.pointerId);
+        setPull(Math.min(resisted, MAX_PULL));
+      };
+
+      const onUp = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        dragging = false;
+        pointerId = null;
+        delete scroll.dataset.dragging;
+        if (scroll.hasPointerCapture?.(e.pointerId)) scroll.releasePointerCapture(e.pointerId);
+        if (pull >= THRESHOLD) {
+          startRefresh();
+        } else {
+          scroll.style.setProperty('--pull', '0px'); // insufficiente → torna su
+          label.textContent = txtPull;
+        }
+        pull = 0;
+      };
+
+      scroll.addEventListener('pointerdown', onDown);
+      scroll.addEventListener('pointermove', onMove);
+      scroll.addEventListener('pointerup', onUp);
+      scroll.addEventListener('pointercancel', onUp);
+
+      // ── Equivalente esplicito ──
+      refreshBtn.addEventListener('click', startRefresh);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

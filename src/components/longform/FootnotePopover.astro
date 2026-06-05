@@ -1,0 +1,300 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FootnotePopover — la nota che non ti manda in fondo alla pagina.
+
+   La nota a piè di pagina classica spezza la lettura: clicchi,
+   salti in fondo, perdi il punto, devi tornare. Una nota inline
+   che apre un popover ancorato al richiamo risolve il problema
+   alla radice — leggi l’inciso lì dove ti è venuto il dubbio, e
+   richiudi senza aver mai lasciato il paragrafo.
+
+   Costruita su due API native: Popover API (popovertarget +
+   popover="auto") per l’apertura/chiusura "light dismiss" e la
+   gestione del top layer, e CSS Anchor Positioning per ancorare
+   il popover al numero del richiamo. Esc chiude (gratis con
+   popover=auto), e al click di chiusura il focus torna al
+   richiamo che l’aveva aperta. Il numero del richiamo resta un
+   vero <sup> con <button>: tastiera e screen reader inclusi.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    title: 'Una nota che non ti sposta',
+    label1: 'Apri nota 1',
+    label2: 'Apri nota 2',
+    closeLabel: 'Chiudi nota',
+    noteHeading: 'Nota',
+    body: [
+      { pre: 'La nota a piè di pagina è una grande invenzione editoriale, ma sullo schermo ha un difetto: il salto. Premi il numero', post: 'e finisci in fondo, lontano dal punto in cui leggevi.' },
+      { pre: 'Un popover ancorato tiene la nota lì, accanto al richiamo. Leggi l’inciso, premi Esc, e il paragrafo non si è mai mosso.', post: 'È la stessa idea di sempre, vestita di un’interazione più gentile.' },
+    ],
+    notes: [
+      'Il richiamo è un <sup> con dentro un <button>: la tastiera ci arriva con Tab, lo screen reader lo annuncia come pulsante. La grafica minuscola non toglie semantica.',
+      'Popover API e CSS Anchor Positioning fanno il lavoro pesante: top layer, light dismiss, Esc e ancoraggio al numero. Niente libreria, niente trappola del focus fatta a mano.',
+    ],
+  },
+  en: {
+    title: 'A note that doesn’t move you',
+    label1: 'Open note 1',
+    label2: 'Open note 2',
+    closeLabel: 'Close note',
+    noteHeading: 'Note',
+    body: [
+      { pre: 'The footnote is a great editorial invention, but on screen it has a flaw: the jump. Press the number', post: 'and you land at the bottom, far from where you were reading.' },
+      { pre: 'An anchored popover keeps the note right there, beside the reference. Read the aside, press Esc, and the paragraph never moved.', post: 'It’s the same old idea, dressed in a gentler interaction.' },
+    ],
+    notes: [
+      'The reference is a <sup> wrapping a <button>: the keyboard reaches it with Tab, a screen reader announces it as a button. The tiny graphic takes nothing from the semantics.',
+      'Popover API and CSS Anchor Positioning do the heavy lifting: top layer, light dismiss, Esc and anchoring to the number. No library, no hand-rolled focus trap.',
+    ],
+  },
+} as const;
+
+const c = COPY[locale];
+const ids = ['fnp-note-1', 'fnp-note-2'];
+const anchors = ['--fnp-anchor-1', '--fnp-anchor-2'];
+---
+
+<div class="fnp">
+  <article class="fnp__article">
+    <h4>{c.title}</h4>
+
+    <p>
+      {c.body[0].pre}
+      <sup class="fnp__ref">
+        <button
+          type="button"
+          class="fnp__call"
+          popovertarget={ids[0]}
+          aria-label={c.label1}
+          style={`anchor-name: ${anchors[0]};`}
+        >1</button>
+      </sup>
+      {c.body[0].post}
+    </p>
+
+    <p>
+      {c.body[1].pre}
+      <sup class="fnp__ref">
+        <button
+          type="button"
+          class="fnp__call"
+          popovertarget={ids[1]}
+          aria-label={c.label2}
+          style={`anchor-name: ${anchors[1]};`}
+        >2</button>
+      </sup>
+      {c.body[1].post}
+    </p>
+  </article>
+
+  {c.notes.map((text, i) => (
+    <div
+      id={ids[i]}
+      class="fnp__pop"
+      popover="auto"
+      role="note"
+      style={`position-anchor: ${anchors[i]};`}
+    >
+      <div class="fnp__pop-head">
+        <span class="fnp__pop-num tabular">{c.noteHeading} {i + 1}</span>
+        <button
+          type="button"
+          class="fnp__close"
+          popovertarget={ids[i]}
+          popovertargetaction="hide"
+          aria-label={c.closeLabel}
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
+          </svg>
+        </button>
+      </div>
+      <p class="fnp__pop-body">{text}</p>
+    </div>
+  ))}
+</div>
+
+<style>
+  .fnp {
+    inline-size: min(32rem, 100%);
+  }
+
+  .fnp__article {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    max-inline-size: 42ch;
+    margin-inline: auto;
+  }
+  .fnp__article h4 {
+    margin: 0 0 var(--space-sm);
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .fnp__article p {
+    margin: 0 0 var(--space-md);
+  }
+
+  .fnp__ref {
+    line-height: 0;
+  }
+  .fnp__call {
+    font: inherit;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border: 1px solid transparent;
+    border-radius: var(--radius-xs);
+    padding: 0.05em 0.35em;
+    margin-inline: 0.1em;
+    cursor: pointer;
+    vertical-align: super;
+    line-height: 1;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fnp__call:hover {
+    background-color: color-mix(in oklab, var(--accent-soft), var(--accent) 25%);
+  }
+  .fnp__call:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  /* Popover ancorato al richiamo che l’ha aperto. */
+  .fnp__pop {
+    margin: 0;
+    inline-size: min(20rem, calc(100vw - 2rem));
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  @supports (anchor-name: --a) {
+    .fnp__pop {
+      position-area: block-end span-inline-end;
+      inset: auto;
+      margin-block-start: var(--space-2xs);
+      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
+  }
+
+  /* Entrata gentile del popover (e fallback statico dove non c’è anchor). */
+  .fnp__pop {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug),
+      overlay var(--dur-fast) allow-discrete,
+      display var(--dur-fast) allow-discrete;
+  }
+  .fnp__pop:popover-open {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @starting-style {
+    .fnp__pop:popover-open {
+      opacity: 0;
+      transform: translateY(-0.25rem);
+    }
+  }
+
+  .fnp__pop-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-2xs);
+  }
+  .fnp__pop-num {
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+  .fnp__close {
+    display: grid;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    margin: calc(-1 * var(--space-3xs));
+    color: var(--ink-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fnp__close:hover {
+    color: var(--ink-strong);
+    background-color: var(--surface-sunken);
+  }
+  .fnp__close:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .fnp__pop-body {
+    margin: 0;
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fnp__call, .fnp__close { transition: none; }
+    .fnp__pop {
+      transition: opacity 1ms, overlay 1ms allow-discrete, display 1ms allow-discrete;
+      transform: none;
+    }
+    .fnp__pop:popover-open { transform: none; }
+    @starting-style {
+      .fnp__pop:popover-open { transform: none; }
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.fnp').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const calls = Array.from(el.querySelectorAll<HTMLButtonElement>('.fnp__call'));
+
+      // Popover API gestisce apertura, Esc e light-dismiss da sola.
+      // A noi resta una cura in più: riportare il focus al richiamo che
+      // ha aperto la nota quando la nota si chiude (focus restore).
+      calls.forEach((call) => {
+        const targetId = call.getAttribute('popovertarget');
+        if (!targetId) return;
+        const pop = el.querySelector<HTMLElement>(`#${targetId}`);
+        if (!pop) return;
+
+        pop.addEventListener('toggle', (ev) => {
+          const e = ev as ToggleEvent;
+          if (e.newState === 'closed') {
+            // Se il focus è finito altrove (Esc, click-fuori, X), riportalo.
+            if (!pop.contains(document.activeElement)) return;
+            call.focus();
+          }
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

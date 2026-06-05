@@ -1,0 +1,271 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ScrollSnapTabs — molte tab in scroll orizzontale, con
+   indicatori di overflow ai bordi.
+
+   Quando le tab sono troppe per stare in una riga, il riflesso
+   sbagliato è rimpicciolire il testo finché ci stanno tutte, o
+   mandarle a capo in due file disordinate. La risposta onesta è
+   un’altra: lasciale scorrere, ma *dichiara* che c’è altro. Il
+   bug di usabilità più comune di una barra scrollabile è proprio
+   il silenzio — niente dice che a destra continua, e metà delle
+   tab non viene mai trovata.
+
+   Due meccaniche:
+     • scroll-snap-type: x proximity, così ogni tab si "incastra"
+       gentilmente al bordo invece di fermarsi a metà;
+     • una sfumatura su ciascun lato, accesa solo quando da quel
+       lato c’è davvero altro da scorrere. È un segnale di
+       affordance, non decorazione: appare e sparisce in base allo
+       scroll reale (scrollLeft vs scrollWidth).
+
+   La tab attiva viene riportata in vista con scrollIntoView, così
+   navigando con ←/→ non finisce mai fuori campo. Resta il pattern
+   ARIA tabs completo: tablist/tab/tabpanel, aria-selected, frecce,
+   Home/End, roving tabindex.
+
+   Reduced motion: lo scroll-into-view usa 'smooth' solo quando il
+   movimento è gradito; con reduced motion è 'auto' (salto secco,
+   stessa destinazione). Le sfumature sono statiche, niente da
+   disabilitare.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Reparto',
+    tabs: [
+      { id: 'tutti', tab: 'Tutti', body: 'Il catalogo intero, senza filtri. È il punto di partenza: da qui si stringe verso un reparto, non il contrario.' },
+      { id: 'novita', tab: 'Novità', body: 'Gli arrivi più recenti. Un reparto che cambia spesso, ed è il motivo per cui sta vicino all’inizio: ciò che si guarda di più, vicino al pollice.' },
+      { id: 'cucina', tab: 'Cucina', body: 'Pentole, utensili, piccoli elettrodomestici. Molte tab significano molti contesti: lo scroll orizzontale li tiene tutti raggiungibili senza affollare la riga.' },
+      { id: 'casa', tab: 'Casa e arredo', body: 'Tessili, illuminazione, complementi. Le sfumature ai lati dicono che a destra continua: senza, metà di questi reparti non verrebbe mai trovata.' },
+      { id: 'giardino', tab: 'Giardino', body: 'Piante, vasi, attrezzi da esterno. Lo scroll-snap fa incastrare ogni tab al bordo, così non resti mai con un’etichetta tagliata a metà.' },
+      { id: 'sport', tab: 'Sport', body: 'Attrezzatura e abbigliamento tecnico. Navigando con le frecce, la tab attiva viene riportata in vista da sola: non scompare mai fuori campo.' },
+      { id: 'libri', tab: 'Libri', body: 'Narrativa, saggi, illustrati. Un reparto in coda non è meno importante — è solo meno frequente, e lo scroll lo tiene a portata senza rubargli spazio agli altri.' },
+      { id: 'offerte', tab: 'Offerte', body: 'Sconti del momento, a tempo. Sta in fondo apposta: è una scorciatoia, non la porta principale, e la sfumatura a destra invita a scoprirla.' },
+    ],
+  },
+  en: {
+    label: 'Department',
+    tabs: [
+      { id: 'all', tab: 'All', body: 'The whole catalogue, unfiltered. It’s the starting point: from here you narrow toward a department, not the other way round.' },
+      { id: 'new', tab: 'New in', body: 'The most recent arrivals. A department that changes often, which is why it sits near the start: what’s looked at most, near the thumb.' },
+      { id: 'kitchen', tab: 'Kitchen', body: 'Pots, utensils, small appliances. Many tabs mean many contexts: horizontal scroll keeps them all reachable without crowding the row.' },
+      { id: 'home', tab: 'Home & living', body: 'Textiles, lighting, accents. The edge fades say there’s more to the right: without them, half of these departments would never be found.' },
+      { id: 'garden', tab: 'Garden', body: 'Plants, pots, outdoor tools. Scroll-snap clicks each tab to the edge, so you’re never left with a label cut in half.' },
+      { id: 'sport', tab: 'Sport', body: 'Gear and technical clothing. Navigating with the arrows, the active tab is brought back into view on its own: it never slips off-screen.' },
+      { id: 'books', tab: 'Books', body: 'Fiction, essays, illustrated. A department at the tail isn’t less important — just less frequent, and scroll keeps it within reach without stealing space from the rest.' },
+      { id: 'deals', tab: 'Deals', body: 'Current, time-limited discounts. It sits at the end on purpose: it’s a shortcut, not the main door, and the right-hand fade invites you to find it.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const initial = 0;
+const uid = `sst-${locale}`;
+---
+
+<div class="sst" data-initial={String(initial)}>
+  <span class="sst__heading">{c.label}</span>
+  <div class="sst__bar" data-overflow-start="false" data-overflow-end="true">
+    <div class="sst__scroll" role="tablist" aria-label={c.label}>
+      {c.tabs.map((t, i) => (
+        <button
+          type="button"
+          class="sst__tab"
+          role="tab"
+          id={`${uid}-tab-${t.id}`}
+          aria-controls={`${uid}-panel-${t.id}`}
+          aria-selected={i === initial ? 'true' : 'false'}
+          tabindex={i === initial ? '0' : '-1'}
+          data-idx={String(i)}
+        >
+          {t.tab}
+        </button>
+      ))}
+    </div>
+  </div>
+  {c.tabs.map((t, i) => (
+    <div
+      class="sst__panel"
+      role="tabpanel"
+      id={`${uid}-panel-${t.id}`}
+      aria-labelledby={`${uid}-tab-${t.id}`}
+      tabindex="0"
+      hidden={i !== initial}
+    >
+      <p>{t.body}</p>
+    </div>
+  ))}
+</div>
+
+<style>
+  .sst {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .sst__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  /* Il contenitore porta le sfumature ai bordi via ::before/::after.
+     L’opacità è guidata dai data-attribute settati in JS. */
+  .sst__bar {
+    position: relative;
+    border-block-end: 1px solid var(--border);
+  }
+  .sst__bar::before,
+  .sst__bar::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inline-size: 2.5rem;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .sst__bar::before {
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--surface-sunken), transparent);
+  }
+  .sst__bar::after {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--surface-sunken), transparent);
+  }
+  .sst__bar[data-overflow-start='true']::before { opacity: 1; }
+  .sst__bar[data-overflow-end='true']::after { opacity: 1; }
+
+  .sst__scroll {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .sst__scroll::-webkit-scrollbar { display: none; }
+
+  .sst__tab {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    appearance: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    background: transparent;
+    padding: 0.55rem 0.85rem;
+    margin-block-end: -1px;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .sst__tab:hover { color: var(--ink); }
+  .sst__tab[aria-selected='true'] {
+    color: var(--accent-ink);
+    border-block-end-color: var(--accent);
+  }
+  .sst__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .sst__panel {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    border-radius: var(--radius-sm);
+  }
+  .sst__panel[hidden] { display: none; }
+  .sst__panel:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .sst__panel p { margin: 0; }
+</style>
+
+<script>
+  function bind() {
+    const reduce =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+    document.querySelectorAll<HTMLElement>('.sst').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bar = root.querySelector<HTMLElement>('.sst__bar');
+      const scroller = root.querySelector<HTMLElement>('.sst__scroll');
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.sst__tab'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.sst__panel'));
+      if (!bar || !scroller || !tabs.length) return;
+
+      let current = Number(root.dataset.initial ?? '0');
+
+      // Accende/spegne le sfumature in base a quanto si è scorso.
+      const updateOverflow = () => {
+        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        const x = scroller.scrollLeft;
+        bar.dataset.overflowStart = String(x > 1);
+        bar.dataset.overflowEnd = String(x < maxScroll - 1);
+      };
+
+      const set = (idx: number, focus: boolean) => {
+        current = idx;
+        tabs.forEach((tab, i) => {
+          const selected = i === idx;
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+          tab.tabIndex = selected ? 0 : -1;
+          if (panels[i]) panels[i].hidden = !selected;
+        });
+        const active = tabs[idx];
+        if (active) {
+          // Riporta in vista la tab attiva: con reduced motion, salto secco.
+          active.scrollIntoView({
+            behavior: reduce ? 'auto' : 'smooth',
+            inline: 'nearest',
+            block: 'nearest',
+          });
+          if (focus) active.focus();
+        }
+      };
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => set(i, false));
+        tab.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          set(next, true);
+        });
+      });
+
+      scroller.addEventListener('scroll', updateOverflow, { passive: true });
+      const ro = new ResizeObserver(updateOverflow);
+      ro.observe(scroller);
+      updateOverflow();
+
+      const cleanup = () => ro.disconnect();
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

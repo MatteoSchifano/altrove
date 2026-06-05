@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-13"
+number: "13"
+title: "The anatomy of a card"
+excerpt: "A card looks like the most innocent component on the web: a rectangle with a border. But that rectangle has to say what order to read in, where you click, how much is underneath, and what's honest to count. Five cards, five different crafts hidden in the same shape."
+date: "July 3, 2026"
+releaseDate: "2026-07-03"
+readMinutes: 11
+tags: ["components", "layout", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import EditorialCard from '../../../components/cards/EditorialCard.astro';
+import StatCard from '../../../components/cards/StatCard.astro';
+import QuickActionCard from '../../../components/cards/QuickActionCard.astro';
+import ExpandableCard from '../../../components/cards/ExpandableCard.astro';
+import CardStack from '../../../components/cards/CardStack.astro';
+
+The card is the component everyone thinks they know how to build. A rectangle, a border, a soft shadow, something inside. It looks like the most innocent brick on the web — and that's exactly why it's the one most often gotten wrong, because the shape is so familiar it hides how many decisions it holds. A card isn't a container: it's an *object that declares a hierarchy*. It says what order to read what it holds, where the clickable target ends, how much lies beneath the surface, and — when it reports a number — whether that number is telling the truth.
+
+The question that opens the chapter is deliberately naïve: “is a card just a rectangle with a border?” No. Under the same profile hide different crafts. The editorial card orders a reading. The stat card reports a figure without inflating it. The action card wants to be fully clickable without breaking text selection. The expanding card has to grow where it stands, not tear the page open with a modal. The stack of cards promises there's more underneath, and must keep that promise for someone navigating by keyboard.
+
+Five cards, five problems the shape won't let you see. And as always, no libraries: HTML already knows the link, the button, the list, the image with its proportion. Our job is to arrange them so the rectangle tells the truth about what it holds and how you touch it.
+
+## The card that orders a reading
+
+The first is the most classic: image, eyebrow, title, lede. It looks like mere layout, but this is where hierarchy is decided — and where one technical detail, the image, can make everything else jump.
+
+<Demo title="Editorial card · hierarchy and derived state with :has()" tag="13.a">
+  <EditorialCard locale="en" />
+  <div slot="note">
+    <p>The image isn't a file: it's a gradient placeholder with a fixed <code>aspect-ratio</code>. The difference isn't aesthetic, it's honesty toward the layout: the image's <em>shape</em> exists before its content, so when the real photo arrives it won't shove the title down mid-read — none of that sudden jump (the infamous <em>layout shift</em>) that makes you lose your place. Above it, the hierarchy is explicit: a monospaced small-caps eyebrow, a title that carries weight, a lede that explains. The eye knows at once where to start.</p>
+    <p>The hover state is <em>derived</em>, not glued on. Instead of tying the effect to “<code>:hover</code> on the title” or “<code>:hover</code> on the image” — which would light up in pieces — the card uses <code>:has(.link:hover)</code>: “if you contain the link the pointer is on, light up as a whole.” Title, arrow and border react together, because the card is the target, not its disconnected parts. And with <code>prefers-reduced-motion</code> the transitions collapse: the lighting stays, the journey doesn't.</p>
+  </div>
+</Demo>
+
+## The card that reports a number
+
+A card can also just state a figure. When it does, the number is the protagonist — and how it enters the scene is a small test of honesty.
+
+<Demo title="Stat card · honest count-up, data that doesn't inflate" tag="13.b">
+  <StatCard locale="en" />
+  <div slot="note">
+    <p>The number climbs from zero to the real value when the card enters the viewport: once only, with <em>out</em> easing — fast at the start, calm at the arrival — in about 900ms. Never <em>in-out</em>, which reads as hesitant; never re-animate if the user scrolls away and back. The digits use <code>tabular-nums</code>: they all share the same width, so as they rise they don't flinch and a column of numbers doesn't dance. The count-up gives the figure a moment on stage, it doesn't turn it into a show.</p>
+    <p>And the data tells the truth. 84% is 84%, not “99 to look good”; the review average <em>drops</em> by a tenth, and that decline is reported — with the <code>▼</code> sign before the colour — instead of vanishing. Colour is always the second signal, never the only one. Under <code>prefers-reduced-motion</code> the number appears already final: an explicit <code>matchMedia</code> guard in JS decides it, because a counting loop doesn't stop on its own just by lowering a duration. Same value, no journey.</p>
+  </div>
+</Demo>
+
+## The card that is all one target
+
+Third: the action card, the kind in a list of documents or files. We want the whole surface to be clickable — big targets are easier to hit — but without sacrificing text selection or the small actions that live inside it.
+
+<Demo title="Quick action card · stretched-link and reachable sub-actions" tag="13.c">
+  <QuickActionCard locale="en" />
+  <div slot="note">
+    <p>The temptation is to wrap the whole card in an <code>&lt;a&gt;</code>. It breaks two things: the text no longer selects, and every sub-action ends up nested inside a link — invalid and inaccessible. The honest technique is the <em>stretched-link</em>: a normal <code>&lt;a&gt;</code> on the title, with an <code>::after</code> that stretches to cover the card. A click on the empty space lands on the link; the text stays selectable, because the overlay is a pseudo-element, not the text. A clickable card that doesn't stop you from copying its name.</p>
+    <p>The sub-actions — share, more options — rise above the overlay with <code>position: relative</code> and <code>z-index</code>: they sit <em>in front of</em> the link that covers everything, so they stay clickable and tabbable. Each is a real <code>&lt;button&gt;</code> with its own <code>aria-label</code>, not a fake button. The rule: one big target for the main action, small independent targets for the secondary ones, and neither eating the other. No JS: it's all browser state.</p>
+  </div>
+</Demo>
+
+## The card that grows where it stands
+
+Fourth: the card that hides a detail and reveals it on request. The lazy answer would be a modal — but for an “I want to know more” a modal is too much: it tears away the context and asks to be closed. The card can simply grow.
+
+<Demo title="Expandable card · grows in place, no modal" tag="13.d">
+  <ExpandableCard locale="en" />
+  <div slot="note">
+    <p>The trigger is a real <code>&lt;button aria-expanded&gt;</code>, not a hidden <code>:checked</code> nor a <code>&lt;div&gt;</code> with a listener. The state is real: a screen reader announces “expanded / collapsed”, the keyboard works for free, the panel is wired up via <code>aria-controls</code>. The card grows <em>where it stands</em>, pushing down what's below: the eye never loses the thread, no dark surface drops over the page, nothing to close. The detail joins the flow, it doesn't interrupt it.</p>
+    <p>The height transition is honest: <code>grid-template-rows</code> going from <code>0fr</code> to <code>1fr</code>. The grid measures the <em>real</em> content and animates exactly to it. That's the difference from the old <code>max-height</code> “big enough” shortcut: that one guesses and, if the content is shorter, the animation snaps halfway and lands badly. Under <code>prefers-reduced-motion</code> the panel opens without growing: the duration token collapses, the final state is the same, only the movement disappears.</p>
+  </div>
+</Demo>
+
+## The card that promises depth
+
+The last isn't one card: it's three, in a stack. A stack says “there's more underneath” — and it has to say it to the eye with shadow and to the finger (or the tab key) by keeping every card genuinely reachable.
+
+<Demo title="Card stack · OKLCH depth and an accessible fan" tag="13.e">
+  <CardStack locale="en" />
+  <div slot="note">
+    <p>Depth comes from shadow, and here the shadow is built in OKLCH with <code>color-mix</code> on the accent: a warm, perceptually uniform tint, not a flat black that muddies. The cards behind are slightly smaller and lower — the perspective says “they're back there” without hiding them. At rest it's a compact stack; on hover or focus it <em>fans out</em>, the cards opening like a lectern just enough to say “there are three, distinct.” Not a deck exploding: a measured opening.</p>
+    <p>The delicate point of any stack is accessibility. Each card is a real <code>&lt;a&gt;</code>, in the flow, in reading order: the fan is only a <code>transform</code>, it doesn't touch the tab order, so no card stays buried and unreachable. And when a card receives focus the stack opens on its own — <code>:focus-within</code> — because the focused card shouldn't stay hidden under the others. With <code>prefers-reduced-motion</code> the fan disappears: the stack stays still and ordered, and focus shows in the border, not in the movement. Reachable either way.</p>
+  </div>
+</Demo>
+
+---
+
+Five cards, one discovery: the rectangle is the least of it. What a card does is declare — the reading order, the boundary of the target, the truth of a number, where the extra detail goes, how much lies under the surface. The editorial card orders, the stat card reports without inflating, the quick-action makes itself fully clickable without stealing your text, the expandable grows instead of tearing, the stack promises depth and keeps it even by keyboard. Border and shadow are the last thing you decide. First comes the question of what, really, this card is saying to whoever looks at it.
+
+The next chapter leaves the objects you touch and looks at the space between them — emptiness as a design material. *Is the silence in a page drawn, or just left to happen?* How white space stops being absence and becomes rhythm, hierarchy, breath.

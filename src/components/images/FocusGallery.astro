@@ -1,0 +1,250 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FocusGallery — guardare una cosa significa smettere di guardare
+   le altre.
+
+   Una gallery non è una griglia neutra: quando una foto è "in
+   primo piano", le vicine devono farsi da parte — non sparire, ma
+   attenuarsi, perché restano contesto. È il gesto del fotografo
+   che mette a fuoco: ciò che conta diventa nitido, il resto
+   sfuma. Qui il fuoco è dichiarato (aria-current) e leggibile
+   anche senza colore: la miniatura attiva è più grande e con un
+   bordo marcato, non solo "più accesa".
+
+   Tastiera: frecce per spostare il fuoco, roving tabindex. Niente
+   file: ogni "foto" è un gradient generato dal seed.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Galleria · usa le frecce per mettere a fuoco',
+    items: [
+      'Mattino sul porto',
+      'Vicolo in controluce',
+      'Tetti dopo la pioggia',
+      'Mercato all’alba',
+      'Finestra sul cortile',
+    ],
+    focusWord: 'A fuoco',
+  },
+  en: {
+    label: 'Gallery · use the arrows to focus',
+    items: [
+      'Morning at the harbour',
+      'Backlit alley',
+      'Rooftops after rain',
+      'Market at dawn',
+      'Window on the courtyard',
+    ],
+    focusWord: 'In focus',
+  },
+} as const;
+const c = COPY[locale];
+
+/* Gradient deterministici per seed — nessun file immagine. */
+const swatch = (h1: number, h2: number) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+  <defs>
+    <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
+      <stop offset='0' stop-color='hsl(${h1} 55% 70%)'/>
+      <stop offset='1' stop-color='hsl(${h2} 45% 32%)'/>
+    </linearGradient>
+  </defs>
+  <rect width='120' height='120' fill='url(#g)'/>
+  <circle cx='84' cy='34' r='16' fill='hsl(${h1} 60% 86%)' opacity='0.7'/>
+</svg>`)}`;
+
+const seeds = [
+  [28, 320], [200, 250], [150, 220], [40, 12], [270, 200],
+];
+const uid = `fg-${locale}`;
+---
+
+<div class="fg" data-focus="0">
+  <span class="fg__heading">{c.label}</span>
+  <ul class="fg__grid" role="list">
+    {c.items.map((title, i) => (
+      <li class="fg__cell" role="listitem">
+        <button
+          type="button"
+          class="fg__thumb"
+          data-idx={String(i)}
+          tabindex={i === 0 ? '0' : '-1'}
+          aria-current={i === 0 ? 'true' : 'false'}
+          aria-label={title}
+        >
+          <img src={swatch(seeds[i][0], seeds[i][1])} alt="" aria-hidden="true" />
+          <span class="fg__badge">{c.focusWord}</span>
+          <span class="fg__title">{title}</span>
+        </button>
+      </li>
+    ))}
+  </ul>
+  <p class="fg__live sr-only" aria-live="polite" id={`${uid}-live`}></p>
+</div>
+
+<style>
+  .fg {
+    inline-size: min(34rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .fg__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .fg__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: var(--space-2xs);
+    align-items: stretch;
+  }
+  .fg__cell {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    /* La cella attiva si espande: il fuoco occupa più spazio. */
+    transition: flex-grow var(--dur-normal) var(--ease-out-soft);
+  }
+  .fg[data-focus] .fg__cell { flex-grow: 1; }
+
+  .fg__thumb {
+    position: relative;
+    inline-size: 100%;
+    display: block;
+    aspect-ratio: 3 / 4;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--surface-sunken);
+    cursor: pointer;
+    /* Non a fuoco → attenuata, ma mai invisibile (contesto). */
+    opacity: 0.5;
+    filter: saturate(0.7);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      filter var(--dur-normal) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fg__thumb img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .fg__thumb:hover { opacity: 0.78; }
+  .fg__thumb:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Il fuoco: più nitido, bordo marcato, badge testuale. Tre
+     canali (dimensione, bordo, parola), non solo opacità. */
+  .fg__thumb[aria-current='true'] {
+    opacity: 1;
+    filter: none;
+    border-color: var(--accent);
+  }
+
+  .fg__badge {
+    position: absolute;
+    inset-block-start: 0.4rem;
+    inset-inline-start: 0.4rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-on);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    opacity: 0;
+    transform: translateY(-0.2rem);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .fg__thumb[aria-current='true'] .fg__badge {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .fg__title {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    padding: 0.85rem 0.5rem 0.4rem;
+    font-size: var(--text-2xs);
+    color: oklch(0.98 0.01 var(--hue-warm));
+    line-height: var(--leading-snug);
+    text-align: start;
+    background: linear-gradient(to top, oklch(0 0 0 / 0.72), transparent);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fg__cell,
+    .fg__thumb,
+    .fg__badge { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.fg').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const thumbs = Array.from(root.querySelectorAll<HTMLButtonElement>('.fg__thumb'));
+      const live = root.querySelector<HTMLElement>('.fg__live')!;
+      if (!thumbs.length) return;
+
+      let current = 0;
+
+      const focusOn = (idx: number, moveFocus: boolean) => {
+        current = idx;
+        root.dataset.focus = String(idx);
+        thumbs.forEach((t, i) => {
+          const active = i === idx;
+          t.setAttribute('aria-current', active ? 'true' : 'false');
+          t.tabIndex = active ? 0 : -1;
+        });
+        if (moveFocus) thumbs[idx]?.focus();
+        const label = thumbs[idx]?.getAttribute('aria-label') ?? '';
+        live.textContent = label;
+      };
+
+      thumbs.forEach((t, i) => {
+        t.addEventListener('click', () => focusOn(i, false));
+        t.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (current + 1) % thumbs.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (current - 1 + thumbs.length) % thumbs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = thumbs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          focusOn(next, true);
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

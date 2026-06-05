@@ -1,0 +1,262 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SplitButton — un’azione primaria, più i suoi cugini, in un solo
+   blocco.
+
+   Il pattern risponde alla domanda del capitolo da un’angolazione
+   diversa: come offrire una scelta *senza* costringere a un menu?
+   La risposta è dare subito l’azione più probabile — il bottone di
+   sinistra fa la cosa giusta nel 90% dei casi — e nascondere le
+   varianti dietro la freccina a destra. Chi sa cosa vuole non apre
+   nulla; chi cerca un’alternativa la trova a un click.
+
+   Due bottoni veri, affiancati, che sembrano un oggetto solo:
+     • a sinistra l’azione primaria (un <button> normale);
+     • a destra il <button> che apre il menu, e SOLO lui porta
+       aria-haspopup="menu" + aria-expanded. È l’errore ARIA più
+       comune del pattern: mettere aria-expanded sull’intero gruppo
+       o sull’azione primaria — che non apre niente. Lo stato di
+       "menu aperto" appartiene alla freccia.
+
+   Menu: role="menu" coi suoi menuitem, frecce per scorrere, Esc
+   chiude e ridà il focus alla freccia, click fuori chiude.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    primary: 'Salva',
+    moreLabel: 'Altre opzioni di salvataggio',
+    items: [
+      { id: 'copy', label: 'Salva una copia' },
+      { id: 'template', label: 'Salva come modello' },
+      { id: 'export', label: 'Salva ed esporta' },
+    ],
+    didPrimary: 'Salvato',
+  },
+  en: {
+    primary: 'Save',
+    moreLabel: 'More save options',
+    items: [
+      { id: 'copy', label: 'Save a copy' },
+      { id: 'template', label: 'Save as template' },
+      { id: 'export', label: 'Save and export' },
+    ],
+    didPrimary: 'Saved',
+  },
+} as const;
+const c = COPY[locale];
+const menuId = `split-menu-${locale}`;
+---
+
+<div class="split">
+  <div class="split__group">
+    <button class="split__primary" type="button" data-action="primary" data-done={c.didPrimary}>
+      {c.primary}
+    </button>
+    <button
+      class="split__more"
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-controls={menuId}
+      aria-label={c.moreLabel}
+    >
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6l4 4 4-4"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="split__menu" id={menuId} role="menu" aria-label={c.moreLabel} data-state="closed">
+    {c.items.map((it) => (
+      <button class="split__item" type="button" role="menuitem" data-label={it.label}>
+        {it.label}
+      </button>
+    ))}
+  </div>
+
+  <p class="split__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .split {
+    position: relative;
+    inline-size: max-content;
+    max-inline-size: 100%;
+  }
+
+  .split__group {
+    display: inline-flex;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .split__primary,
+  .split__more {
+    border: 0;
+    background: transparent;
+    color: var(--accent-on);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .split__primary {
+    padding: 0.55rem 1rem;
+    border-start-start-radius: var(--radius-pill);
+    border-end-start-radius: var(--radius-pill);
+  }
+  /* Il divisore fra le due metà: un filo, perché restino leggibili
+     come due bottoni distinti pur essendo un oggetto solo. */
+  .split__more {
+    padding: 0.55rem 0.6rem;
+    display: grid;
+    place-items: center;
+    border-start-end-radius: var(--radius-pill);
+    border-end-end-radius: var(--radius-pill);
+    box-shadow: inset 1px 0 0 color-mix(in oklab, var(--accent-on) 28%, transparent);
+  }
+  .split__more svg {
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .split__more[aria-expanded='true'] svg { transform: rotate(180deg); }
+
+  .split__primary:hover,
+  .split__more:hover { background-color: color-mix(in oklab, oklch(0 0 0) 10%, transparent); }
+  .split__primary:focus-visible,
+  .split__more:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .split__menu {
+    position: absolute;
+    z-index: var(--z-overlay);
+    inset-block-start: calc(100% + 0.4rem);
+    inset-inline-end: 0;
+    inline-size: 13rem;
+    padding: var(--space-3xs);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    opacity: 0;
+    transform: translateY(-0.35rem) scale(0.97);
+    transform-origin: top right;
+    pointer-events: none;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .split__menu[data-state='open'] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .split__item {
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .split__item:hover { background-color: var(--surface-sunken); }
+  .split__item:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .split__menu { transition-duration: 1ms; transform: none; }
+    .split__more svg { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.split').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const primary = root.querySelector<HTMLButtonElement>('[data-action="primary"]')!;
+      const more = root.querySelector<HTMLButtonElement>('.split__more')!;
+      const menu = root.querySelector<HTMLElement>('.split__menu')!;
+      const items = Array.from(root.querySelectorAll<HTMLButtonElement>('.split__item'));
+      const live = root.querySelector<HTMLElement>('.split__live')!;
+
+      const open = () => {
+        menu.dataset.state = 'open';
+        more.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(() => items[0]?.focus());
+      };
+      const close = (restore = true) => {
+        if (menu.dataset.state !== 'open') return;
+        menu.dataset.state = 'closed';
+        more.setAttribute('aria-expanded', 'false');
+        if (restore) more.focus();
+      };
+
+      // L’azione primaria NON apre il menu — fa la sua cosa.
+      primary.addEventListener('click', () => {
+        live.textContent = primary.dataset.done ?? '';
+      });
+
+      more.addEventListener('click', () => {
+        if (menu.dataset.state === 'open') close(); else open();
+      });
+      // Freccia giù sulla maniglia apre e va alla prima voce.
+      more.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); open(); }
+      });
+
+      menu.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        const idx = items.indexOf(document.activeElement as HTMLButtonElement);
+        if (idx === -1) return;
+        let next = idx;
+        if (e.key === 'ArrowDown') next = (idx + 1) % items.length;
+        else if (e.key === 'ArrowUp') next = (idx - 1 + items.length) % items.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = items.length - 1;
+        else return;
+        e.preventDefault();
+        items[next]?.focus();
+      });
+
+      items.forEach((item) => {
+        item.addEventListener('click', () => {
+          live.textContent = item.dataset.label ?? '';
+          close();
+        });
+      });
+
+      document.addEventListener('pointerdown', (e) => {
+        if (menu.dataset.state !== 'open') return;
+        if (root.contains(e.target as Node)) return;
+        close(false);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

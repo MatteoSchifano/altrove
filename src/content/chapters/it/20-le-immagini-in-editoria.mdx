@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-20"
+number: "20"
+title: "Le immagini in editoria"
+excerpt: "Un'immagine a volte porta informazione e a volte è solo respiro, e quasi tutto il lavoro sta nel non confondere i due casi: dove la foto dice qualcosa la si annota e la si apre, dove serve a far prendere fiato la si lascia muta."
+date: "21 agosto 2026"
+releaseDate: "2026-08-21"
+readMinutes: 11
+tags: ["editoriale", "immagini", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import PositionedCaption from '../../../components/images/PositionedCaption.astro';
+import FocusGallery from '../../../components/images/FocusGallery.astro';
+import HonestLightbox from '../../../components/images/HonestLightbox.astro';
+import FigureCaptionHover from '../../../components/images/FigureCaptionHover.astro';
+import HotspotImage from '../../../components/images/HotspotImage.astro';
+
+I capitoli scorsi hanno lavorato sul testo e sul ritmo della pagina; questo si ferma sulla cosa che, in editoria, occupa più spazio di tutte e di cui si parla meno come *interazione*: l'immagine. La domanda di partenza è una sola, e taglia tutto il resto: quando un'immagine è **informazione** e quando è **respiro**? Sembrano lo stesso oggetto — un rettangolo con dentro qualcosa — ma chiedono trattamenti opposti. Un diagramma, una foto-documento, un dettaglio da leggere: lì l'immagine *dice*, e va annotata, ingrandita, didascalizzata. Un'apertura di capitolo, un fondale, una pausa fra due blocchi di testo: lì l'immagine *non dice*, fa prendere fiato, e ogni etichetta che le appiccichiamo addosso è rumore.
+
+Confondere i due casi è l'errore editoriale più comune. Si vedono respiri trattati come informazione — didascalie obbligatorie sotto ogni decorazione, alt-text che descrive una texture — e informazione trattata come respiro — la foto che andava letta lasciata muta, senza un appiglio. La differenza non è nell'immagine: è nella **promessa** che le facciamo fare. Le cinque dimostrazioni qui sotto sono cinque modi di mantenere quella promessa: dove mettere la voce, come dare fuoco a una sola foto, come ingrandirne una senza far cambiare pagina all'occhio, come nascondere la trama senza nasconderla davvero, e come annotare un dettaglio puntuale.
+
+E come sempre niente file immagine: ogni "foto" qui è un gradient o un piccolo SVG con l'`aspect-ratio` fissato. Serve a tenere il discorso sul comportamento — la cornice, la didascalia, il movimento — e non sul soggetto. Il pattern è identico con immagini vere: basta sostituire la sorgente.
+
+## Dove mettere la voce
+
+La prima decisione su un'immagine-informazione non è quale filtro darle: è **dove mettere la didascalia**. La stessa foto cambia significato a seconda che la voce stia sotto, di fianco o sopra — e ognuna delle tre posizioni promette una cosa diversa.
+
+<Demo title="Didascalia posizionata · sotto, di fianco, in overlay" tag="20.a">
+  <PositionedCaption locale="it" />
+  <div slot="note">
+    <p>Tre posizioni, tre relazioni. <strong>Sotto</strong> la didascalia è una nota distinta: l'immagine resta intatta, la voce è chiaramente separata, è il caso editoriale classico per una foto-documento. <strong>Di fianco</strong> diventa un margine che dialoga alla pari — buona quando la nota è lunga quanto l'immagine è importante. <strong>In overlay</strong> la voce si fonde con la scena, ed è la più rischiosa: bisogna garantire il contrasto su <em>qualunque</em> pixel sotto, perché un cielo chiaro mangia il testo bianco. Per questo non c'è solo il colore del testo, c'è il velo a gradiente: il contrasto è progettato, non sperato.</p>
+    <p>La struttura sotto non cambia mai: è sempre una <code>&lt;figure&gt;</code> con una <code>&lt;figcaption&gt;</code> vera, qualunque sia la posizione. È la differenza fra una didascalia e una scritta-sopra-l'immagine: la prima è legata semanticamente alla figura, lo screen reader la legge come sua, sopravvive al copia-incolla; la seconda è testo orfano appoggiato lì. Spostare la voce è un fatto di <em>layout</em>, non di markup — e il markup onesto resta quello, costante, sotto tutte e tre le vesti.</p>
+  </div>
+</Demo>
+
+## Dare fuoco a una sola
+
+Una galleria non è una griglia neutra. Quando guardi una foto, le altre dovrebbero farsi da parte — non sparire, ma attenuarsi, perché restano contesto. È il gesto del fotografo che mette a fuoco: il soggetto diventa nitido, lo sfondo sfuma. Una gallery che tiene tutte le miniature alla stessa intensità ti lascia senza un punto dove posare l'occhio.
+
+<Demo title="Galleria con focus mode · una nitida, le altre attenuate" tag="20.b">
+  <FocusGallery locale="it" />
+  <div slot="note">
+    <p>La miniatura a fuoco si ingrandisce, recupera saturazione e prende un bordo marcato; le vicine si attenuano ma non scompaiono — restano lì, leggibili, come contesto periferico. Il punto onesto è che il fuoco non è dichiarato col <em>solo</em> colore: c'è la dimensione, c'è il bordo, e c'è una parola — «a fuoco» — più <code>aria-current</code> che lo screen reader annuncia. Chi non distingue la saturazione legge comunque dove sta l'attenzione. Tre canali per lo stesso segnale, mai uno solo.</p>
+    <p>E la tastiera è di prima classe, non un ripensamento: le frecce spostano il fuoco, un <em>roving tabindex</em> tiene un solo elemento tabbabile per volta, così la galleria è una tappa sola nel <kbd>Tab</kbd>, non cinque. L'attenuazione delle vicine usa <code>opacity</code> e <code>filter</code>, mai <code>display:none</code>: restano nel flusso, restano cliccabili, restano lette. Sotto <code>prefers-reduced-motion</code> l'ingrandimento non viaggia — il fuoco è semplicemente già lì. Stesso stato finale, nessuno scivolamento.</p>
+  </div>
+</Demo>
+
+## Ingrandire senza cambiare pagina
+
+Quando un dettaglio va guardato da vicino serve un lightbox. Ma un lightbox onesto non fa *apparire* una scatola dal nulla: prende la stessa immagine che hai toccato e la fa **crescere** fino a riempire lo schermo. La continuità è la cura — l'occhio segue l'oggetto, non «cambia pagina».
+
+<Demo title="Lightbox con morph · la miniatura diventa la finestra" tag="20.c">
+  <HonestLightbox locale="it" />
+  <div slot="note">
+    <p>Cliccando, la miniatura non viene sostituita da un modal: <em>diventa</em> l'immagine grande. Lo facciamo con la View Transitions API — stesso <code>view-transition-name</code> sulla miniatura e sull'immagine a tutto schermo, e il browser interpola il morph fra le due posizioni. La scatola dentro cui atterra è un <code>&lt;dialog&gt;</code> nativo, che regala gratis il focus trap e la chiusura con <kbd>Esc</kbd>. Alla chiusura il morph va all'indietro: la finestra ridiventa miniatura, l'occhio la riaccompagna dov'era.</p>
+    <p>Il morph è un <em>miglioramento progressivo</em>, non un requisito: dove l'API non c'è, o sotto reduced motion, il dialog si apre comunque — solo senza la crescita, con un fade misurato (entrata ~280ms, uscita più rapida, perché le cose se ne vanno più in fretta di quanto entrino). Stesso stato finale, con o senza viaggio. E sopra tutto c'è il dettaglio che si dimentica sempre: alla chiusura il focus <strong>torna sul pulsante</strong> che ha aperto il lightbox, non si perde all'inizio del documento. Aprire qualcosa è metà del lavoro; rimettere a posto l'attenzione quando si chiude è l'altra metà.</p>
+  </div>
+</Demo>
+
+## Nascondere la trama senza nasconderla
+
+A volte la didascalia è una *trama*, non una nota: il perché dietro lo scatto, che bello scoprire al passaggio invece di leggere subito. Far comparire la voce all'hover è elegante — l'immagine respira da sola e parla solo quando la cerchi. Ma è anche la trappola di accessibilità più frequente: una didascalia hover-only è muta per la tastiera, per lo screen reader, per il touch.
+
+<Demo title="Didascalia che si scopre · al hover e al focus, mai solo al hover" tag="20.d">
+  <FigureCaptionHover locale="it" />
+  <div slot="note">
+    <p>La distinzione che salva tutto è fra «nascosto agli occhi» e «nascosto all'accessibilità». Qui la didascalia è nascosta <em>visivamente</em> — <code>opacity</code> e <code>transform</code>, mai <code>display:none</code> né <code>visibility:hidden</code> — quindi resta nel DOM e lo screen reader la legge sempre, hover o no. Riappare in tre modi, non uno: al passaggio del mouse, al <code>:focus-within</code> (entri nella figura con la tastiera e la trama compare), e con un pulsante esplicito che la apre e la tiene aperta — l'unica via che funziona davvero su touch, dove l'hover non esiste.</p>
+    <p>Quel pulsante non è una ridondanza: è <em>la</em> via accessibile, con hover e focus come comodità in più per chi può usarli. Ha <code>aria-expanded</code> che dice se la trama è aperta, e l'etichetta cambia fra «mostra» e «nascondi» così lo stato è leggibile anche senza vedere l'animazione. La regola, identica al resto del playground: un effetto grazioso non può togliere informazione a nessuno. Se la trama vive solo nell'hover, per metà delle persone semplicemente non esiste.</p>
+  </div>
+</Demo>
+
+## Annotare un dettaglio
+
+L'ultimo caso è l'immagine-informazione portata al suo estremo puntuale: non una didascalia per tutta la foto, ma una nota *qui*, su questo dettaglio preciso. Gli hot-spot sono il modo onesto di farlo — piccoli punti sull'immagine che, toccati, aprono una spiegazione localizzata.
+
+<Demo title="Hot-spot annotati · punti che aprono una nota, da tastiera" tag="20.e">
+  <HotspotImage locale="it" />
+  <div slot="note">
+    <p>Ogni punto è un <code>&lt;button&gt;</code> vero, numerato e con etichetta, non un <code>&lt;div&gt;</code> con un tooltip al passaggio. La differenza è tutta in cosa sopravvive: il bottone è raggiungibile col <kbd>Tab</kbd>, si attiva con <kbd>Invio</kbd> o <kbd>Spazio</kbd>, funziona al primo tocco su mobile, e annuncia il proprio nome allo screen reader. Il tooltip-su-div muore in tutti e tre i casi. La nota che si apre è un piccolo popover ancorato al punto, e <code>aria-expanded</code> dice se è aperto o chiuso: l'informazione di stato non è affidata solo all'animazione.</p>
+    <p>Un solo punto aperto per volta — l'attenzione è dosata, non si apre un coro di note sovrapposte. Si chiude cliccando fuori o con <kbd>Esc</kbd>, e <kbd>Esc</kbd> riporta il focus sul punto che avevi aperto, non lo butta via. I punti sono posizionati in percentuale sull'immagine, così restano dove devono a qualunque dimensione, e il numero dentro il pallino è in <code>tabular-nums</code> perché un'etichetta puntuale non deve mai sussultare. È l'immagine che, invece di una sola voce per tutta la scena, ne offre molte piccole — ciascuna ancorata a ciò che spiega.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque modi, una sola domanda sotto: questa immagine *dice* o *fa respirare*? Se dice, le diamo appigli — una didascalia ben posizionata, un fuoco che la stacca dalle altre, un ingrandimento che non spaesa, una nota puntuale dove serve. Se fa respirare, la lasciamo in pace: niente etichette obbligatorie, niente annotazioni su una texture. Tutto il mestiere editoriale dell'immagine sta nel non scambiare i due casi — nel non far parlare ciò che doveva tacere, e nel non far tacere ciò che aveva qualcosa da dire. E quando la facciamo parlare, le diamo una voce raggiungibile da tutti: la didascalia che lo screen reader legge, il punto che la tastiera apre, il focus che torna a casa.
+
+Con questo si chiude la **Fase C**, quella sull'editoria e il respiro della pagina. Il prossimo capitolo cambia registro di nuovo: dall'immagine che si guarda all'oggetto che si afferra. *Il drag e il drop* — come si tiene in mano una cosa mentre la si sposta, e come si dice all'utente, mentre è ancora in volo, dove potrà posarla.

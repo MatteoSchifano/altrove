@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-16"
+number: "16"
+title: "La griglia editoriale"
+excerpt: "Una pagina sembra elegante prima di essere bella, e quasi sempre per un motivo solo: ogni blocco si appoggia alla stessa linea. Cinque modi di costruire e spezzare la griglia con CSS — named lines, subgrid, full-bleed, container query — senza un solo file immagine."
+date: "24 luglio 2026"
+releaseDate: "2026-07-24"
+readMinutes: 12
+tags: ["editoriale", "layout", "css-grid"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import TwelveColumnGrid from '../../../components/grids/TwelveColumnGrid.astro';
+import SidenotePattern from '../../../components/grids/SidenotePattern.astro';
+import PullQuoteGrid from '../../../components/grids/PullQuoteGrid.astro';
+import FullBleedFigure from '../../../components/grids/FullBleedFigure.astro';
+import ContainerRecompose from '../../../components/grids/ContainerRecompose.astro';
+
+C'è una domanda che precede tutte le altre quando si guarda una pagina: cosa la rende elegante *prima ancora* di essere bella? Non il font, non il colore — quelli arrivano dopo, e da soli non bastano. Quello che l'occhio registra per primo, senza saperlo nominare, è l'allineamento: il fatto che i margini tornino, che i blocchi comincino sulla stessa linea, che niente balli. Una pagina con un solo carattere e una griglia onesta batte sempre una pagina ricca di font ma costruita a occhio. La griglia è il silenzio su cui, dopo, la bellezza può parlare.
+
+La griglia editoriale è un'eredità della stampa: una gabbia che teneva insieme testo, immagini e didascalie su pagine diverse senza che nulla si spostasse di un millimetro. Sul web abbiamo ereditato la gabbia ma non sempre la disciplina, e bastano due margini disallineati perché un layout sembri improvvisato. La buona notizia è che CSS Grid oggi conosce già tutto quello che serve — named lines, subgrid, container query — e quasi sempre il lavoro è solo *nominare* le linee giuste e lasciare che i blocchi vi si appoggino.
+
+Cinque dimostrazioni, una per gesto: costruire la griglia, allinearci le note, spezzarla con una citazione, farla respirare a tutta pagina, e farla ascoltare il contenitore invece della finestra. E come sempre niente librerie e — qui è una promessa precisa — nessun file immagine: ogni "media" è un gradiente CSS con una forma già sua.
+
+## La griglia a 12 colonne
+
+Il primo gesto è costruire la gabbia. Dodici colonne fluide sono lo standard editoriale perché si dividono bene — in 2, 3, 4, 6 — e perché danno linee abbastanza fitte da far appoggiare qualsiasi blocco senza inventare misure.
+
+<Demo title="Dodici colonne fluide · named lines + overlay" tag="16.a">
+  <TwelveColumnGrid locale="it" />
+  <div slot="note">
+    <p>I blocchi non contano le colonne, le <em>nominano</em>: il titolo va da <code>[col-1]</code> a <code>[col-9]</code>, la meta da <code>[col-9]</code> a <code>[col-13]</code>. È la differenza fra «dalla quarta alla settima» (fragile: aggiungi una colonna e salta tutto) e una linea che ha un nome. Il layout diventa un linguaggio leggibile, e quando lo rileggi fra sei mesi capisci subito a cosa si appoggia ogni cosa.</p>
+    <p>L'overlay che rivela le colonne è puro ponteggio: serve a chi <em>progetta</em>, non a chi legge. Per questo è <code>aria-hidden</code> — decorazione diagnostica — e i blocchi reali restano nel flusso, leggibili anche a overlay spento. Lo accende uno switch nativo (<code>button role="switch"</code>): tastiera e stato annunciato gratis. E su schermo stretto, dove dodici colonne minuscole sarebbero illeggibili, i blocchi collassano a tutta larghezza in ordine di lettura — la griglia serve la lettura, non il contrario.</p>
+  </div>
+</Demo>
+
+## La nota a margine
+
+Costruita la gabbia, ci si appoggiano due colonne che devono restare allineate riga per riga: il testo e le sue note. È il caso in cui l'allineamento manuale si rompe sempre, ed è esattamente ciò per cui `subgrid` è nato.
+
+<Demo title="Nota a margine · allineata con subgrid" tag="16.b">
+  <SidenotePattern locale="it" />
+  <div slot="note">
+    <p>La nota deve cominciare <em>esattamente</em> all'altezza del paragrafo che commenta, non fluttuare a caso. Con <code>subgrid</code> la colonna principale e quella sussidiaria condividono le righe della griglia genitore: ogni paragrafo e la sua nota si appoggiano alla stessa linea orizzontale, senza margini calcolati a mano che si spaccano al primo cambio di lunghezza del testo. È il pattern più antico dell'editoria — il commento <em>accanto</em>, mai a piè di pagina — finalmente facile da fare bene.</p>
+    <p>La nota è un <code>&lt;aside&gt;</code> e resta <em>dopo</em> il suo paragrafo nell'ordine del DOM, così lo screen reader la legge nel punto giusto del discorso: la disposizione a due colonne è solo visiva. Su contenitore stretto le colonne collassano e la nota scivola <em>sotto</em> il paragrafo, rientrata e con un filetto d'accento — resta riconoscibile come nota, non si confonde col corpo. Il colore non è l'unico segnale: c'è anche il rientro e il numeretto. Nessuna animazione: è un cambio di struttura, non un effetto da vendere.</p>
+  </div>
+</Demo>
+
+## La citazione che spezza la griglia
+
+Una griglia chiara serve anche per romperla bene. La pull quote esiste per spezzare il ritmo — ma una rottura è elegante solo se la regola che infrange è netta.
+
+<Demo title="Pull quote · esce nella colonna full-bleed" tag="16.c">
+  <PullQuoteGrid locale="it" />
+  <div slot="note">
+    <p>Il testo vive in una colonna di lettura stretta; la pull quote esce nella colonna larga, da <code>[full-start]</code> a <code>[full-end]</code>, sconfinando nei margini che il corpo non tocca. Non galleggia a caso: <em>occupa una linea precisa</em> della stessa griglia, e proprio per questo lo scarto si legge come intenzione, non come errore di impaginazione. È la stessa gabbia di prima, usata a due ampiezze diverse — ed è quel contrasto controllato a dare enfasi.</p>
+    <p>Qui l'onestà è semantica. Questa pull quote è un duplicato <em>visivo</em> di una frase già presente nel corpo, quindi è <code>aria-hidden</code>: non vogliamo che lo screen reader la legga due volte. È decorazione editoriale, non nuovo contenuto. Se invece citasse una fonte esterna sarebbe un <code>&lt;blockquote&gt;</code> reale nel flusso, con la sua attribuzione. La forma — grande, centrata, accentata — è la stessa nei due casi; ciò che cambia è la verità che racconta allo screen reader.</p>
+  </div>
+</Demo>
+
+## La figura a tutta pagina
+
+Il full-bleed è il gesto del respiro: un'immagine che tocca i due bordi e dà aria alla pagina. Ma il suo valore non sta solo nell'uscire — sta nel rientrare subito dopo.
+
+<Demo title="Figura full-bleed · gradiente, poi il rientro del testo" tag="16.d">
+  <FullBleedFigure locale="it" />
+  <div slot="note">
+    <p>La figura si appoggia alla linea <code>[full]</code> e scavalca i margini; subito dopo il testo torna alla sua misura di lettura. Quel «fuori e poi dentro» è il ritmo editoriale che fa sembrare composta una pagina: la prosa non si stira mai a tutta larghezza, perché una riga troppo lunga è faticosa — l'occhio fatica a ritrovare l'inizio della successiva. La figura allarga, il testo rientra, e la pagina respira senza perdere la leggibilità.</p>
+    <p>Nessun file immagine: il «media» è un gradiente CSS con <code>aspect-ratio</code> fissa, così la figura ha già una forma e non c'è reflow all'arrivo di un asset — è il placeholder <em>onesto</em>, occupa esattamente lo spazio che occuperebbe la foto vera. Il blocco è una <code>&lt;figure&gt;</code> con <code>&lt;figcaption&gt;</code> reale, testo nel flusso; il riquadro-gradiente è decorazione (<code>aria-hidden</code>). La didascalia rientra alla larghezza di lettura, allineata al testo: anche quando l'immagine grida, la parola torna composta.</p>
+  </div>
+</Demo>
+
+## La scheda che ascolta il contenitore
+
+L'ultima dimostrazione rovescia la domanda di partenza. Per anni abbiamo deciso il layout guardando la *finestra*. Ma un componente non vive nella finestra: vive in uno slot, e lo stesso componente può stare largo in un punto e stretto in un altro della stessa pagina.
+
+<Demo title="Container query · si ricompone sulla larghezza del contenitore" tag="16.e">
+  <ContainerRecompose locale="it" />
+  <div slot="note">
+    <p>La media query chiede «quanto è larga la pagina?». La container query rovescia tutto e chiede «quanto spazio ho <em>io</em>?». La scheda si ricompone in base alla larghezza del suo contenitore — da orizzontale (media a sinistra, testo a destra) a verticale (media sopra, testo sotto) — <strong>indipendentemente dalla finestra</strong>. È la fine di un'epoca di componenti che indovinavano il loro spazio: ora lo misurano.</p>
+    <p>Per dimostrarlo senza ridimensionare il browser, uno <code>&lt;input type="range"&gt;</code> nativo restringe il contenitore: tastiera, trascinamento e valore arrivano gratis, e <code>aria-valuetext</code> dice il valore in parole («largo»/«stretto»), non solo come numero astratto — due canali, non uno. La scheda dentro non sa nulla del cursore: reagisce solo alla larghezza che le resta, ed è esattamente il punto. Il riflusso è un cambio di <em>struttura</em>, non un'animazione: la larghezza transita mentre trascini, ma sotto <code>prefers-reduced-motion</code> collassa allo stato finale senza lo scivolamento.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque gesti, un'unica intuizione: l'eleganza di una pagina non è ciò che aggiungi, è il fatto che ogni cosa si appoggia alla stessa linea. Costruire la gabbia a dodici colonne, allinearci le note con subgrid, spezzarla con una citazione che sa dove sconfina, farla respirare a tutta pagina e poi rientrare, farla ascoltare il contenitore invece della finestra — ogni mossa è la stessa griglia letta in un modo diverso. E nessuna di queste richiede una libreria o un'immagine: solo linee con un nome, e la disciplina di rispettarle. La bellezza viene dopo. Prima c'è l'allineamento, che è la forma più quieta del rispetto per chi legge.
+
+Il prossimo capitolo resta nel territorio editoriale ma stringe il fuoco su un singolo elemento: la citazione. *La citazione* — quando si dà la parola a qualcun altro, come la si presenta? Dove finisce il nostro testo e comincia il suo, e come si rende quella soglia visibile senza renderla rumorosa.

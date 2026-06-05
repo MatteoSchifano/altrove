@@ -1,0 +1,140 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SidenotePattern — la nota a margine, allineata con subgrid.
+
+   La nota a margine è il gesto editoriale più antico: un commento
+   che vive *accanto* al testo, non sotto. Sullo schermo è raro,
+   perché allinearla bene è fastidioso — la nota deve cominciare
+   esattamente all’altezza del paragrafo che commenta, non fluttuare
+   a caso.
+
+   La risposta onesta è subgrid. La colonna principale e la colonna
+   sussidiaria condividono le *righe* della griglia genitore: ogni
+   blocco di testo e la sua nota si appoggiano alla stessa linea
+   orizzontale, senza margini calcolati a mano che si rompono al
+   primo cambio di lunghezza.
+
+   Accessibilità: la nota è marcata <aside> e resta *dopo* il suo
+   paragrafo nell’ordine del DOM, così uno screen reader la legge
+   nel punto giusto del discorso. La disposizione a due colonne è
+   solo visiva; il significato non dipende dalla posizione.
+
+   Responsive onesto: su contenitore stretto le due colonne
+   collassano — la nota scivola *sotto* il suo paragrafo, rientrata
+   e con un filetto di accento, così resta riconoscibile come nota
+   e non si confonde col corpo. Nessuna animazione: è un cambio di
+   struttura, non un effetto.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    rows: [
+      {
+        body: 'La griglia editoriale nasce dalla stampa: una gabbia che teneva insieme testo, immagini e didascalie su pagine diverse senza che nulla ballasse.',
+        note: 'La «gabbia» tipografica definiva margini e colonne prima ancora del contenuto.',
+      },
+      {
+        body: 'Sul web abbiamo ereditato la gabbia ma non sempre la disciplina: bastano due margini disallineati perché una pagina sembri improvvisata.',
+        note: 'L’occhio non misura i pixel, ma sente quando un bordo non torna.',
+      },
+      {
+        body: 'La nota a margine restituisce al lettore un secondo livello di lettura, opzionale, che non interrompe il filo principale del discorso.',
+        note: 'Tufte ne ha fatto una firma: il commento accanto, mai a piè di pagina.',
+      },
+    ],
+  },
+  en: {
+    rows: [
+      {
+        body: 'The editorial grid comes from print: a cage that held text, images and captions together across pages without anything wobbling.',
+        note: 'The typographic «cage» defined margins and columns before the content itself.',
+      },
+      {
+        body: 'On the web we inherited the cage but not always the discipline: two misaligned margins are enough to make a page look improvised.',
+        note: 'The eye doesn’t measure pixels, but it feels when an edge doesn’t line up.',
+      },
+      {
+        body: 'The sidenote gives the reader a second, optional layer of reading that never interrupts the main thread of the argument.',
+        note: 'Tufte made it a signature: the comment beside the text, never at the foot of the page.',
+      },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="sidenote">
+  {c.rows.map((row, i) => (
+    <div class="sidenote__row">
+      <p class="sidenote__body">{row.body}</p>
+      <aside class="sidenote__aside">
+        <span class="sidenote__marker tabular" aria-hidden="true">{i + 1}</span>
+        <span class="sidenote__text">{row.note}</span>
+      </aside>
+    </div>
+  ))}
+</div>
+
+<style>
+  .sidenote {
+    inline-size: min(42rem, 100%);
+    display: grid;
+    /* Genitore: colonna principale larga, colonna sussidiaria stretta */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 13rem);
+    gap: var(--space-md);
+  }
+
+  .sidenote__row {
+    display: grid;
+    /* subgrid: la riga eredita le colonne del genitore, così corpo e
+       nota condividono esattamente le stesse linee verticali */
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: start;
+    padding-block: var(--space-sm);
+    border-block-start: 1px solid var(--border);
+  }
+  .sidenote__row:first-child { border-block-start: 0; }
+
+  .sidenote__body {
+    margin: 0;
+    max-inline-size: var(--measure);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink);
+  }
+
+  .sidenote__aside {
+    display: flex;
+    gap: var(--space-2xs);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+  .sidenote__marker {
+    flex-shrink: 0;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    color: var(--accent-ink);
+    line-height: 1.6;
+  }
+  .sidenote__text { display: block; }
+
+  /* Su contenitore stretto: una colonna sola. La nota collassa SOTTO
+     il suo paragrafo, rientrata e con filetto d’accento — resta
+     riconoscibile come nota, non si confonde col corpo. */
+  @media (max-width: 40rem) {
+    .sidenote { grid-template-columns: 1fr; }
+    .sidenote__row { grid-template-columns: 1fr; gap: var(--space-2xs); }
+    .sidenote__aside {
+      margin-inline-start: var(--space-md);
+      padding-inline-start: var(--space-sm);
+      border-inline-start: 2px solid var(--accent);
+    }
+  }
+</style>

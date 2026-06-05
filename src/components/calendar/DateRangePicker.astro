@@ -1,0 +1,389 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   DateRangePicker — selezionare un intervallo, non un punto.
+
+   Scegliere "dal 12 al 19" è due gesti, non uno, e l’errore più
+   comune è non dire all’utente in quale dei due si trova. Qui lo
+   stato è esplicito: il primo clic fissa l’inizio (entry), il
+   secondo fissa la fine (exit). Fra i due, mentre il puntatore si
+   muove, l’intervallo si *anteprima* sotto il cursore — così si
+   vede cosa si sta per scegliere prima di confermarlo.
+
+   I capi dell’intervallo sono marcati due volte: con il colore
+   pieno e con la forma (estremi arrotondati, corpo squadrato). Il
+   colore non è mai l’unico canale — chi non lo distingue legge
+   comunque "inizio" e "fine" dalle etichette e dal testo riepilogo.
+
+   Se il secondo clic cade *prima* del primo, non si rompe nulla:
+   si normalizza (l’inizio è sempre la data minore). Un terzo clic
+   ricomincia un intervallo nuovo: lo stato torna a "scegli l’inizio".
+
+   IMPORTANTE: niente new Date() nel frontmatter. La data di
+   riferimento è fissa e tutta la matematica vive nel client.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    caption: 'Seleziona un intervallo',
+    prevMonth: 'Mese precedente',
+    nextMonth: 'Mese successivo',
+    askStart: 'Scegli la data di inizio',
+    askEnd: 'Scegli la data di fine',
+    nights: (n: number) => (n === 1 ? '1 notte' : `${n} notti`),
+    clear: 'Azzera',
+  },
+  en: {
+    caption: 'Select a range',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
+    askStart: 'Pick the start date',
+    askEnd: 'Pick the end date',
+    nights: (n: number) => (n === 1 ? '1 night' : `${n} nights`),
+    clear: 'Clear',
+  },
+} as const;
+const c = COPY[locale];
+const bcp = locale === 'it' ? 'it-IT' : 'en-US';
+---
+
+<div
+  class="rng"
+  data-locale={bcp}
+  data-ask-start={c.askStart}
+  data-ask-end={c.askEnd}
+>
+  <div class="rng__head">
+    <button type="button" class="rng__nav" data-step="-1" aria-label={c.prevMonth}>
+      <span aria-hidden="true">‹</span>
+    </button>
+    <h4 class="rng__title" data-rng-title aria-live="polite">&nbsp;</h4>
+    <button type="button" class="rng__nav" data-step="1" aria-label={c.nextMonth}>
+      <span aria-hidden="true">›</span>
+    </button>
+  </div>
+
+  <div class="rng__grid" role="grid" aria-label={c.caption} data-rng-grid>
+    <div class="rng__weekdays" role="row" data-rng-weekdays aria-hidden="true"></div>
+    <div class="rng__weeks" data-rng-weeks></div>
+  </div>
+
+  <div class="rng__foot">
+    <p class="rng__status tabular" aria-live="polite" data-rng-status>{c.askStart}</p>
+    <button type="button" class="rng__clear" data-rng-clear hidden>{c.clear}</button>
+  </div>
+</div>
+
+<style>
+  .rng {
+    inline-size: min(22rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .rng__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs);
+  }
+  .rng__nav {
+    appearance: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    font-size: var(--text-md);
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .rng__nav:hover { color: var(--ink-strong); border-color: var(--border-strong); }
+  .rng__nav:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .rng__title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+    text-align: center;
+    text-transform: capitalize;
+  }
+
+  .rng__grid { display: flex; flex-direction: column; gap: 0.2rem; }
+  .rng__weekdays,
+  .rng__week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .rng__weekday {
+    text-align: center;
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    padding-block: 0.25rem;
+  }
+  .rng__weeks { display: flex; flex-direction: column; }
+
+  /* La cella è un wrapper: il fondo (range) tocca i bordi senza gap,
+     il bottone interno è arrotondato. Così la "barra" dell’intervallo
+     è continua, e i capi restano pillole nette. */
+  .rng__cell {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+  }
+  .rng__day {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-sm);
+    inline-size: 100%;
+    block-size: 100%;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    z-index: 1;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .rng__day--outside { color: var(--ink-subtle); }
+  .rng__day:hover { background-color: var(--surface-sunken); }
+  .rng__day:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Corpo dell’intervallo: fondo morbido steso dietro il bottone. */
+  .rng__cell--in-range::before {
+    content: '';
+    position: absolute;
+    inset-block: 0.1rem;
+    inset-inline: 0;
+    background-color: var(--accent-soft);
+    z-index: 0;
+  }
+  .rng__cell--range-start::before { inset-inline-start: 50%; border-start-start-radius: var(--radius-md); border-end-start-radius: var(--radius-md); }
+  .rng__cell--range-end::before { inset-inline-end: 50%; border-start-end-radius: var(--radius-md); border-end-end-radius: var(--radius-md); }
+
+  /* I due capi: riempimento pieno + forma pillola. Doppio canale. */
+  .rng__day[data-edge] {
+    background-color: var(--accent);
+    color: var(--accent-on);
+    font-weight: var(--weight-medium);
+  }
+  .rng__day[data-edge]:hover { background-color: var(--accent); }
+
+  .rng__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    min-block-size: 1.5rem;
+  }
+  .rng__status {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+  .rng__clear {
+    appearance: none;
+    border: 1px solid var(--border);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    font-family: inherit;
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .rng__clear:hover { color: var(--ink-strong); }
+  .rng__clear:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+</style>
+
+<script>
+  function ymd(y: number, m: number, d: number): string {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  function keyToTime(key: string): number {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d).getTime();
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.rng').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bcp = root.dataset.locale ?? 'it-IT';
+      const askStart = root.dataset.askStart ?? '';
+      const askEnd = root.dataset.askEnd ?? '';
+      const titleEl = root.querySelector<HTMLElement>('[data-rng-title]')!;
+      const weekdaysEl = root.querySelector<HTMLElement>('[data-rng-weekdays]')!;
+      const weeksEl = root.querySelector<HTMLElement>('[data-rng-weeks]')!;
+      const statusEl = root.querySelector<HTMLElement>('[data-rng-status]')!;
+      const clearBtn = root.querySelector<HTMLButtonElement>('[data-rng-clear]')!;
+      const navs = root.querySelectorAll<HTMLButtonElement>('.rng__nav');
+
+      const ref = new Date(2026, 8, 11); // riferimento fisso
+      const weekStart = bcp === 'it-IT' ? 1 : 0;
+
+      const titleFmt = new Intl.DateTimeFormat(bcp, { month: 'long', year: 'numeric' });
+      const weekdayFmt = new Intl.DateTimeFormat(bcp, { weekday: 'short' });
+      const fullFmt = new Intl.DateTimeFormat(bcp, { dateStyle: 'medium' });
+      const longFmt = new Intl.DateTimeFormat(bcp, { dateStyle: 'full' });
+
+      const labelOf = (key: string) => {
+        const [y, m, d] = key.split('-').map(Number);
+        return fullFmt.format(new Date(y, m - 1, d));
+      };
+      const nights = (a: string, b: string) =>
+        Math.round((keyToTime(b) - keyToTime(a)) / 86_400_000);
+      const nightsCopy = (n: number) =>
+        bcp === 'it-IT' ? (n === 1 ? '1 notte' : `${n} notti`) : n === 1 ? '1 night' : `${n} nights`;
+
+      let view = { year: ref.getFullYear(), month: ref.getMonth() };
+      let start: string | null = null;
+      let end: string | null = null;
+      let hover: string | null = null;
+
+      const renderWeekdays = () => {
+        weekdaysEl.replaceChildren();
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(2026, 2, 1 + ((weekStart + i) % 7));
+          const cell = document.createElement('span');
+          cell.className = 'rng__weekday';
+          cell.textContent = weekdayFmt.format(d);
+          weekdaysEl.append(cell);
+        }
+      };
+
+      const bounds = (): [string, string] | null => {
+        if (!start) return null;
+        // intervallo "vivo" mentre si sceglie la fine: usa l’hover
+        const tail = end ?? hover;
+        if (!tail) return [start, start];
+        return keyToTime(tail) < keyToTime(start) ? [tail, start] : [start, tail];
+      };
+
+      const paint = () => {
+        const b = bounds();
+        weeksEl.querySelectorAll<HTMLElement>('.rng__cell').forEach((cell) => {
+          const day = cell.querySelector<HTMLButtonElement>('.rng__day')!;
+          const key = day.dataset.key!;
+          cell.classList.remove('rng__cell--in-range', 'rng__cell--range-start', 'rng__cell--range-end');
+          delete day.dataset.edge;
+          if (!b) return;
+          const [lo, hi] = b;
+          const t = keyToTime(key);
+          const inRange = t >= keyToTime(lo) && t <= keyToTime(hi);
+          if (inRange) cell.classList.add('rng__cell--in-range');
+          if (key === lo) { cell.classList.add('rng__cell--range-start'); day.dataset.edge = 'start'; }
+          if (key === hi) { cell.classList.add('rng__cell--range-end'); day.dataset.edge = 'end'; }
+        });
+      };
+
+      const announce = () => {
+        if (!start) { statusEl.textContent = askStart; clearBtn.hidden = true; return; }
+        if (!end) { statusEl.textContent = `${labelOf(start)} → … · ${askEnd}`; clearBtn.hidden = false; return; }
+        const n = nights(start, end);
+        statusEl.textContent = `${labelOf(start)} → ${labelOf(end)} · ${nightsCopy(n)}`;
+        clearBtn.hidden = false;
+      };
+
+      const pick = (key: string) => {
+        if (!start || (start && end)) {
+          // primo gesto, o terzo clic che ricomincia
+          start = key; end = null; hover = null;
+        } else {
+          // secondo gesto: chiude e normalizza
+          if (keyToTime(key) < keyToTime(start)) { end = start; start = key; }
+          else { end = key; }
+        }
+        paint();
+        announce();
+      };
+
+      const clear = () => { start = null; end = null; hover = null; paint(); announce(); };
+
+      const render = () => {
+        titleEl.textContent = titleFmt.format(new Date(view.year, view.month, 1));
+        const first = new Date(view.year, view.month, 1);
+        const lead = (first.getDay() - weekStart + 7) % 7;
+        const gridStart = new Date(view.year, view.month, 1 - lead);
+
+        weeksEl.replaceChildren();
+        for (let w = 0; w < 6; w++) {
+          const row = document.createElement('div');
+          row.className = 'rng__week';
+          row.setAttribute('role', 'row');
+          for (let i = 0; i < 7; i++) {
+            const offset = w * 7 + i;
+            const day = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + offset);
+            const key = ymd(day.getFullYear(), day.getMonth(), day.getDate());
+            const outside = day.getMonth() !== view.month;
+
+            const cell = document.createElement('div');
+            cell.className = 'rng__cell';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'rng__day' + (outside ? ' rng__day--outside' : '');
+            btn.setAttribute('role', 'gridcell');
+            btn.dataset.key = key;
+            btn.textContent = String(day.getDate());
+            btn.setAttribute('aria-label', longFmt.format(day));
+
+            btn.addEventListener('click', () => pick(key));
+            btn.addEventListener('pointerenter', () => {
+              if (start && !end) { hover = key; paint(); }
+            });
+            cell.append(btn);
+            row.append(cell);
+          }
+          weeksEl.append(row);
+        }
+        paint();
+      };
+
+      navs.forEach((nav) => {
+        nav.addEventListener('click', () => {
+          const step = Number(nav.dataset.step);
+          const next = new Date(view.year, view.month + step, 1);
+          view = { year: next.getFullYear(), month: next.getMonth() };
+          render();
+        });
+      });
+      clearBtn.addEventListener('click', clear);
+
+      renderWeekdays();
+      render();
+      announce();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

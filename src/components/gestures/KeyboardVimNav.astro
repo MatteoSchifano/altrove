@@ -1,0 +1,257 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   KeyboardVimNav — la scorciatoia opzionale, scoped al componente.
+
+   Navigazione stile Vim: j/k per scendere e salire fra gli item,
+   h/l per restringere/espandere (qui: collassa/apri il dettaglio).
+   È un *acceleratore* per chi quelle dita le ha già allenate —
+   non sostituisce nulla. Le frecce, il Tab e il click continuano a
+   funzionare come sempre; j/k sono in più, non al posto.
+
+   Il punto cruciale è lo scope. I tasti agiscono SOLO quando il
+   componente ha il focus dentro di sé: niente listener globale su
+   window che intercetta la "j" mentre stai leggendo o scrivendo
+   altrove. Leghiamo il keydown alla lista (che è un roving-tabindex
+   focusabile), così la pagina resta libera. Quando il focus esce,
+   le scorciatoie tacciono.
+
+   Accessibilità: la lista è un menu a roving tabindex (un solo item
+   tabbabile per volta, frecce + Home/End standard). Un hint visibile
+   annuncia che j/k sono attivi *adesso* (appare al focus), perché una
+   scorciatoia nascosta non è una scorciatoia. Il focus è sempre
+   visibile via --halo-focus.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Lista navigabile',
+    hint: 'j / k per muoverti, h / l per chiudere o aprire — le frecce e il Tab funzionano comunque.',
+    active: 'Navigazione da tastiera attiva',
+    items: [
+      { t: 'Capitolo 23 · Il ritmo', d: 'Come la cadenza dei contenuti diventa respiro.' },
+      { t: 'Capitolo 24 · L’attesa onesta', d: 'Mostrare il tempo senza fingerlo più corto.' },
+      { t: 'Capitolo 25 · Il gesto', d: 'Cosa cambia quando l’interfaccia si tocca.' },
+      { t: 'Capitolo 26 · Il commiato', d: 'Come si lascia andare un utente con grazia.' },
+    ],
+  },
+  en: {
+    legend: 'Navigable list',
+    hint: 'j / k to move, h / l to close or open — arrows and Tab work anyway.',
+    active: 'Keyboard navigation active',
+    items: [
+      { t: 'Chapter 23 · Rhythm', d: 'How the cadence of content becomes breath.' },
+      { t: 'Chapter 24 · Honest waiting', d: 'Showing time without faking it shorter.' },
+      { t: 'Chapter 25 · The gesture', d: 'What changes when the interface is touched.' },
+      { t: 'Chapter 26 · The farewell', d: 'How to let a user go with grace.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="vim">
+  <p class="vim__active" data-on="false">
+    <span class="vim__dot" aria-hidden="true"></span>{c.active}
+  </p>
+
+  <ul class="vim__list" role="menu" aria-label={c.legend}>
+    {c.items.map((it, i) => (
+      <li class="vim__item" role="none">
+        <button
+          type="button"
+          class="vim__row"
+          role="menuitem"
+          tabindex={i === 0 ? 0 : -1}
+          aria-expanded="true"
+        >
+          <span class="vim__marker" aria-hidden="true"></span>
+          <span class="vim__body">
+            <span class="vim__title">{it.t}</span>
+            <span class="vim__detail">{it.d}</span>
+          </span>
+        </button>
+      </li>
+    ))}
+  </ul>
+
+  <p class="vim__hint">{c.hint}</p>
+</div>
+
+<style>
+  .vim {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .vim__active {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    align-self: flex-start;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .vim__active[data-on='true'] { opacity: 1; color: var(--accent-ink); }
+  .vim__dot {
+    inline-size: 0.45rem;
+    block-size: 0.45rem;
+    border-radius: 50%;
+    background-color: var(--border-strong);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vim__active[data-on='true'] .vim__dot { background-color: var(--accent); }
+
+  .vim__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    padding: 0.3rem;
+  }
+
+  .vim__row {
+    inline-size: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vim__row:hover { background-color: var(--surface-sunken); }
+  .vim__row:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  /* l’item attivo (focusato) si distingue anche oltre il colore: barra a sinistra */
+  .vim__row:focus-visible .vim__marker { background-color: var(--accent); transform: scaleY(1); }
+
+  .vim__marker {
+    flex: 0 0 auto;
+    inline-size: 0.2rem;
+    align-self: stretch;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    transform: scaleY(0.4);
+    transition: transform var(--dur-fast) var(--ease-out-snug), background-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .vim__body { display: flex; flex-direction: column; gap: 0.1rem; min-inline-size: 0; }
+  .vim__title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .vim__detail {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+    overflow: hidden;
+    max-block-size: 2.5rem;
+    transition: max-block-size var(--dur-normal) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  /* h chiude il dettaglio (aria-expanded=false), l lo riapre */
+  .vim__row[aria-expanded='false'] .vim__detail {
+    max-block-size: 0;
+    opacity: 0;
+  }
+
+  .vim__hint {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.vim').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const list = root.querySelector<HTMLElement>('.vim__list');
+      const active = root.querySelector<HTMLElement>('.vim__active');
+      if (!list || !active) return;
+
+      const rows = Array.from(list.querySelectorAll<HTMLButtonElement>('.vim__row'));
+      if (rows.length === 0) return;
+
+      const indexOfFocused = () => rows.findIndex((r) => r.tabIndex === 0);
+
+      const focusAt = (i: number) => {
+        const clamped = Math.max(0, Math.min(rows.length - 1, i));
+        rows.forEach((r, j) => (r.tabIndex = j === clamped ? 0 : -1));
+        rows[clamped].focus();
+      };
+
+      // Lo scope: i tasti vivono SUL contenitore, non su window.
+      // Si attivano solo mentre il focus è dentro la lista.
+      list.addEventListener('keydown', (e) => {
+        const i = indexOfFocused();
+        switch (e.key) {
+          // Vim (acceleratore) + frecce standard (sempre)
+          case 'j':
+          case 'ArrowDown':
+            e.preventDefault();
+            focusAt(i + 1);
+            break;
+          case 'k':
+          case 'ArrowUp':
+            e.preventDefault();
+            focusAt(i - 1);
+            break;
+          case 'h':
+          case 'ArrowLeft':
+            e.preventDefault();
+            rows[i]?.setAttribute('aria-expanded', 'false'); // chiudi il dettaglio
+            break;
+          case 'l':
+          case 'ArrowRight':
+            e.preventDefault();
+            rows[i]?.setAttribute('aria-expanded', 'true'); // apri il dettaglio
+            break;
+          case 'Home':
+            e.preventDefault();
+            focusAt(0);
+            break;
+          case 'End':
+            e.preventDefault();
+            focusAt(rows.length - 1);
+            break;
+        }
+      });
+
+      // L’hint di attivazione appare solo quando il componente ha il focus:
+      // una scorciatoia nascosta non è una scorciatoia.
+      list.addEventListener('focusin', () => { active.dataset.on = 'true'; });
+      list.addEventListener('focusout', (e) => {
+        if (!list.contains(e.relatedTarget as Node)) active.dataset.on = 'false';
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-25"
+number: "25"
+title: "The gesture"
+excerpt: "Touching isn't clicking: the finger follows, drags, pulls. But every gesture here has a button and a shortcut that do the same thing — because a gesture is an accelerator, not a gate."
+date: "September 25, 2026"
+releaseDate: "2026-09-25"
+readMinutes: 12
+tags: ["interaction", "touch", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SwipeToDismiss from '../../../components/gestures/SwipeToDismiss.astro';
+import PullToRefresh from '../../../components/gestures/PullToRefresh.astro';
+import KeyboardVimNav from '../../../components/gestures/KeyboardVimNav.astro';
+import ShortcutHint from '../../../components/gestures/ShortcutHint.astro';
+import InertBackdrop from '../../../components/gestures/InertBackdrop.astro';
+
+The mouse points and clicks: a target, a hit. The finger does something different — it *follows*. It drags, pulls, swipes, keeps contact while the thing moves. When an interface stops being clicked and starts being touched, the grammar changes: no longer a point and an action, but a continuous trajectory that the finger leads and the interface obliges. The gesture is a dialogue, not a command.
+
+But here's the trap half of "mobile-first" design falls into: mistaking the gesture for the *function*. Swipe-to-dismiss is elegant — until it's the **only** way to dismiss. Then it becomes a gate: whoever doesn't know it exists, whoever can't drag precisely, whoever navigates by keyboard or screen reader is left out. An invisible, mandatory gesture isn't a shortcut: it's a door with the handle hidden. The rule of this chapter is one, and we repeat it in each of the five demos: **a gesture is an accelerator, not a gate**. Every swipe has its button, every pull has its "Refresh", every shortcut has its explicit path.
+
+And there's a second commitment, more technical but just as much about respect: the gesture stays home. No global handlers hijacking the whole page's scroll because one box wanted pull-to-refresh; no `?` key opening an overlay while you're reading somewhere else. Pointer capture, `overscroll-behavior: contain`, listeners bound to the component and not to `window`: containment is the difference between a gesture that helps and one that takes over everything. Five gestures, five explicit equivalents, zero hijacked page.
+
+## Dismiss with a finger, or with a button
+
+The first gesture is swipe-to-dismiss: a card you drag away. The finger moves it 1:1, with resistance growing near the threshold, and it either flies off or springs back. But beside it there's always the "Dismiss" button.
+
+<Demo title="Swipe-to-dismiss · the finger follows, but there’s a button" tag="25.a">
+  <SwipeToDismiss locale="en" />
+  <div slot="note">
+    <p>Drag the card sideways: it follows the finger exactly, with resistance building past the midpoint — the square root of the displacement saying “I'm giving, but you'll have to insist”. Past the threshold it leaves from the side of the gesture; below it, it returns into place with a soft curve. We use Pointer Events with <code>setPointerCapture</code> and <code>touch-action: pan-y</code>, so the horizontal drag never steals the page's vertical scroll: the gesture stays inside the card.</p>
+    <p>Here's the chapter's honesty. The swipe is an <strong>accelerator</strong> for those who know it — the "Dismiss" button does the exact same thing, reachable with Tab and Enter, and after dismissal focus moves to "Restore" so nobody is orphaned. If the swipe were the only way, it would be a gate: keyboard users couldn't archive anything. With reduced motion the elastic return and the decorative exit collapse via tokens: the card disappears all the same, only the journey is gone.</p>
+  </div>
+</Demo>
+
+## Pull to refresh, without abducting the page
+
+Pull-to-refresh is the quintessential mobile gesture, and also the easiest to get wrong: one careless handler and the whole page bounces. Here the gesture lives inside a scrollable container, and stays there.
+
+<Demo title="Pull-to-refresh · contained in its frame" tag="25.b">
+  <PullToRefresh locale="en" />
+  <div slot="note">
+    <p>When you're already at the top of the list and pull down further, the indicator descends following the finger with resistance; past the threshold, on release the refresh fires. Containment is everything: <code>overscroll-behavior: contain</code> stops the box's scroll from overflowing onto the page, and the JS gesture arms <em>only</em> when <code>scrollTop</code> is 0 — the moment there's content above, the pull goes back to being normal scroll. No listener on <code>window</code>, no hijacking of the global scroll.</p>
+    <p>The accelerator always has its explicit twin: the "Refresh" button up top does the same thing, from the keyboard, without needing to know the gesture exists. And the state stays honest — no inflated counts on return, just “updated just now”, and the spinner turns only while the work is genuinely in progress, past the threshold of decency. With reduced motion the spinner doesn't rotate: the indicator appears, the state changes, but without the decorative spin.</p>
+  </div>
+</Demo>
+
+## The arrows for fingers already trained
+
+Not every gesture is the finger's. Vim-style navigation — `j`/`k` to go up and down, `h`/`l` to close and open — is a keyboard gesture: invisible, optional, lightning-fast for those who know it. The risk is that it becomes a secret language.
+
+<Demo title="Vim navigation · optional shortcut, never forced" tag="25.c">
+  <KeyboardVimNav locale="en" />
+  <div slot="note">
+    <p>Focus the list and <kbd>j</kbd>/<kbd>k</kbd> move you between items, <kbd>h</kbd>/<kbd>l</kbd> close and reopen the detail. But it's an <em>extra</em>: the <kbd>↑</kbd>/<kbd>↓</kbd> arrows, <kbd>Home</kbd>/<kbd>End</kbd>, Tab and click work exactly as always. The list is a roving-tabindex menu — one tabbable item at a time — so the standard keyboard comes for free and <code>j</code>/<code>k</code> merely accelerate it. Focus is always visible: the <code>--halo-focus</code> ring plus a bar beside the item, because position isn't read from colour alone.</p>
+    <p>Two honesty details. First: the keys are <strong>scoped</strong> — the <code>keydown</code> is bound to the list, not to <code>window</code>, so "j" isn't intercepted while you read elsewhere on the page. Second: a hint appears on focus (“Keyboard navigation active”), because a shortcut nobody announces isn't a shortcut, it's a secret. The accelerator must declare itself, or it helps no one but those who already knew.</p>
+  </div>
+</Demo>
+
+## The legend that appears only where you are
+
+The `?` key that opens the list of shortcuts is a classic. Almost always it's global — listening across the whole page. Here we make it local: the legend opens only when *this* panel has focus.
+
+<Demo title="ShortcutHint · the “?” scoped to the component" tag="25.d">
+  <ShortcutHint locale="en" />
+  <div slot="note">
+    <p>Focus the panel and press <kbd>?</kbd>: a <code>&lt;dialog&gt;</code> opens with the local shortcuts, closed by <kbd>Esc</kbd>. Unlike the global overlay of chapter 04, here the <code>keydown</code> is bound to the component, not to <code>document</code>: the legend won't intrude while you're elsewhere, and several "islands" of shortcuts can coexist without fighting over the same key. Using <code>showModal()</code>, focus trap, top-layer and focus restoration arrive natively — no hand-written trap.</p>
+    <p>The accelerator stays one: there's always the visible "Shortcuts" button that opens the same panel, for whoever knows nothing of the key. And <code>?</code> doesn't fire while you're typing in a field — someone typing “why?” wants the question mark, not an overlay in their face. It's the same courtesy as ever: the quick gesture must never steal the obvious one.</p>
+  </div>
+</Demo>
+
+## When a panel is open, the rest is out of play
+
+The last one isn't a finger gesture but the *structural* gesture every overlay must make: declaring what's interactive. When a panel opens, the backdrop should become `inert` — not focusable, not clickable, invisible to screen readers.
+
+<Demo title="InertBackdrop · with and without inert, compared" tag="25.e">
+  <InertBackdrop locale="en" />
+  <div slot="note">
+    <p>Open the panel and try pressing <kbd>Tab</kbd> or clicking the backdrop buttons. With <code>inert</code> on, the backdrop is truly out of play: Tab can't reach it, clicks don't pass, assistive tech skips it — one attribute removes focus, pointer events and ARIA visibility together. Uncheck "Use inert" and try again: Tab falls behind the panel and the "covered" buttons still respond — the proof, written on screen, of why it's needed.</p>
+    <p>The <code>&lt;dialog&gt;.showModal()</code> makes the backdrop inert on its own; but when the panel is in-page, as here, it's on us. It's the other face of the chapter: an interface that's touched must know, at every instant, <em>what</em> can be touched. The inert backdrop is also visibly dimmed — blurred and muted — because the “non-interactive” state doesn't rely on behaviour alone, it's seen. <code>inert</code> is correctness, not decoration: it stays identical even with reduced motion.</p>
+  </div>
+</Demo>
+
+---
+
+Five gestures, one discipline: touch adds speed, never requirements. The swipe that dismisses has its button, the pull that refreshes has its own, Vim navigation has its arrows, the `?` has its icon, and every panel declares with `inert` what stays alive beneath it. A gesture is honest when it's a bonus for those who know it and nothing lost for those who don't — and when it stays home, without seizing the scroll, the focus or the keyboard of the rest of the page. The interface that's touched is more alive than the one that's clicked, but only if no one, touching it or not, is locked out.
+
+The next chapter closes the circle, and shifts tone. After twenty-five chapters spent bringing the user in — holding them, serving them, not disturbing them — the last question is the most neglected: how do you let them go? *The farewell* — how to take leave of a user with grace, when they're done, without grabbing them by the arm.

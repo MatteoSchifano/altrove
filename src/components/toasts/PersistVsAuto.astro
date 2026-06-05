@@ -1,0 +1,291 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PersistVsAuto — quando il toast deve restare, quando deve andarsene.
+
+   Due toast affiancati, due regole opposte, una sola domanda sotto:
+   l’utente *deve* leggere questo messaggio per agire?
+
+   - AUTO-DISMISS (a destra): conferma di un’azione andata a buon
+     fine. Non richiede risposta, sparisce dopo ~3.5s. Costringere
+     a chiudere un "salvato" è attrito gratuito.
+   - PERSISTENTE (a sinistra): un errore che blocca l’utente, o che
+     richiede una decisione. Non sparisce da solo: resta finché non
+     lo si chiude o non si risolve. Far svanire un errore prima che
+     venga letto è disonesto — l’utente resta col problema, senza il
+     messaggio.
+
+   La regola: l’auto-dismiss è per ciò che l’utente può ignorare;
+   la persistenza è per ciò che non può permettersi di perdere.
+
+   - Entrambi accessibili: il persistente ha una X reale con
+     aria-label; l’auto annuncia via aria-live e basta.
+   - Reduced motion: nessun viaggio, stesso stato finale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    persistTitle: 'Persistente · per gli errori',
+    persistWhen: 'Resta finché non lo chiudi. Per ciò che blocca.',
+    persistTrigger: 'Simula un errore',
+    persistTag: 'Errore',
+    persistMsg: 'Pagamento rifiutato: la carta è scaduta. Aggiornala per continuare.',
+    close: 'Chiudi avviso',
+
+    autoTitle: 'Auto-dismiss · per le conferme',
+    autoWhen: 'Sparisce dopo qualche secondo. Per ciò che rassicura.',
+    autoTrigger: 'Simula un salvataggio',
+    autoTag: 'Salvato',
+    autoMsg: 'Modifiche salvate — sincronizzate su tutti i dispositivi.',
+  },
+  en: {
+    persistTitle: 'Persistent · for errors',
+    persistWhen: 'Stays until you close it. For what blocks.',
+    persistTrigger: 'Simulate an error',
+    persistTag: 'Error',
+    persistMsg: 'Payment declined: the card has expired. Update it to continue.',
+    close: 'Close alert',
+
+    autoTitle: 'Auto-dismiss · for confirmations',
+    autoWhen: 'Disappears after a few seconds. For what reassures.',
+    autoTrigger: 'Simulate a save',
+    autoTag: 'Saved',
+    autoMsg: 'Changes saved — synced across all your devices.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="pva">
+  <section class="pva__col" data-kind="persist">
+    <header class="pva__head">
+      <h4 class="pva__title">{c.persistTitle}</h4>
+      <p class="pva__when">{c.persistWhen}</p>
+    </header>
+    <button type="button" class="pva__btn" data-trigger="persist">{c.persistTrigger}</button>
+    <div class="pva__slot">
+      <div
+        class="pva__toast pva__toast--error"
+        role="alert"
+        data-toast="persist"
+        data-state="hidden"
+      >
+        <span class="pva__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="7.5" /><path d="M10 6.4v4.2" /><path d="M10 13.5h.01" />
+          </svg>
+        </span>
+        <span class="pva__body">
+          <span class="pva__tag">{c.persistTag}</span>
+          <span class="pva__text">{c.persistMsg}</span>
+        </span>
+        <button type="button" class="pva__close" data-close aria-label={c.close}>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pva__col" data-kind="auto">
+    <header class="pva__head">
+      <h4 class="pva__title">{c.autoTitle}</h4>
+      <p class="pva__when">{c.autoWhen}</p>
+    </header>
+    <button type="button" class="pva__btn" data-trigger="auto">{c.autoTrigger}</button>
+    <div class="pva__slot">
+      <div
+        class="pva__toast pva__toast--ok"
+        role="status"
+        aria-live="polite"
+        data-toast="auto"
+        data-state="hidden"
+      >
+        <span class="pva__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="7.5" /><path d="M6.6 10.3l2.2 2.2 4.6-4.8" />
+          </svg>
+        </span>
+        <span class="pva__body">
+          <span class="pva__tag">{c.autoTag}</span>
+          <span class="pva__text">{c.autoMsg}</span>
+        </span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+  .pva {
+    inline-size: min(34rem, 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+  @media (max-width: 32rem) {
+    .pva { grid-template-columns: 1fr; }
+  }
+
+  .pva__col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .pva__head { display: flex; flex-direction: column; gap: 0.1rem; }
+  .pva__title {
+    margin: 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--ink-strong);
+  }
+  .pva__when {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .pva__btn {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .pva__btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .pva__btn:active { transform: translateY(0); }
+  .pva__btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .pva__slot { min-block-size: 5.5rem; }
+
+  .pva__toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    padding: 0.7rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--tone);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .pva__toast[data-state='shown'] { opacity: 1; transform: translateY(0); }
+  .pva__toast[data-state='leaving'] {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--dur-fast) var(--ease-in),
+      transform var(--dur-fast) var(--ease-in);
+  }
+  .pva__toast[data-state='hidden'] { pointer-events: none; }
+
+  .pva__toast--error { --tone: oklch(0.58 0.19 25); }
+  .pva__toast--ok    { --tone: oklch(0.62 0.15 150); }
+
+  .pva__icon {
+    flex-shrink: 0;
+    color: var(--tone);
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    margin-block-start: 0.05rem;
+  }
+  .pva__icon svg { inline-size: 100%; block-size: 100%; }
+
+  .pva__body { display: flex; flex-direction: column; gap: 0.1rem; flex: 1; }
+  .pva__tag {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--tone);
+  }
+  .pva__text {
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  .pva__close {
+    flex-shrink: 0;
+    inline-size: 1.4rem;
+    block-size: 1.4rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out-soft), background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .pva__close:hover { color: var(--ink-strong); background-color: var(--surface-sunken); }
+  .pva__close:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .pva__close svg { inline-size: 0.7rem; block-size: 0.7rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pva__toast { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.pva').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const persistToast = root.querySelector<HTMLElement>('[data-toast="persist"]')!;
+      const autoToast = root.querySelector<HTMLElement>('[data-toast="auto"]')!;
+      const persistBtn = root.querySelector<HTMLButtonElement>('[data-trigger="persist"]')!;
+      const autoBtn = root.querySelector<HTMLButtonElement>('[data-trigger="auto"]')!;
+      const closeBtn = persistToast.querySelector<HTMLButtonElement>('[data-close]')!;
+
+      let autoTimer: number | null = null;
+      const AUTO_LIFE = 3500;
+
+      const show = (toast: HTMLElement) => {
+        // Re-trigger pulito: torna a hidden, reflow, poi shown.
+        toast.dataset.state = 'hidden';
+        void toast.offsetWidth;
+        toast.dataset.state = 'shown';
+      };
+
+      const leave = (toast: HTMLElement) => {
+        toast.dataset.state = 'leaving';
+        const done = () => { toast.dataset.state = 'hidden'; };
+        toast.addEventListener('transitionend', done, { once: true });
+        window.setTimeout(done, 200);
+      };
+
+      // Persistente: appare e RESTA. Si chiude solo a mano.
+      persistBtn.addEventListener('click', () => show(persistToast));
+      closeBtn.addEventListener('click', () => leave(persistToast));
+
+      // Auto: appare e se ne va da solo dopo AUTO_LIFE.
+      autoBtn.addEventListener('click', () => {
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        show(autoToast);
+        autoTimer = window.setTimeout(() => leave(autoToast), AUTO_LIFE);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

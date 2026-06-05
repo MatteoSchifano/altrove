@@ -1,0 +1,208 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   TranslatedQuote — citazione tradotta: originale + traduzione.
+
+   Quando si cita qualcuno che parlava un’altra lingua, si dà sia
+   l’originale sia la traduzione. La domanda di design è: quale dei
+   due è il primario, quello grande e in evidenza, e quale il
+   secondario, di servizio? La risposta dipende dal lettore — e qui
+   la lasciamo scegliere con un toggle.
+
+   La parte che NON è negoziabile è il `lang` su ciascun blocco.
+   Ogni citazione dichiara la propria lingua reale:
+     • serve allo screen reader, che cambia voce/pronuncia;
+     • serve alla sillabazione (hyphens: auto vuole il dizionario
+       giusto, lezione del cap. 08);
+     • serve alle virgolette: la proprietà `quotes` segue la lingua
+       del blocco, così l’originale francese porta i caporali e la
+       traduzione inglese le doppie curve. Un solo blocco con due
+       lingue mischiate sbaglierebbe entrambe.
+
+   Il toggle scambia solo la GERARCHIA visiva (chi è primario), non
+   il contenuto: è un <button> vero con aria-pressed, tastiera
+   gratis, anello di focus via --halo-focus. La transizione di scala
+   passa dalle durate-token → con prefers-reduced-motion commuta
+   secca, stesso stato finale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    // L’originale è francese; la traduzione segue la lingua dell’UI.
+    origLang: 'fr',
+    orig: 'On ne voit bien qu’avec le cœur. L’essentiel est invisible pour les yeux.',
+    transLang: 'it',
+    trans: 'Non si vede bene che col cuore. L’essenziale è invisibile agli occhi.',
+    person: 'Antoine de Saint-Exupéry',
+    work: 'Il Piccolo Principe',
+    swap: 'Scambia primario',
+    origCap: 'Originale · francese',
+    transCap: 'Traduzione · italiano',
+  },
+  en: {
+    origLang: 'fr',
+    orig: 'On ne voit bien qu’avec le cœur. L’essentiel est invisible pour les yeux.',
+    transLang: 'en',
+    trans: 'It is only with the heart that one can see rightly. What is essential is invisible to the eye.',
+    person: 'Antoine de Saint-Exupéry',
+    work: 'The Little Prince',
+    swap: 'Swap primary',
+    origCap: 'Original · French',
+    transCap: 'Translation · English',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<figure class="tq" data-primary="orig">
+  <div class="tq__pair">
+    <blockquote class="tq__block tq__block--orig" lang={c.origLang}>
+      <span class="tq__cap">{c.origCap}</span>
+      <p class="tq__text">{c.orig}</p>
+    </blockquote>
+
+    <blockquote class="tq__block tq__block--trans" lang={c.transLang}>
+      <span class="tq__cap">{c.transCap}</span>
+      <p class="tq__text">{c.trans}</p>
+    </blockquote>
+  </div>
+
+  <figcaption class="tq__attr">
+    <span aria-hidden="true">—&nbsp;</span>{c.person},
+    <cite class="tq__work" lang={c.transLang}>{c.work}</cite>
+  </figcaption>
+
+  <button type="button" class="tq__swap" aria-pressed="false">
+    <span class="tq__swap-icon" aria-hidden="true">⇄</span>{c.swap}
+  </button>
+</figure>
+
+<style>
+  .tq {
+    inline-size: min(34rem, 100%);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .tq__pair {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  .tq__block {
+    margin: 0;
+    padding-inline-start: var(--space-sm);
+    border-inline-start: 2px solid var(--border-strong);
+    /* La scala è il segnale di gerarchia, mossa via --scale.
+       Forma (dimensione) + opacità: non solo colore. */
+    transition:
+      font-size var(--dur-normal) var(--ease-out-soft),
+      opacity var(--dur-normal) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .tq__cap {
+    display: block;
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ink-subtle);
+    margin-block-end: var(--space-3xs);
+  }
+
+  .tq__text {
+    margin: 0;
+    line-height: var(--leading-relaxed);
+    letter-spacing: var(--tracking-snug);
+    color: var(--ink-strong);
+    /* Virgolette curve coerenti con la lingua del blocco. */
+    quotes: '«' '»' '‘' '’';
+    text-wrap: pretty;
+    hyphens: auto;
+  }
+  .tq__block[lang='en'] .tq__text { quotes: '“' '”' '‘' '’'; }
+  .tq__block[lang='fr'] .tq__text { quotes: '«\00a0' '\00a0»' '‘' '’'; }
+
+  .tq__text::before { content: open-quote; }
+  .tq__text::after  { content: close-quote; }
+
+  /* Primario: grande, opaco, filetto d’accento.
+     Secondario: più piccolo, attenuato, filetto neutro. */
+  .tq[data-primary='orig'] .tq__block--orig,
+  .tq[data-primary='trans'] .tq__block--trans {
+    font-size: var(--text-md);
+    opacity: 1;
+    border-inline-start-color: var(--accent);
+  }
+  .tq[data-primary='orig'] .tq__block--trans,
+  .tq[data-primary='trans'] .tq__block--orig {
+    font-size: var(--text-sm);
+    opacity: 0.72;
+  }
+  /* In ordine sorgente l’originale è primo; quando il primario è la
+     traduzione, la portiamo sopra otticamente con l’ordine flex. */
+  .tq[data-primary='trans'] .tq__block--orig { order: 2; }
+
+  .tq__attr {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+  .tq__work { font-style: italic; color: var(--ink); }
+
+  .tq__swap {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.4rem 0.75rem;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .tq__swap:hover { border-color: var(--border-strong); color: var(--ink-strong); }
+  .tq__swap:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .tq__swap-icon {
+    font-size: var(--text-base);
+    color: var(--accent);
+  }
+
+  .tq__text::selection { background-color: var(--accent-soft); }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.tq').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const btn = root.querySelector<HTMLButtonElement>('.tq__swap');
+      if (!btn) return;
+
+      btn.addEventListener('click', () => {
+        const next = root.dataset.primary === 'orig' ? 'trans' : 'orig';
+        root.dataset.primary = next;
+        // aria-pressed riflette “la traduzione è in primo piano”.
+        btn.setAttribute('aria-pressed', next === 'trans' ? 'true' : 'false');
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

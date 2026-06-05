@@ -1,0 +1,85 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   InlineQuote — la citazione dentro la frase, annidata e onesta.
+
+   Citare dentro una riga sembra banale: si mettono due virgolette.
+   Ma due cose vanno fatte bene, e quasi nessuno le fa:
+
+   1. Il TAG. Una citazione inline è <q>, non virgolette battute a
+      mano. Il browser aggiunge i segni da solo, e — cosa che a mano
+      è impossibile — sa annidare: una <q> dentro un’altra <q> usa
+      automaticamente il livello giusto di virgolette.
+
+   2. La LINGUA. Quali segni metta il browser dipende dalla proprietà
+      CSS `quotes`, che cambia con la lingua:
+        • italiano: «… ‘…’ …»  — caporali fuori, curve singole dentro
+        • inglese:  “… ‘…’ …”  — doppie curve fuori, singole dentro
+      Senza dichiarare la convenzione giusta, <q> userebbe quella di
+      default del browser — spesso quella inglese, anche su testo
+      italiano. È il bug silenzioso della citazione.
+
+   Niente JS, niente motion: il livello di annidamento e i glifi li
+   risolve il CSS via `quotes` + content: open-quote / close-quote,
+   che <q> applica da solo.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    // Frase con citazione esterna e una interna annidata.
+    lead: 'Il direttore tagliò corto:',
+    outer: 'la regola è una sola, e me la ripeteva mio nonno:',
+    inner: 'misura due volte, taglia una.',
+    tail: 'Non c’è altro da aggiungere.',
+  },
+  en: {
+    lead: 'The editor cut it short:',
+    outer: 'there is only one rule, and my grandfather kept telling me:',
+    inner: 'measure twice, cut once.',
+    tail: 'There is nothing more to add.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<p class="iq" lang={locale}>
+  {c.lead}{' '}
+  <q class="iq__outer"
+    >{c.outer}{' '}<q class="iq__inner">{c.inner}</q></q>{' '}{c.tail}
+</p>
+
+<style>
+  .iq {
+    inline-size: min(30rem, 100%);
+    margin: 0;
+    font-size: var(--text-md);
+    line-height: var(--leading-relaxed);
+    letter-spacing: var(--tracking-snug);
+    color: var(--ink-strong);
+    text-wrap: pretty;
+  }
+
+  /* La convenzione italiana: due livelli.
+     1° livello → caporali «»  ·  2° livello → curve singole ‘’ */
+  .iq {
+    quotes: '«' '»' '‘' '’';
+  }
+  /* La convenzione inglese: doppie curve fuori, singole dentro. */
+  .iq[lang='en'] {
+    quotes: '“' '”' '‘' '’';
+  }
+
+  /* <q> mette i segni da solo dal valore `quotes`; non scriviamo
+     noi le virgolette nel markup — sarebbe il modo per sbagliarle. */
+  .iq__inner { font-style: italic; }
+
+  /* Un soffio d’accento sulla citazione interna per leggibilità,
+     ma il segno tipografico resta il canale primario. */
+  .iq__outer { color: var(--ink); }
+
+  .iq ::selection { background-color: var(--accent-soft); }
+</style>

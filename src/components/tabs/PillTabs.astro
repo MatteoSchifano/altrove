@@ -1,0 +1,212 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PillTabs — tab a "pillole" dense, con la pillola che scivola
+   *dietro* la selezione.
+
+   È la lezione del controllo segmentato (cap. 09) applicata a un
+   problema diverso. Lì la pillola scivolava sotto un radio: una
+   scelta di valore. Qui scivola sotto una *tab*: ogni pillola
+   apre un pannello, e la semantica è il pattern ARIA tabs, non
+   un radio group. Stessa meccanica visiva, contratto diverso —
+   ed è proprio la confusione tra i due che disorienta.
+
+   La pillola di sfondo è un solo elemento che trasla per --idx.
+   I segmenti sono a larghezza uguale (grid 1fr × N), così la
+   pillola è esattamente 100%/N e si sposta di idx·100%: nessuna
+   misura in JS, solo una custom property che cambia. Densa e
+   compatta, sta dove la barra underline sarebbe troppo "ariosa".
+
+   Tastiera: ←/→ ciclano, Home/End agli estremi, roving tabindex.
+   Cambiando pannello, il contenuto già visto non si ri-anima:
+   lo scambio è istantaneo, la pillola porta la continuità.
+
+   Reduced motion: la pillola non scivola (durate-token → 1ms),
+   è già dietro la tab scelta. Stesso stato finale, nessun viaggio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Periodo',
+    tabs: [
+      { id: 'day', tab: 'Giorno', body: 'Le ultime 24 ore, ora per ora. Una vista stretta per chi vuole sapere "cosa sta succedendo adesso", senza il rumore della settimana intera.' },
+      { id: 'week', tab: 'Settimana', body: 'Sette giorni aggregati. È il periodo di default perché è quello in cui un andamento comincia a leggersi: abbastanza ampio da mostrare un trend, abbastanza stretto da restare leggibile.' },
+      { id: 'month', tab: 'Mese', body: 'Trenta giorni, raggruppati per settimana. Cambiare periodo non ricalcola tutto da capo agli occhi: la pillola scivola e il pannello cambia, ma resti nello stesso posto della pagina.' },
+    ],
+  },
+  en: {
+    label: 'Range',
+    tabs: [
+      { id: 'day', tab: 'Day', body: 'The last 24 hours, hour by hour. A narrow view for whoever wants to know "what’s happening right now", without the noise of the whole week.' },
+      { id: 'week', tab: 'Week', body: 'Seven days aggregated. It’s the default range because it’s where a trend starts to read: wide enough to show a movement, narrow enough to stay legible.' },
+      { id: 'month', tab: 'Month', body: 'Thirty days, grouped by week. Switching range doesn’t recompute everything before your eyes: the pill slides and the panel changes, but you stay in the same place on the page.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const initial = 1; // "Settimana" — un default ragionevole, non l’estremo
+const uid = `plt-${locale}`;
+---
+
+<div class="plt" data-initial={String(initial)}>
+  <span class="plt__heading">{c.label}</span>
+  <div
+    class="plt__list"
+    role="tablist"
+    aria-label={c.label}
+    style={`--count:${c.tabs.length}; --idx:${initial};`}
+  >
+    <span class="plt__pill" aria-hidden="true"></span>
+    {c.tabs.map((t, i) => (
+      <button
+        type="button"
+        class="plt__tab"
+        role="tab"
+        id={`${uid}-tab-${t.id}`}
+        aria-controls={`${uid}-panel-${t.id}`}
+        aria-selected={i === initial ? 'true' : 'false'}
+        tabindex={i === initial ? '0' : '-1'}
+        data-idx={String(i)}
+      >
+        {t.tab}
+      </button>
+    ))}
+  </div>
+  {c.tabs.map((t, i) => (
+    <div
+      class="plt__panel"
+      role="tabpanel"
+      id={`${uid}-panel-${t.id}`}
+      aria-labelledby={`${uid}-tab-${t.id}`}
+      tabindex="0"
+      hidden={i !== initial}
+    >
+      <p>{t.body}</p>
+    </div>
+  ))}
+</div>
+
+<style>
+  .plt {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .plt__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .plt__list {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--count), 1fr);
+    padding: 0.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  /* La pillola di sfondo: larga un segmento, scivola sull’asse X.
+     Vive sotto il testo (z-index) e si muove per --idx. */
+  .plt__pill {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0.25rem;
+    inset-inline-start: 0.25rem;
+    inline-size: calc((100% - 0.5rem) / var(--count));
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(calc(var(--idx) * 100%));
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .plt__tab {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.4rem 0.75rem;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    text-align: center;
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .plt__tab:hover { color: var(--ink); }
+  .plt__tab[aria-selected='true'] { color: var(--ink-strong); }
+  .plt__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .plt__panel {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    border-radius: var(--radius-sm);
+  }
+  .plt__panel[hidden] { display: none; }
+  .plt__panel:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .plt__panel p { margin: 0; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.plt').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const list = root.querySelector<HTMLElement>('.plt__list');
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.plt__tab'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.plt__panel'));
+      if (!list || !tabs.length) return;
+
+      let current = Number(root.dataset.initial ?? '0');
+
+      const set = (idx: number, focus: boolean) => {
+        current = idx;
+        tabs.forEach((tab, i) => {
+          const selected = i === idx;
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+          tab.tabIndex = selected ? 0 : -1;
+          if (panels[i]) panels[i].hidden = !selected;
+        });
+        // La pillola si sposta cambiando solo --idx: niente misure.
+        list.style.setProperty('--idx', String(idx));
+        if (focus) tabs[idx]?.focus();
+      };
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => set(i, false));
+        tab.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          set(next, true);
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

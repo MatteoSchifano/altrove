@@ -1,0 +1,281 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HotspotImage — l’immagine che si annota senza coprirsi.
+
+   Un’immagine può portare informazione puntuale: "questo dettaglio
+   qui significa questo". Gli hot-spot sono il modo onesto di farlo
+   — piccoli punti sull’immagine che, toccati, aprono una nota. La
+   tentazione sbagliata è il tooltip hover-only su un <div>: muore
+   su touch e per la tastiera. Qui ogni hot-spot è un <button> vero
+   con etichetta, la nota è un popover ancorato, e si chiude con
+   click-fuori o Esc. Un solo punto aperto per volta: l’attenzione
+   è dosata.
+
+   Niente file: la scena è un gradient SVG; i punti sono posizionati
+   in percentuale, così restano coerenti a ogni dimensione.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Immagine annotata · punti cliccabili',
+    alt: 'Natura morta astratta: una brocca, un frutto e un panno su un tavolo caldo.',
+    hint: 'Apri un punto per la nota · Esc chiude',
+    spots: [
+      { x: 30, y: 42, name: 'La brocca', note: 'Il riflesso sul ventre della brocca è dipinto, non fotografato: serve a dire “ceramica”, non vetro.' },
+      { x: 62, y: 58, name: 'Il frutto', note: 'L’unico punto saturo della scena. Tutto il resto è desaturato apposta perché l’occhio cada qui.' },
+      { x: 47, y: 80, name: 'Il panno', note: 'La piega obliqua porta lo sguardo dal basso verso la brocca: una scala nascosta nel tessuto.' },
+    ],
+  },
+  en: {
+    label: 'Annotated image · clickable points',
+    alt: 'Abstract still life: a jug, a fruit and a cloth on a warm table.',
+    hint: 'Open a point for the note · Esc closes',
+    spots: [
+      { x: 30, y: 42, name: 'The jug', note: 'The highlight on the jug’s belly is painted, not photographed: it says “ceramic”, not glass.' },
+      { x: 62, y: 58, name: 'The fruit', note: 'The only saturated point in the scene. Everything else is desaturated on purpose so the eye lands here.' },
+      { x: 47, y: 80, name: 'The cloth', note: 'The diagonal fold leads the gaze upward to the jug: a hidden staircase in the fabric.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+
+const scene = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 220'>
+  <defs>
+    <linearGradient id='bg' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#e8c9a4'/>
+      <stop offset='1' stop-color='#6e4d3c'/>
+    </linearGradient>
+  </defs>
+  <rect width='320' height='220' fill='url(#bg)'/>
+  <rect x='0' y='150' width='320' height='70' fill='#8a6347' opacity='0.7'/>
+  <path d='M78 70 q-14 6 -14 38 q0 34 32 34 q32 0 32 -34 q0 -32 -14 -38 q4 -10 -4 -14 l-28 0 q-8 4 -4 14 z' fill='#cdb69a'/>
+  <circle cx='198' cy='128' r='22' fill='#c64f2e'/>
+  <path d='M120 168 q40 -10 110 6 l0 12 q-70 -12 -110 -2 z' fill='#d8c3a6' opacity='0.85'/>
+</svg>`)}`;
+const uid = `hsi-${locale}`;
+---
+
+<div class="hsi">
+  <span class="hsi__heading">{c.label}</span>
+  <figure class="hsi__figure">
+    <div class="hsi__media">
+      <img src={scene} alt={c.alt} />
+      {c.spots.map((s, i) => (
+        <div class="hsi__spot" style={`--x:${s.x}%; --y:${s.y}%;`}>
+          <button
+            type="button"
+            class="hsi__dot"
+            data-idx={String(i)}
+            aria-expanded="false"
+            aria-controls={`${uid}-note-${i}`}
+            aria-label={s.name}
+          >
+            <span class="hsi__num tabular">{i + 1}</span>
+          </button>
+          <div
+            class="hsi__note"
+            id={`${uid}-note-${i}`}
+            role="dialog"
+            aria-label={s.name}
+            data-state="closed"
+          >
+            <span class="hsi__note-name">{s.name}</span>
+            <span class="hsi__note-text">{s.note}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+    <figcaption class="hsi__caption">{c.hint}</figcaption>
+  </figure>
+</div>
+
+<style>
+  .hsi {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .hsi__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .hsi__figure { margin: 0; }
+
+  .hsi__media {
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 16 / 11;
+    border-radius: var(--radius-lg);
+    overflow: visible;
+    box-shadow: var(--shadow-md);
+  }
+  .hsi__media > img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    display: block;
+  }
+
+  .hsi__spot {
+    position: absolute;
+    inset-block-start: var(--y);
+    inset-inline-start: var(--x);
+    transform: translate(-50%, -50%);
+  }
+
+  .hsi__dot {
+    inline-size: 1.6rem;
+    block-size: 1.6rem;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 2px solid oklch(0.99 0.01 var(--hue-warm));
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: var(--accent-on);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform var(--dur-fast) var(--ease-out-snug),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .hsi__dot:hover { transform: scale(1.12); }
+  .hsi__dot:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .hsi__dot[aria-expanded='true'] {
+    transform: scale(1.12);
+    box-shadow: var(--halo-accent);
+  }
+  .hsi__num {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
+    line-height: 1;
+  }
+
+  .hsi__note {
+    position: absolute;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-start: 50%;
+    inline-size: 14rem;
+    max-inline-size: 70vw;
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    z-index: var(--z-overlay);
+    opacity: 0;
+    transform: translate(-50%, -0.3rem) scale(0.96);
+    transform-origin: top center;
+    pointer-events: none;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .hsi__note[data-state='open'] {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    pointer-events: auto;
+  }
+  .hsi__note-name {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .hsi__note-text {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+  }
+
+  .hsi__caption {
+    margin-block-start: var(--space-2xs);
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hsi__dot,
+    .hsi__note { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.hsi').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('.hsi__dot'));
+      const notes = Array.from(root.querySelectorAll<HTMLElement>('.hsi__note'));
+      if (!dots.length) return;
+
+      let openIdx: number | null = null;
+
+      const closeAll = () => {
+        notes.forEach((n) => (n.dataset.state = 'closed'));
+        dots.forEach((d) => d.setAttribute('aria-expanded', 'false'));
+        openIdx = null;
+      };
+
+      const openOne = (idx: number) => {
+        // Un solo punto aperto per volta: attenzione dosata.
+        closeAll();
+        notes[idx].dataset.state = 'open';
+        dots[idx].setAttribute('aria-expanded', 'true');
+        openIdx = idx;
+      };
+
+      dots.forEach((dot, i) => {
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (openIdx === i) closeAll();
+          else openOne(i);
+        });
+      });
+
+      // Esc chiude e riporta il focus al punto.
+      root.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && openIdx !== null) {
+          e.preventDefault();
+          const i = openIdx;
+          closeAll();
+          dots[i]?.focus();
+        }
+      });
+
+      // Click fuori chiude.
+      document.addEventListener('click', (e) => {
+        if (openIdx === null) return;
+        const target = e.target as Node;
+        if (root.contains(target)) {
+          const insideOpen =
+            notes[openIdx].contains(target) || dots[openIdx].contains(target);
+          if (insideOpen) return;
+        }
+        closeAll();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

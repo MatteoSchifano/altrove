@@ -1,0 +1,92 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PullQuoteType — la citazione che esce dalla griglia.
+
+   Il pull quote non è una citazione vera: è una frase del testo
+   stesso, ripescata e ingrandita per dare ritmo alla lettura.
+   Per questo non porta attribuzione — la fonte è la pagina che
+   stai già leggendo. Il suo mestiere è tipografico, non semantico:
+   un respiro, un appiglio per l’occhio che scorre.
+
+   Due decisioni lo fanno funzionare:
+     • la scala — deve essere grande abbastanza da “staccare” dal
+       corpo, ma non così grande da gridare;
+     • la virgoletta d’apertura SPORGENTE (hanging punctuation):
+       il segno « (o “) esce a sinistra del blocco, così il bordo
+       del testo resta otticamente dritto. È il dettaglio che
+       distingue un pull quote “composto” da uno “incollato”.
+
+   Niente motion: è testo che si presenta, non si anima. Niente
+   semantica di <blockquote> qui — è materiale editoriale interno,
+   non parola di un altro. La differenza la fa il 17.b.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    quote: 'Tutto quello che succede senza che l’utente se ne accorga è la vera potenza dell’interfaccia.',
+    open: '«',
+    close: '»',
+  },
+  en: {
+    quote: 'Everything that happens without the user noticing is the real power of the interface.',
+    open: '“',
+    close: '”',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<p class="pull" lang={locale}>
+  <span class="pull__mark" aria-hidden="true">{c.open}</span>{c.quote}<span
+    class="pull__mark pull__mark--close"
+    aria-hidden="true">{c.close}</span>
+</p>
+
+<style>
+  .pull {
+    /* “Fuori griglia”: il blocco è più stretto della prosa e
+       leggermente sfalsato, come una nota a piena pagina. */
+    inline-size: min(30rem, 100%);
+    margin: 0;
+    position: relative;
+    /* La virgoletta sporge a sinistra: rientriamo il testo e poi
+       facciamo uscire il segno con un margine negativo pari. */
+    padding-inline-start: 1.2em;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    color: var(--ink-strong);
+    text-wrap: balance;
+  }
+
+  /* La virgoletta d’apertura, grande e sporgente. È decorativa
+     (aria-hidden): il testo si legge benissimo senza, e lo screen
+     reader non deve annunciare un glifo enorme. */
+  .pull__mark {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: -0.08em;
+    font-size: 1.9em;
+    line-height: 1;
+    color: var(--accent);
+    /* Il colore è il SECONDO segnale: la posizione sporgente e la
+       scala dicono già “citazione” a chi non distingue i colori. */
+  }
+
+  .pull__mark--close {
+    position: static;
+    font-size: 1em;
+    color: var(--accent);
+    margin-inline-start: 0.05em;
+  }
+
+  .pull ::selection { background-color: var(--accent-soft); }
+  .pull::selection { background-color: var(--accent-soft); }
+</style>

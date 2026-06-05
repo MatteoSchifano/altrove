@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-15"
+number: "15"
+title: "The long page"
+excerpt: "Ten minutes of reading is a small journey: whoever sets out wants to know where they are, how much is left, and to find their place again if they wander off. These are the details that keep company without getting in front of the text."
+date: "July 17, 2026"
+releaseDate: "2026-07-17"
+readMinutes: 12
+tags: ["editorial", "scroll", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import StickyToc from '../../../components/longform/StickyToc.astro';
+import ReadingProgressBar from '../../../components/longform/ReadingProgressBar.astro';
+import FootnotePopover from '../../../components/longform/FootnotePopover.astro';
+import BackToTop from '../../../components/longform/BackToTop.astro';
+import ReadingBookmark from '../../../components/longform/ReadingBookmark.astro';
+
+The last chapter was about components you touch once and that end. This one changes the scale of time: not a one-second gesture, but a ten-minute read. The question becomes different — not “how do I answer a click?”, but “how do you keep company with someone reading for ten minutes?”. A long page is a small journey, and travellers have simple needs: to know where they are, how much is left, to find their place again if they wander off, to read an aside without losing the thread.
+
+These are humble needs, and for that reason easy to overlook. Almost all of the playground chases micro-interactions that last a heartbeat; here the details must *last*, accompany without tiring, stay useful at the first minute as at the ninth. It's a particular kind of honesty: the risk isn't lying about a state, it's faking progress, celebrating a milestone the reader hasn't reached yet, stealing the scroll from them “to help”.
+
+Five details, five reading companions. And as always, no libraries: the browser already knows scroll-spy with the IntersectionObserver, scroll timelines in CSS, the Popover API, anchoring, localStorage. Our job is only to orchestrate them with measure — so the protagonist stays the text, and the details know how to stand one step back.
+
+## The index that says “you are here”
+
+The first companion is a map. On a long page the reader easily loses the sense of where they are: a sticky index gives it back, and updates itself as you scroll.
+
+<Demo title="Sticky index · the current section highlights itself" tag="15.a">
+  <StickyToc locale="en" />
+  <div slot="note">
+    <p>Scroll the article on the right and watch the index on the left: the active entry changes on its own. But choosing “what's active” isn't trivial — it isn't the topmost section, it's the one you're <em>actually</em> reading. An IntersectionObserver with a rootMargin that raises the reading line to 35% from the edge decides which section holds your gaze, and the highlight moves when your eye is already there, not a moment before. It's scroll-spy done on the compositor, not a listener re-measuring everything every frame.</p>
+    <p>The index is a real <code>&lt;nav&gt;</code> with a list of in-page links, and the active entry carries <code>aria-current="location"</code>: a screen reader announces “current location”, colour is the second signal, not the first. A click scrolls to the section smoothly — but under <code>prefers-reduced-motion</code> it becomes a clean jump, because smooth-scroll is motion in every sense. And when the viewport narrows the index disappears: on a small screen the space goes to the content, not to a contents column stealing room.</p>
+  </div>
+</Demo>
+
+## The bar that says “how much is left”
+
+Second companion: progress. A thin bar at the top answers the most frequent question of a long read — how much remains? — and the best answer is carved into the CSS, not computed by hand.
+
+<Demo title="Reading bar · animation-timeline: scroll() with fallback" tag="15.b">
+  <ReadingProgressBar locale="en" />
+  <div slot="note">
+    <p>The bar's fill is tied to the container's scroll with <code>animation-timeline: scroll()</code>: a scroll timeline in pure CSS, zero JavaScript for the movement. It runs on the compositor, and that changes everything — it doesn't jolt, doesn't skip a beat while the eye races, doesn't take up the main thread. An <code>@supports (animation-timeline: scroll())</code> opens the native path; where it's still missing, a small script with a passive <code>scroll</code> event pushes the same bar. Same result, two roads, and the native one always wins.</p>
+    <p>The percentage number, by contrast, is updated by JavaScript, because CSS animates the width and not the text — and it uses tabular figures, so going from 9 to 10 the line doesn't jolt. Under <code>prefers-reduced-motion</code> there's nothing to remove: this isn't a time-based animation, it's a position mapping. Reducing motion doesn't mean hiding information, and the bar stays tied to the scroll exactly as before. It's the distinction chapter 02 kept repeating: you remove the <em>path</em>, never the <em>state</em>.</p>
+  </div>
+</Demo>
+
+## The note that doesn't move you
+
+Third companion: the aside. The footnote is a great editorial invention, but on screen it has an old flaw — the jump. You click, land at the bottom, lose your place. An anchored popover solves it at the root.
+
+<Demo title="Footnote · Popover API + CSS Anchor Positioning" tag="15.c">
+  <FootnotePopover locale="en" />
+  <div slot="note">
+    <p>The little reference number opens a note right where you're reading, anchored to the reference itself. Under the skin two native APIs do the heavy lifting: the <strong>Popover API</strong> (<code>popovertarget</code> + <code>popover="auto"</code>) handles top layer, light-dismiss and <kbd>Esc</kbd> without a line of code; <strong>CSS Anchor Positioning</strong> glues the popover to the number with <code>position-anchor</code> and flips itself toward free space with <code>position-try-fallbacks</code>. No hand-rolled focus trap, no tooltip library.</p>
+    <p>The reference is a <code>&lt;sup&gt;</code> wrapping a real <code>&lt;button&gt;</code>: the keyboard reaches it with Tab, a screen reader announces it as a button, and the popover has <code>role="note"</code>. The extra care we add by hand is <em>focus restore</em>: when the note closes — with the X, with <kbd>Esc</kbd>, or by clicking outside — focus returns to the reference that opened it, so the keyboard isn't left orphaned at the top of the page. It's the difference between a component that works and one that lets itself be used with eyes closed.</p>
+  </div>
+</Demo>
+
+## The button that appears only when needed
+
+Fourth companion: the return shortcut. At the top of the page a “back to top” is useless — you're already at the top. That's why it mustn't be there at the start: it should appear only when returning to the top has become a journey.
+
+<Demo title="Back to top · appears after a scroll threshold" tag="15.d">
+  <BackToTop locale="en" />
+  <div slot="note">
+    <p>Scroll down inside the window: at first, bottom-right, there's nothing. The button appears only after 35% of scroll, the threshold past which climbing back stops being a flick and becomes a trek. Appearing earlier would be noise — a button stating the obvious; appearing later is a service. And the appearance respects the law of chapter 01: it rises into place in about 220ms, and when you climb back above the threshold it leaves <em>faster</em> than it arrived, because things exit the stage quicker than they enter.</p>
+    <p>It's a real <code>&lt;button&gt;</code> with an accessible label, and while invisible it's pulled from the flow with <code>hidden</code>: so you don't meet it with Tab when it isn't needed, and it returns to the tab order only once visible. The click brings you back to the top with a smooth scroll — a clean jump, again, under <code>prefers-reduced-motion</code> — and then moves focus to the content, not to a button that's already vanishing. All inside a fake scrollable container, so the demo doesn't move the real page: an honest “back to top” is one that genuinely has a page worth returning from.</p>
+  </div>
+</Demo>
+
+## The bookmark that doesn't fake progress
+
+The last companion is the most delicate for honesty. Someone reading for ten minutes sometimes leaves and comes back: a bookmark gives the spot back. But it must give back a *position*, not pass off *progress*.
+
+<Demo title="Bookmark · saves to localStorage, honest about where you stopped" tag="15.e">
+  <ReadingBookmark locale="en" />
+  <div slot="note">
+    <p>Scroll a little, press “Place the bookmark here”: the browser remembers in <code>localStorage</code> the exact height you were at — not continuously, but when you decide or when you leave the page. On reopening it doesn't jump back on its own: that would feel arrogant, it snatches the scroll from you. It <em>offers</em> to resume, with a banner saying “you stopped here, about N%”, and leaves you the choice between returning and starting over. Restoring is a smooth scroll, a clean jump under reduced motion.</p>
+    <p>Here honesty is all in the difference between <strong>position</strong> and <strong>progress</strong>. A bar says “how much is left”; a bookmark says “where you stopped” — the first is a measure, the second is a memory. That's why it never writes “67% complete” as if you'd <em>understood</em> that 67%: it shows where you were, not a progress grade. It's a ribbon between the pages, not a report card. And when the browser denies memory — private mode, full storage, denied permissions — the component declares it plainly instead of pretending: a bookmark that lies would be worse than no bookmark.</p>
+  </div>
+</Demo>
+
+---
+
+Five companions, one discipline: accompany without getting in front. The index that says “you are here”, the bar that says “how much is left”, the note that doesn't move you, the button that appears only when needed, the bookmark that remembers where you were without faking how much you understood. None of them is the protagonist — the protagonist is the text, and ten minutes of attention that deserve respect. Keeping company with someone reading at length isn't filling the margins with gadgets: it's removing every small friction of “where am I, how much is left, how do I get back” so silently the reader doesn't notice, and can stay *elsewhere* in their mind, inside the words.
+
+The next chapter stays on the long page but shifts its gaze: from accompanying the reader to *composing* the space they move through. *The editorial grid* — what makes a page elegant before it's even beautiful?

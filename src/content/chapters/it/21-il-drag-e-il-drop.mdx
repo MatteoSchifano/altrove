@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-21"
+number: "21"
+title: "Il drag e il drop"
+excerpt: "Trascinare è il gesto più diretto e il più escludente: nato per il mouse, lascia fuori chi usa la tastiera. Questo capitolo costruisce cinque drag-and-drop e a ognuno cuce addosso un gemello da tastiera con annunci a voce — perché un oggetto in volo deve poter essere afferrato anche senza mano."
+date: "28 agosto 2026"
+releaseDate: "2026-08-28"
+readMinutes: 12
+tags: ["componenti", "interazione", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import ReorderList from '../../../components/dragdrop/ReorderList.astro';
+import DragToAction from '../../../components/dragdrop/DragToAction.astro';
+import GhostElement from '../../../components/dragdrop/GhostElement.astro';
+import KeyboardReorder from '../../../components/dragdrop/KeyboardReorder.astro';
+import KanbanLite from '../../../components/dragdrop/KanbanLite.astro';
+
+C'è una domanda che il drag-and-drop si porta dietro da sempre: come si tiene un oggetto in volo? Sullo schermo non c'è peso, non c'è attrito, non c'è la mano che si chiude attorno a qualcosa. Eppure il gesto funziona, perché il browser e un po' di codice ricostruiscono l'illusione: un elemento si stacca, segue il puntatore, lascia un posto vuoto, e si posa altrove. È uno dei pochi momenti in cui un'interfaccia finge davvero la fisica — e proprio per questo è facile innamorarsene e dimenticare metà delle persone.
+
+Perché il trascinamento è, insieme, il gesto più diretto e il più escludente che abbiamo. Diretto perché non c'è niente da spiegare: prendi e sposti, come nel mondo. Escludente perché nasce per il mouse, e se ci si ferma lì chi naviga da tastiera, chi usa uno screen reader, chi ha un tremore o una motricità ridotta resta semplicemente fuori. Una colonna kanban solo-mouse non è "difficile" da usare per loro: è impossibile. È la voragine di accessibilità più comune del web, e si apre quasi sempre per distrazione, non per cattiveria.
+
+La tesi di questo capitolo è che non è un destino. Ogni singola interazione qui ha un gemello da tastiera completo — non un ripiego, un'alternativa vera — e una regione `aria-live` che annuncia presa, spostamento e rilascio, perché chi non vede l'oggetto volare deve poterlo *sentire*. Cinque demo, e nessuna libreria: solo Pointer Events per la mano e gestione dei tasti per la tastiera, con la regola di sempre — il colore non è mai l'unico segnale, e il movimento si toglie quando qualcuno chiede meno movimento.
+
+## La lista che si riordina
+
+Il primo caso è il riordino: cinque righe, e l'utente decide la sequenza. La parte che vale la pena guardare non è la riga che si solleva, ma la *linea di rilascio* — il filo che appare tra due item per dire dove cadrà quello che stai tenendo.
+
+<Demo title="Riordino con drop indicator · la linea che dice «qui»" tag="21.a">
+  <ReorderList locale="it" />
+  <div slot="note">
+    <p>Premi la maniglia e la riga si stacca dal flusso seguendo il dito; nel frattempo una linea sottile scivola nei *gap* tra le altre righe, sempre dove l'item si poserà. È una scelta di modello, non grafica: la linea dice «tra questi due», mentre un'evidenziazione direbbe «su questo». Per un riordino la verità è la prima — non stai posando l'oggetto *sopra* un altro, lo stai infilando *fra* due posizioni. Il drop indicator è onesto perché mostra l'intervallo, non il bersaglio.</p>
+    <p>E qui sta il gemello da tastiera, che fa lo stesso lavoro senza il gesto: dai il focus a una maniglia e premi <kbd>↑</kbd>/<kbd>↓</kbd>; la riga sale o scende di una posizione e una voce annuncia «spostato in posizione 2 di 5». Niente puntatore, stesso risultato, stesso feedback. Il ricomporsi della lista usa FLIP — misuriamo dove stava ogni riga, eseguiamo lo spostamento, e lasciamo che la differenza si animi; ma è guardato da <code>matchMedia</code>, così sotto <code>prefers-reduced-motion</code> le righe si trovano già al loro posto, senza scivolata. Lo stato finale è identico per tutti; il viaggio è un di più che si può togliere.</p>
+  </div>
+</Demo>
+
+## Il trascinamento che compie un'azione
+
+Spostiamoci dal riordino all'azione. A volte non trascini per cambiare ordine, ma per *fare* qualcosa: archiviare un messaggio, eliminarlo. Il gesto diventa un comando, e la "drop zone" è il pulsante con cui si finge la fisica.
+
+<Demo title="Trascina verso un'azione · con i pulsanti accanto" tag="21.b">
+  <DragToAction locale="it" />
+  <div slot="note">
+    <p>Prendi il messaggio e portalo su una delle due zone — <em>Archivia</em> o <em>Elimina</em> — che si accendono quando le sorvoli. Le zone non sono distinte solo dal colore: hanno un'etichetta scritta e un'icona (la freccia in giù archivia, la croce elimina), così chi non distingue verde da rosso legge comunque parola e simbolo. Il colore è il terzo segnale, mai il primo: è la regola del playground applicata a un caso dove sbagliare costa — eliminare non è un'azione che vuoi affidare al solo cromatismo.</p>
+    <p>Ma il punto vero sono i due pulsanti sotto, sempre presenti. Il drag è una <em>scorciatoia</em>; il pulsante è la <em>strada</em>. Un trascinamento senza alternativa cliccabile e tabbabile è una trappola: chi non può trascinare non ha modo di archiviare. Mettendo i pulsanti accanto — non nascosti dietro un menu, non «scopribili», lì in chiaro — l'azione resta raggiungibile da tutti, e il drag diventa quello che dovrebbe sempre essere: un di più per chi lo gradisce, non l'unica porta. Al termine, una regione <code>aria-live</code> annuncia «messaggio archiviato», così l'esito è chiaro anche senza guardare.</p>
+  </div>
+</Demo>
+
+## L'oggetto in volo
+
+Torniamo alla domanda guida e prendiamola alla lettera: come si tiene un oggetto in volo? La risposta più espressiva è separare ciò che vola da ciò che resta — un *fantasma* sotto il dito, e un segnaposto dove l'oggetto stava.
+
+<Demo title="Elemento fantasma · la copia che vola, l'originale che resta" tag="21.c">
+  <GhostElement locale="it" />
+  <div slot="note">
+    <p>Mentre trascini, l'elemento originale non si muove: ne sollevi un <em>fantasma</em>, una copia che segue il puntatore con un filo di <code>scale</code> e di <code>opacity</code>, come se fosse a mezz'aria. L'originale, intanto, sbiadisce e diventa un segnaposto: «il mio posto è ancora qui, sto solo volando». Sono due informazioni che la mente tiene separate — <em>cosa</em> sto spostando e <em>da dove</em> l'ho preso — e mostrarle entrambe evita il disorientamento del far sparire l'originale, che fa sembrare l'oggetto teletrasportato invece che trasportato.</p>
+    <p>Questa è la demo più onesta del capitolo anche in negativo: isola un solo fenomeno — il volo — e non ha un esito spaziale, non c'è un «dove» da scegliere. Per questo qui la tastiera non avrebbe un significato da navigare, e dirlo è più corretto che inventare una falsa alternativa: il riordino e lo spostamento veri, al 100% da tastiera, sono nelle altre demo. Resta giusto annunciare presa e rilascio via <code>aria-live</code>, così anche chi usa il puntatore con uno screen reader sa cosa accade. E sotto <code>prefers-reduced-motion</code> il fantasma non «cresce»: appare già nella sua forma e segue il puntatore in modo netto, senza dissolvenze.</p>
+  </div>
+</Demo>
+
+## Il riordino senza mouse
+
+Adesso la prova del nove. Togliamo del tutto il puntatore e teniamo solo il gemello da tastiera, per vederlo nudo: si può riordinare una lista al 100% da tastiera, e con un'esperienza completa?
+
+<Demo title="Riordino solo-tastiera · la prova che il DnD può non avere mouse" tag="21.d">
+  <KeyboardReorder locale="it" />
+  <div slot="note">
+    <p>Il modello è l'<em>afferra esplicito</em>, lo stesso dei reorder accessibili seri. <kbd>Tab</kbd> porta il focus su una tappa; <kbd>Spazio</kbd> la <em>afferra</em> ed entra in modalità spostamento; <kbd>↑</kbd>/<kbd>↓</kbd> la muovono di una posizione; <kbd>Spazio</kbd> la posa, <kbd>Esc</kbd> annulla e la riporta dov'era. La modalità è importante: dice allo screen reader e all'utente <em>quando</em> le frecce spostano invece di navigare. Senza quel «momento afferrato», le frecce sarebbero ambigue — sto scorrendo la lista o trascinando l'item?</p>
+    <p>Ogni passaggio ha la sua voce: «Lisbona afferrato, posizione 1 di 5», «spostato in posizione 2 di 5», «posato in posizione 2 di 5». E lo stato «in spostamento» non è affidato al solo colore — c'è <code>aria-grabbed</code>, un'etichetta visibile e un bordo pieno, tre canali per la stessa informazione. È la dimostrazione, esplicita, che il drag-and-drop non <em>richiede</em> il drag: richiede un modello di presa, spostamento e rilascio, e quel modello si esprime altrettanto bene con cinque tasti. Il mouse è un'opzione, non un prerequisito.</p>
+  </div>
+</Demo>
+
+## La kanban che ricompone con FLIP
+
+Chiudiamo col caso che ha dato al drag-and-drop la sua pessima fama di accessibilità: la board kanban. Ne teniamo la versione minima — due colonne — ma con entrambe le strade complete, e con il ricomporsi animato come si deve.
+
+<Demo title="Kanban tra due colonne · sposta col mouse o con ←/→" tag="21.e">
+  <KanbanLite locale="it" />
+  <div slot="note">
+    <p>Una card si sposta tra «Da fare» e «Fatto» trascinandola — la colonna bersaglio si illumina — oppure dandole il focus e premendo <kbd>←</kbd>/<kbd>→</kbd>. Le colonne hanno un titolo e un conteggio che si aggiorna, non solo una tinta: quando una diventa bersaglio mostra un bordo pieno, perché il colore da solo non basta a dire «qui». E ogni spostamento è annunciato: «Rivedere la PR #42, spostata in Fatto». La kanban inaccessibile non lo è per natura — lo diventa quando si lascia fuori la tastiera, ed è una scelta, non un vincolo.</p>
+    <p>Il ricomporsi è dove la board respira. Quando una card lascia una colonna, la coda sotto si richiude; quando entra nell'altra, le sorelle le fanno spazio. Lo facciamo con FLIP: misuriamo la geometria di tutte le card <em>prima</em> dello spostamento nel DOM, la rimisuriamo <em>dopo</em>, e animiamo solo la differenza — un movimento reale e coerente, non quattro elementi che saltano. Ma è guardato da <code>matchMedia</code>: sotto <code>prefers-reduced-motion</code> la card si trova già nella nuova colonna, senza viaggio. La regola non cambia mai — non si rallenta un'animazione, la si toglie, lasciando intatto lo stato finale.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque trascinamenti, un'unica disciplina: il drag è una scorciatoia, mai l'unica porta. La linea che dice «qui», le zone con i pulsanti accanto, il fantasma che vola lasciando un segnaposto, il riordino che vive intero dentro cinque tasti, la kanban che si ricompone con FLIP — ognuno mostra lo stesso oggetto in volo da un'angolazione diversa, ma tutti rispondono alla stessa domanda nascosta: e chi non ha la mano sul mouse? La risposta non è «mettiamo un'alternativa, se avanza tempo». È costruire il gemello da tastiera <em>insieme</em> al gesto, annunciare a voce ciò che si vede a colpo d'occhio, e togliere il movimento a chi lo chiede. L'oggetto in volo si tiene in due modi, e nessuno dei due è facoltativo.
+
+Il prossimo capitolo lascia gli oggetti che si spostano e torna al testo che si cerca. *La ricerca* — cosa succede tra ogni tasto premuto, come si risponde prima che l'utente finisca di scrivere, e come si dice «non c'è niente» senza farlo sembrare un errore.

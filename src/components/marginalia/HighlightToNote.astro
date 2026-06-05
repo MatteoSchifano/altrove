@@ -1,0 +1,388 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HighlightToNote — il lettore evidenzia, nasce una nota collegata.
+
+   L’idea: invece di note calate dall’alto dall’autore, lasciare che
+   sia il lettore a scegliere cosa annotare. Seleziona una frase e
+   compare un’ancora a margine — la sua nota, agganciata a quel passo.
+   È il dialogo col lettore portato al limite: non gli parli soltanto,
+   gli dai la penna.
+
+   La tentazione disonesta è farlo funzionare SOLO col gesto del
+   mouse (selezione → trascinamento). Ma il gesto di selezione è
+   scomodo da tastiera, impossibile per chi non usa il puntatore, e
+   invisibile finché non lo si scopre per caso. Quindi: la selezione
+   è una *scorciatoia*, non l’unica via. Ogni frase ha anche un
+   bottone "Annota" sempre presente e raggiungibile da tastiera, e la
+   barra di azione che spunta è essa stessa fatta di <button> veri.
+
+   Selection API: leggiamo window.getSelection() per sapere cosa è
+   stato evidenziato; ancoriamo la nota all’elemento di frase, non a
+   un range fragile, così resta valida anche dopo un re-render.
+
+   Accessibilità: aria-live annuncia "nota aggiunta"; le note sono in
+   un <aside> con role="list"; nessun colore è l’unico segnale (la
+   frase annotata prende sfondo + segno + numero).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    intro: 'Seleziona una frase qui sotto — o usa il pulsante «Annota» —',
+    introTail: 'per agganciarle una nota a margine.',
+    sentences: [
+      'La nota a margine è il modo più antico di parlare al lettore senza interromperlo.',
+      'Un buon margine non è spazio sprecato: è spazio offerto a una seconda voce.',
+      'Quando il lettore annota, smette di subire il testo e comincia a rispondergli.',
+    ],
+    annotate: 'Annota',
+    annotateThis: 'Annota questa frase',
+    asideLabel: 'Le tue note',
+    empty: 'Nessuna nota, per ora. Evidenzia o premi «Annota».',
+    added: 'Nota aggiunta.',
+    removed: 'Nota rimossa.',
+    noteFor: 'Nota su',
+    remove: 'Rimuovi',
+  },
+  en: {
+    intro: 'Select a sentence below — or use the “Annotate” button —',
+    introTail: 'to attach a side note to it.',
+    sentences: [
+      'The side note is the oldest way to speak to the reader without interrupting them.',
+      'A good margin isn’t wasted space: it’s space offered to a second voice.',
+      'When the reader annotates, they stop enduring the text and start replying to it.',
+    ],
+    annotate: 'Annotate',
+    annotateThis: 'Annotate this sentence',
+    asideLabel: 'Your notes',
+    empty: 'No notes yet. Highlight or press “Annotate”.',
+    added: 'Note added.',
+    removed: 'Note removed.',
+    noteFor: 'Note on',
+    remove: 'Remove',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="h2n" data-added={c.added} data-removed={c.removed} data-notefor={c.noteFor} data-remove={c.remove}>
+  <p class="h2n__intro">{c.intro} <em>{c.introTail}</em></p>
+
+  <div class="h2n__layout">
+    <div class="h2n__text">
+      {c.sentences.map((s, i) => (
+        <span class="h2n__sentence" data-idx={i}>
+          <span class="h2n__sentence-text">{s}</span>
+          <button type="button" class="h2n__annotate" data-idx={i} aria-label={c.annotateThis}>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 2.5 13.5 5 6 12.5l-3 .5.5-3L11 2.5Z" />
+            </svg>
+            <span>{c.annotate}</span>
+          </button>
+        </span>
+      ))}
+    </div>
+
+    <aside class="h2n__aside" aria-label={c.asideLabel}>
+      <p class="h2n__empty" data-empty>{c.empty}</p>
+      <ol class="h2n__notes" role="list"></ol>
+    </aside>
+  </div>
+
+  <p class="h2n__live" aria-live="polite" role="status"></p>
+</div>
+
+<style>
+  .h2n {
+    inline-size: min(38rem, 100%);
+    container-type: inline-size;
+  }
+
+  .h2n__intro {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0 0 var(--space-sm);
+    max-inline-size: none;
+  }
+
+  .h2n__layout {
+    display: grid;
+    gap: var(--space-md);
+  }
+  @container (min-width: 32rem) {
+    .h2n__layout {
+      grid-template-columns: 1fr 11rem;
+      align-items: start;
+    }
+  }
+
+  .h2n__text {
+    font-size: var(--text-base);
+    color: var(--ink);
+    line-height: var(--leading-loose);
+  }
+
+  .h2n__sentence {
+    position: relative;
+    border-radius: var(--radius-xs);
+    padding: 0.05em 0.1em;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  /* Frase annotata: sfondo + numero + sottolineatura. Tre canali. */
+  .h2n__sentence[data-noted] {
+    background-color: var(--accent-soft);
+    box-shadow: inset 0.18em 0 0 var(--accent);
+  }
+  .h2n__sentence[data-noted]::after {
+    content: attr(data-num);
+    font-size: 0.62em;
+    vertical-align: super;
+    margin-inline-start: 0.15em;
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+  }
+
+  /* Il bottone "Annota": piccolo, sempre presente, appare al
+     hover/focus della frase — ma raggiungibile da tastiera comunque. */
+  .h2n__annotate {
+    appearance: none;
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    color: var(--accent-ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    margin-inline-start: 0.3em;
+    padding: 0.1em 0.45em;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    vertical-align: middle;
+    white-space: nowrap;
+    opacity: 0;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .h2n__annotate svg { inline-size: 0.75rem; block-size: 0.75rem; }
+  .h2n__sentence:hover .h2n__annotate,
+  .h2n__annotate:focus-visible {
+    opacity: 1;
+  }
+  .h2n__annotate:hover { background-color: var(--surface-sunken); }
+  .h2n__annotate:focus-visible { outline: none; box-shadow: var(--halo-focus); opacity: 1; }
+  .h2n__sentence[data-noted] .h2n__annotate { display: none; }
+
+  .h2n__aside {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  .h2n__empty {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-normal);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  .h2n__notes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-2xs);
+  }
+
+  .h2n__note {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    column-gap: var(--space-2xs);
+    align-items: start;
+    animation: h2n-in var(--dur-normal) var(--ease-out-soft);
+  }
+  .h2n__note-num {
+    inline-size: 1.1rem;
+    block-size: 1.1rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+  }
+  .h2n__note-body { min-inline-size: 0; }
+  .h2n__note-quote {
+    font-size: var(--text-2xs);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .h2n__note-remove {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink-subtle);
+    cursor: pointer;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-xs);
+    line-height: 1;
+  }
+  .h2n__note-remove:hover { color: var(--accent-ink); background-color: var(--surface-raised); }
+  .h2n__note-remove:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .h2n__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  @keyframes h2n-in {
+    from { opacity: 0; transform: translateY(0.35rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .h2n__note { animation: none; }
+    .h2n__sentence, .h2n__annotate { transition: none; }
+  }
+</style>
+
+<script>
+  interface NoteState { idx: number; num: number; quote: string; }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.h2n').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const text = root.querySelector<HTMLElement>('.h2n__text');
+      const list = root.querySelector<HTMLOListElement>('.h2n__notes');
+      const empty = root.querySelector<HTMLElement>('[data-empty]');
+      const live = root.querySelector<HTMLElement>('.h2n__live');
+      if (!text || !list || !empty) return;
+
+      const COPY = {
+        added: root.dataset.added ?? '',
+        removed: root.dataset.removed ?? '',
+        remove: root.dataset.remove ?? 'Remove',
+      };
+
+      const notes = new Map<number, NoteState>();
+      let counter = 0;
+
+      const sentenceAt = (idx: number) =>
+        text.querySelector<HTMLElement>(`.h2n__sentence[data-idx="${idx}"]`);
+
+      const announce = (msg: string) => { if (live) live.textContent = msg; };
+
+      const render = () => {
+        empty.hidden = notes.size > 0;
+        list.replaceChildren();
+        // Ordine stabile per numero crescente.
+        [...notes.values()].sort((a, b) => a.num - b.num).forEach((n) => {
+          const li = document.createElement('li');
+          li.className = 'h2n__note';
+
+          const num = document.createElement('span');
+          num.className = 'h2n__note-num';
+          num.textContent = String(n.num);
+
+          const body = document.createElement('div');
+          body.className = 'h2n__note-body';
+          const q = document.createElement('span');
+          q.className = 'h2n__note-quote';
+          q.textContent = n.quote;
+          body.appendChild(q);
+
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'h2n__note-remove';
+          rm.setAttribute('aria-label', `${COPY.remove} — ${n.quote.slice(0, 32)}`);
+          rm.textContent = '×';
+          rm.addEventListener('click', () => removeNote(n.idx));
+
+          li.append(num, body, rm);
+          list.appendChild(li);
+        });
+      };
+
+      const addNote = (idx: number) => {
+        if (notes.has(idx)) return; // idempotente: una nota per frase
+        const sentence = sentenceAt(idx);
+        const quote = sentence?.querySelector('.h2n__sentence-text')?.textContent?.trim() ?? '';
+        if (!sentence || !quote) return;
+        counter += 1;
+        notes.set(idx, { idx, num: counter, quote });
+        sentence.dataset.noted = '';
+        sentence.dataset.num = String(counter);
+        render();
+        announce(COPY.added);
+      };
+
+      const removeNote = (idx: number) => {
+        if (!notes.delete(idx)) return;
+        const sentence = sentenceAt(idx);
+        if (sentence) { delete sentence.dataset.noted; delete sentence.dataset.num; }
+        render();
+        announce(COPY.removed);
+      };
+
+      // ── Via 1: il bottone "Annota" (sempre disponibile, da tastiera) ──
+      const onClick = (e: Event) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.h2n__annotate');
+        if (!btn) return;
+        const idx = Number(btn.dataset.idx);
+        if (Number.isFinite(idx)) addNote(idx);
+      };
+      text.addEventListener('click', onClick);
+
+      // ── Via 2: la Selection API (scorciatoia col puntatore) ──
+      const onSelect = () => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        const el = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as HTMLElement);
+        const sentence = el?.closest<HTMLElement>('.h2n__sentence');
+        if (sentence && text.contains(sentence)) {
+          const idx = Number(sentence.dataset.idx);
+          if (Number.isFinite(idx)) {
+            addNote(idx);
+            sel.removeAllRanges(); // niente selezione "appiccicata" dopo l’azione
+          }
+        }
+      };
+      // mouseup è il momento onesto: la selezione è conclusa, non in corso.
+      text.addEventListener('mouseup', onSelect);
+
+      root.addEventListener('astro:before-swap', () => {
+        text.removeEventListener('click', onClick);
+        text.removeEventListener('mouseup', onSelect);
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

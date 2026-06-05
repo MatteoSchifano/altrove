@@ -1,0 +1,91 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   IconBreath — il divider con una piccola icona centrale, come
+   un respiro fra due blocchi.
+
+   A volte una sezione finisce e un’altra comincia, e una linea piena
+   sarebbe troppo netta: taglia, non respira. Un glifo minuscolo al
+   centro — tre punti, un piccolo rombo, un asterisco tipografico —
+   addolcisce la pausa: dice "qui si tira il fiato" invece di "qui
+   finisce". È la differenza fra un muro e una soglia.
+
+   Onestà: è un separatore vero (role="separator") per chi naviga di
+   struttura, ma l’icona è puro ornamento — un glifo decorativo che
+   non aggiunge significato — quindi aria-hidden. Lo screen reader
+   sente la pausa, non il fronzolo.
+
+   Niente motion: il respiro è nello spazio attorno, non in un
+   movimento. Lo spazio generoso sopra e sotto è metà del lavoro.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    before: 'Qui finisce un pensiero, e gli si lascia spazio.',
+    after: 'Qui ne comincia un altro, riposato.',
+  },
+  en: {
+    before: 'Here a thought ends, and is given room.',
+    after: 'Here another begins, rested.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="breath">
+  <p class="breath__text">{c.before}</p>
+
+  <div class="breath__rule" role="separator" aria-orientation="horizontal">
+    <span class="breath__line" aria-hidden="true"></span>
+    <span class="breath__mark" aria-hidden="true">
+      <svg viewBox="0 0 24 8" width="24" height="8" focusable="false" aria-hidden="true">
+        <circle cx="4" cy="4" r="1.5"></circle>
+        <circle cx="12" cy="4" r="1.5"></circle>
+        <circle cx="20" cy="4" r="1.5"></circle>
+      </svg>
+    </span>
+    <span class="breath__line" aria-hidden="true"></span>
+  </div>
+
+  <p class="breath__text">{c.after}</p>
+</div>
+
+<style>
+  .breath {
+    inline-size: min(30rem, 100%);
+  }
+
+  .breath__text {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ── Il respiro ──
+     spazio generoso attorno: è qui che sta la pausa, non nel glifo. */
+  .breath__rule {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block: var(--space-lg);
+  }
+  .breath__line {
+    flex: 1 1 0;
+    block-size: 1px;
+    background-color: var(--border);
+  }
+  .breath__mark {
+    flex-shrink: 0;
+    display: inline-flex;
+    color: var(--ink-subtle);
+  }
+  .breath__mark svg {
+    display: block;
+    fill: currentColor;
+  }
+</style>
