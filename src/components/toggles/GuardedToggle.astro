@@ -1,0 +1,287 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   GuardedToggle — l'attrito messo apposta.
+
+   Quasi tutto questo playground rincorre la rimozione dell'attrito.
+   Questo è l'unico caso in cui lo aggiungiamo — e proprio per questo
+   è il più delicato dal punto di vista dell'onestà.
+
+   Alcuni switch hanno conseguenze grosse: mettere un sito in
+   manutenzione, disattivare un backup, spegnere la 2FA. Un tap
+   accidentale lì non è un fastidio, è un danno. La risposta non è
+   un modal ("Sei sicuro?" che si clicca via senza leggere): è
+   rendere il gesto *fisicamente* deliberato. Tieni premuto finché
+   l'anello si chiude — circa 700ms — e solo allora commuta. Molli
+   prima, non succede nulla.
+
+   La regola di onestà che tiene insieme tutto: l'attrito si mette
+   *solo dove la conseguenza è reale*, e *solo nella direzione
+   pericolosa*. Accendere la manutenzione richiede la pressione
+   prolungata; spegnerla è immediato — riportare il sito online non
+   ha bisogno di guardie. Mettere attrito su un toggle banale, o
+   "per sicurezza" ovunque, sarebbe un dark pattern: frizione
+   fabbricata, il contrario del rispetto.
+
+   Accessibilità: è un <button role="switch">. La pressione lunga
+   funziona col puntatore (pointerdown/up) e con la tastiera (tieni
+   premuto Spazio/Invio). L'anello di progresso è *informazione*,
+   non decorazione: resta anche sotto prefers-reduced-motion, perché
+   dice quanto manca. Quel che si toglie, con reduced motion, è solo
+   il viaggio del thumb (collassa istantaneo allo stato finale).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Modalità manutenzione',
+    holdHint: 'Tieni premuto per attivare',
+    onHint: 'Attiva — il sito è offline. Tocca per spegnere.',
+    on: 'Attiva',
+    off: 'Spenta',
+  },
+  en: {
+    label: 'Maintenance mode',
+    holdHint: 'Press and hold to enable',
+    onHint: 'On — the site is offline. Tap to turn off.',
+    on: 'On',
+    off: 'Off',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="guard" style="--hold-ms: 700ms;">
+  <span class="guard__copy">
+    <span class="guard__label" id="guard-label">{c.label}</span>
+    <span class="guard__hint" aria-live="polite">{c.holdHint}</span>
+  </span>
+
+  <button
+    type="button"
+    class="guard__switch"
+    role="switch"
+    aria-checked="false"
+    aria-labelledby="guard-label"
+    aria-describedby="guard-label"
+    data-on={c.on}
+    data-off={c.off}
+    data-hint-hold={c.holdHint}
+    data-hint-on={c.onHint}
+  >
+    <span class="guard__track" aria-hidden="true">
+      <span class="guard__thumb">
+        <svg class="guard__ring" viewBox="0 0 24 24" fill="none">
+          <circle class="guard__ring-track" cx="12" cy="12" r="9" />
+          <circle class="guard__ring-fill" cx="12" cy="12" r="9" />
+        </svg>
+        <span class="guard__dot"></span>
+      </span>
+    </span>
+    <span class="guard__state tabular" aria-hidden="true">{c.off}</span>
+  </button>
+</div>
+
+<style>
+  .guard {
+    inline-size: min(27rem, 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .guard__copy { display: flex; flex-direction: column; gap: 0.15rem; }
+  .guard__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .guard__hint { font-size: var(--text-xs); color: var(--ink-muted); }
+
+  .guard__switch {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    touch-action: none; /* la pressione lunga non deve scrollare */
+  }
+  .guard__switch:focus-visible { outline: none; }
+  .guard__switch:focus-visible .guard__track { box-shadow: var(--halo-focus); }
+
+  .guard__track {
+    position: relative;
+    inline-size: 3rem;
+    block-size: 1.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    transition: background-color var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .guard__thumb {
+    position: absolute;
+    inset-block: 0.2rem;
+    inset-inline-start: 0.2rem;
+    inline-size: 1.3rem;
+    block-size: 1.3rem;
+    transform: translateX(0);
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  /* Dot e anello sono entrambi posizionati in assoluto e centrati sul
+     thumb: l'anello è più grande del dot, ma posizionandolo fuori dal
+     flusso non altera la geometria del thumb (che resta centrato nel
+     binario). */
+  .guard__dot {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Anello di progresso, concentrico al dot e leggermente più grande.
+     r=9 → circonferenza ≈ 56.5. parte da ore 12, in senso orario. */
+  .guard__ring {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 1.7rem;
+    block-size: 1.7rem;
+    /* il reset globale impone svg { max-inline-size: 100% }, che qui
+       clamperebbe l'anello alla larghezza del thumb (1.3rem) e, dopo
+       la rotazione, lo deformerebbe in un'ellisse. Lo annulliamo. */
+    max-inline-size: none;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .guard__ring-track {
+    stroke: color-mix(in oklab, var(--accent) 22%, transparent);
+    stroke-width: 2.5;
+  }
+  .guard__ring-fill {
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 56.5;
+    stroke-dashoffset: 56.5; /* vuoto */
+    /* il riempimento dura quanto la pressione richiesta: è progresso
+       funzionale, non un abbellimento → resta anche con reduced motion */
+    transition: stroke-dashoffset var(--hold-ms) linear;
+  }
+  /* Mentre si tiene premuto, l'anello si chiude */
+  .guard__switch[data-holding] .guard__ring-fill { stroke-dashoffset: 0; }
+  /* Al rilascio anticipato, torna vuoto in fretta (non in 700ms) */
+  .guard__switch:not([data-holding]) .guard__ring-fill {
+    transition-duration: var(--dur-fast);
+  }
+  /* Da acceso, l'anello non serve: pieno e silenzioso */
+  .guard__switch[aria-checked='true'] .guard__ring-fill {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+
+  .guard__state {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    inline-size: 3rem;
+    text-align: start;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  /* ── Acceso ── */
+  .guard__switch[aria-checked='true'] .guard__track { background-color: var(--accent); }
+  .guard__switch[aria-checked='true'] .guard__thumb { transform: translateX(1.3rem); }
+  .guard__switch[aria-checked='true'] .guard__state { color: var(--accent-ink); }
+</style>
+
+<script>
+  const HOLD_MS = 700; // deve combaciare con --hold-ms nel CSS
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.guard').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const sw = root.querySelector<HTMLButtonElement>('.guard__switch');
+      const state = root.querySelector<HTMLElement>('.guard__state');
+      const hint = root.querySelector<HTMLElement>('.guard__hint');
+      if (!sw) return;
+
+      const on = sw.dataset.on ?? 'On';
+      const off = sw.dataset.off ?? 'Off';
+      const hintHold = sw.dataset.hintHold ?? '';
+      const hintOn = sw.dataset.hintOn ?? '';
+
+      let holding = false;
+      let timer: number | null = null;
+
+      const isOn = () => sw.getAttribute('aria-checked') === 'true';
+
+      const reflect = (next: boolean) => {
+        sw.setAttribute('aria-checked', String(next));
+        if (state) state.textContent = next ? on : off;
+        if (hint) hint.textContent = next ? hintOn : hintHold;
+        if ('vibrate' in navigator) navigator.vibrate?.(next ? 14 : 6);
+      };
+
+      const cancelHold = () => {
+        if (!holding) return;
+        holding = false;
+        if (timer != null) { clearTimeout(timer); timer = null; }
+        delete sw.dataset.holding;
+      };
+
+      const startHold = () => {
+        // Spegnere è sicuro e immediato: la guardia vale solo per accendere.
+        if (isOn()) { reflect(false); return; }
+        if (holding) return;
+        holding = true;
+        sw.dataset.holding = '';
+        timer = window.setTimeout(() => {
+          holding = false;
+          timer = null;
+          delete sw.dataset.holding;
+          reflect(true); // commit: solo dopo l'intera pressione
+        }, HOLD_MS);
+      };
+
+      // ── Puntatore ──
+      sw.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
+      sw.addEventListener('pointerup', cancelHold);
+      sw.addEventListener('pointerleave', cancelHold);
+      sw.addEventListener('pointercancel', cancelHold);
+
+      // ── Tastiera: tieni premuto Spazio/Invio ──
+      sw.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          if (!e.repeat) startHold(); // ignora i keydown ripetuti dell'autorepeat
+        }
+      });
+      sw.addEventListener('keyup', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); cancelHold(); }
+      });
+
+      // Il click nativo (Spazio/Invio/tap) non deve commutare da solo:
+      // la commutazione passa solo dalla pressione prolungata.
+      sw.addEventListener('click', (e) => e.preventDefault());
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

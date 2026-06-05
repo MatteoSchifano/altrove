@@ -144,7 +144,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '09',
     translationKey: 'chapter-09',
     phase: 'B',
-    status: 'next',
+    status: 'published',
     title: { it: 'Anatomia di un toggle', en: 'The anatomy of a toggle' },
     question: {
       it: 'La differenza tra un bottone e uno switch è solo grafica?',
@@ -156,7 +156,7 @@ export const ROADMAP: readonly RoadmapEntry[] = [
     number: '10',
     translationKey: 'chapter-10',
     phase: 'B',
-    status: 'planned',
+    status: 'next',
     title: { it: 'Anatomia di un toast', en: 'The anatomy of a toast' },
     question: {
       it: 'Come si dà un’informazione senza interrompere?',

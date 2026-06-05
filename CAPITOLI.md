@@ -19,8 +19,9 @@
 | 06 | Numeri che hanno peso | ✅ pubblicato |
 | 07 | Anatomia di un input | ✅ pubblicato |
 | 08 | La micro-tipografia | ✅ pubblicato |
-| 09 | Anatomia di un toggle | 📋 prossimo |
-| 10–26 | *(vedi sotto)* | 💭 ipotizzati |
+| 09 | Anatomia di un toggle | ✅ pubblicato |
+| 10 | Anatomia di un toast | 📋 prossimo |
+| 11–26 | *(vedi sotto)* | 💭 ipotizzati |
 
 I primi 8 sono dettagliati nel piano `playground-a-capitoli-validated-liskov.md`. Da 09 in poi: questo file è la fonte.
 
