@@ -37,10 +37,28 @@ The best interface works in silence while the user's mind is **elsewhere** (*alt
 | Confirm / inline-confirm auto-cancel | **4s / 5s** | A window of intent, not a modal menu |
 | Reveal stagger | **40–90ms** | Longer reads as "celebration" |
 | Count-up | **900ms, ease-out** | Out, never in-out: start fast, arrive calm |
-| Reduced-motion durations | **→ 1ms** | Same final state, no journey |
+| Hold-to-confirm (guarded toggle) | **~700ms** | Deliberate physical intent for a consequential switch |
+| Search debounce | **~250ms** | Wait for the fingers to pause, not per keystroke |
+| Persistent undo window | **~10s** | Reversible action — friction *behind* it, not in front |
+| Comfortable measure (line length) | **45–75ch** | Reading-comfort range, in `ch` not px |
+| Back-to-top / reveal threshold | **~35% scroll** | A shortcut earns its place after enough scroll |
+| Reduced-motion durations | **→ 1ms** | Same final state, no journey — *but functional progress/countdown bars stay* |
 
 ## Where to look
 
-- **`patterns.md`** — concrete, per-interaction heuristics: buttons, waiting/loading, empty & error states, dialogs & confirmations, scroll, numbers, inputs, micro-typography.
-- **`motion.md`** — motion as a craft: the timing laws, the four "feels", easing, and reduced-motion done right.
+- **`patterns.md`** — concrete, per-interaction heuristics across the whole book: buttons, waiting/loading, empty & error states, dialogs & confirmations, scroll, numbers, inputs, micro-typography, **toggles, toasts, menus, tabs, cards, dividers, long-form reading, editorial grids, quotations, marginalia, indexing & navigation, editorial images, drag & drop, search, calendar & dates, timelines, gestures, and endings**.
+- **`motion.md`** — motion as a craft: the timing laws, the four "feels", easing, FLIP for reflow, visual haptics, and reduced-motion done right (including the one exception — functional progress/countdown bars stay).
 - **`honesty.md`** — the honest-vs-deceptive throughline: a catalogue of patterns that respect the user vs dark patterns that lie.
+
+## The recurring cross-cutting laws
+
+Across all 26 chapters, the same handful of disciplines reappear — when in doubt, fall back to these:
+
+1. **Native platform first.** `<dialog>`, Popover API, CSS Anchor Positioning, `<input type=radio/checkbox>`, `role="switch"`, `subgrid`, `@container`, `animation-timeline: scroll()`, View Transitions, `Intl.*`, `inert`, `<details>`, `<time>`. Known well, the platform does almost everything — and gives you keyboard, focus, and ARIA for free.
+2. **`appearance: none` on the clothing, never the semantics.** Restyle the native control; never rebuild it from a `<div>` and lose keyboard/focus/form/indeterminate.
+3. **Colour is never the only channel.** Pair it with sign, icon, position, weight, or text — in that order.
+4. **Every gesture/drag has a keyboard twin.** A gesture is an accelerator, not a gate; announce state changes via `aria-live`.
+5. **`tabular-nums` wherever a number changes or is compared.** Digits must not flinch.
+6. **A control answers to its *container's* width, not the window's** (`@container`) — a component may sit in a narrow column on a huge screen.
+7. **Friction only where the consequence is real, and only in the dangerous direction.** Manufactured friction "to be safe" is a dark pattern.
+8. **Don't fake freshness or completion.** No build-time `new Date()` for dynamic labels; no faked progress %; relative time keeps the absolute reachable; a time without its zone is a lie.
