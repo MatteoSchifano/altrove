@@ -130,13 +130,35 @@ const bcp = locale === 'it' ? 'it-IT' : 'en-US';
 
   .cal__grid { display: flex; flex-direction: column; gap: 0.2rem; }
 
+  /* I layout di griglia dei giorni vivono nel blocco is:global qui sotto,
+     perché le celle sono create via JS e gli stili scoped non le
+     raggiungerebbero. Qui restano solo gli elementi resi da Astro. */
+
+  .cal__hint {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+  }
+
+  .cal__selected {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+</style>
+
+<!-- I giorni e le righe-settimana sono creati via JS: gli stili scoped di
+     Astro (che agganciano un data-cid agli elementi del template) non li
+     raggiungerebbero. Questo blocco è globale ma interamente namespacizzato
+     sotto `.cal__*`, classi usate solo da questo componente. -->
+<style is:global>
   .cal__weekdays,
   .cal__week {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 0.2rem;
   }
-
   .cal__weekday {
     text-align: center;
     font-size: var(--text-2xs);
@@ -146,7 +168,6 @@ const bcp = locale === 'it' ? 'it-IT' : 'en-US';
     text-transform: uppercase;
     padding-block: 0.25rem;
   }
-
   .cal__weeks { display: flex; flex-direction: column; gap: 0.2rem; }
 
   .cal__day {
@@ -170,17 +191,11 @@ const bcp = locale === 'it' ? 'it-IT' : 'en-US';
   .cal__day--outside { color: var(--ink-subtle); }
   .cal__day:hover { background-color: var(--surface-sunken); }
   .cal__day:focus-visible { outline: none; box-shadow: var(--halo-focus); }
-
-  /* Giorno "oggi" (rispetto alla data di riferimento): un anello, non
-     un riempimento — così non collide visivamente con il selezionato. */
   .cal__day[aria-current='date'] {
     border-color: var(--accent);
     color: var(--accent-ink);
     font-weight: var(--weight-medium);
   }
-
-  /* Selezionato: riempimento pieno. Il colore non è l’unico segnale —
-     il giorno è anche annunciato nel live region sotto la griglia. */
   .cal__day[aria-selected='true'] {
     background-color: var(--accent);
     color: var(--accent-on);
@@ -188,19 +203,6 @@ const bcp = locale === 'it' ? 'it-IT' : 'en-US';
     font-weight: var(--weight-medium);
   }
   .cal__day[aria-selected='true']:hover { background-color: var(--accent); }
-
-  .cal__hint {
-    margin: 0;
-    font-size: var(--text-2xs);
-    color: var(--ink-subtle);
-    line-height: var(--leading-snug);
-  }
-
-  .cal__selected {
-    margin: 0;
-    font-size: var(--text-xs);
-    color: var(--ink-muted);
-  }
 </style>
 
 <script>
