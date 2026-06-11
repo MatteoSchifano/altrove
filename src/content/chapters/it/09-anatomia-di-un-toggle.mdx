@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-09"
+number: "09"
+title: "Anatomia di un toggle"
+excerpt: "Un bottone si preme e torna. Uno switch si impegna in una posizione e ci resta. Quella differenza — due posizioni, non due stati — cambia tutto il modo in cui si disegna un controllo binario, e nasconde una famiglia di parenti più larga di quanto sembri."
+date: "5 giugno 2026"
+releaseDate: "2026-06-05"
+readMinutes: 11
+tags: ["componenti", "accessibilità", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SoftSwitch from '../../../components/toggles/SoftSwitch.astro';
+import SegmentedControl from '../../../components/toggles/SegmentedControl.astro';
+import CustomCheckbox from '../../../components/toggles/CustomCheckbox.astro';
+import HapticSwitch from '../../../components/toggles/HapticSwitch.astro';
+import GuardedToggle from '../../../components/toggles/GuardedToggle.astro';
+
+Il capitolo scorso parlava di pagine; questo torna ai componenti, con una domanda che sembra banale: che differenza c'è tra un bottone e uno switch? A guardarli, sembra solo grafica — uno è un rettangolo, l'altro è una pillola con un pallino. Ma il gesto che descrivono è diverso alla radice. Il bottone si preme e *torna*: è un'azione che accade una volta e finisce. Lo switch *si impegna in una posizione* e ci resta finché non lo si sposta: non ha due stati astratti, ha due posizioni fisiche, come una levetta della luce. È l'unico controllo dell'interfaccia che si comporta davvero come un oggetto del mondo.
+
+Quella distinzione — due posizioni, non due stati — non è pedanteria. Decide quando un controllo deve avere effetto immediato e quando differito, quando va spinto a fondo con un detent e quando basta sfiorarlo, e perfino quale tag HTML è quello onesto. E sotto il nome generico di "toggle" si nasconde una famiglia più larga di quanto sembri: lo switch acceso/spento, il controllo segmentato che sceglie fra tre, la checkbox che promette qualcosa al submit, lo switch sorvegliato che non si lascia toccare per sbaglio. Cinque parenti, cinque gesti diversi, spesso confusi l'uno con l'altro.
+
+Cinque dimostrazioni, una per parente. E come sempre niente librerie: l'HTML nativo conosce già lo switch, il radio group, la checkbox con tutti i loro stati e la loro tastiera. Il nostro lavoro è solo vestirli senza spogliarli della semantica.
+
+## Lo switch che ha due posizioni
+
+Il primo è il toggle nella sua forma più pura: acceso o spento, e il thumb che percorre il binario da un capo all'altro. Vale la pena fermarsi sulla scelta del tag, perché è qui che si annida l'errore più comune.
+
+<Demo title="Lo switch fondamentale · button role=switch" tag="09.a">
+  <SoftSwitch locale="it" />
+  <div slot="note">
+    <p>Clicca, o dai il focus e premi <kbd>Spazio</kbd>: il thumb scivola dall'altra parte. Non è una checkbox ridipinta — è un <code>&lt;button role="switch"&gt;</code> con <code>aria-checked</code>. La differenza la sente lo screen reader: annuncia <em>«interruttore, attivo»</em>, non <em>«casella, selezionata»</em>. Ed è la verità, perché lo switch ha <strong>effetto immediato</strong>: accende la sincronizzazione adesso, non «al salvataggio del modulo». Una checkbox, invece, è una scelta differita che si applica al submit. Scegliere il tag giusto è scegliere quale dei due gesti stai promettendo.</p>
+    <p>Essendo un <code>&lt;button&gt;</code> vero, la tastiera arriva gratis: <kbd>Spazio</kbd> e <kbd>Invio</kbd> commutano, <code>:focus-visible</code> disegna l'anello, niente JS per la navigazione. Il colore del binario è il <em>secondo</em> segnale, non il primo: chi non distingue bene i colori legge comunque la posizione del thumb e la parolina di stato accanto. E con <code>prefers-reduced-motion</code> il thumb non viaggia — si trova già dall'altra parte. Stesso stato finale, nessuno scivolamento.</p>
+  </div>
+</Demo>
+
+## Il toggle che non è binario
+
+Spostiamo di un passo. Quando le opzioni non sono due ma tre, e pari-grado, lo switch non basta più: serve un controllo segmentato. È un parente stretto del toggle, e confonderli è l'errore di partenza.
+
+<Demo title="Controllo segmentato · una scelta fra poche, non on/off" tag="09.b">
+  <SegmentedControl locale="it" />
+  <div slot="note">
+    <p>La pillola scivola sotto il segmento attivo, in stile iOS. Ma sotto la pelle non c'è niente di esotico: sono tre normali <code>&lt;input type="radio"&gt;</code> in un <code>&lt;fieldset&gt;</code>. Da lì arriva gratis tutto ciò che conta — le frecce <kbd>←</kbd>/<kbd>→</kbd> muovono la selezione, un solo segmento è scelto <em>sempre</em> (lo garantisce il browser, non il nostro codice), e in un form il valore parte da solo. L'unica cosa che aggiungiamo è l'indicatore che si muove: una custom property <code>--idx</code> che trasla la pillola di un segmento.</p>
+    <p>La lezione è di tassonomia: un controllo segmentato è una scelta <em>singola fra poche alternative</em>, non un acceso/spento. Usarne uno da due segmenti dove servirebbe uno switch — o, peggio, uno switch che nasconde tre opzioni dietro un gesto solo — è il modo più frequente di disorientare. La forma deve dire quante strade ci sono: una levetta per due, una fila di segmenti per tre o quattro, un menu quando diventano troppe. Il re-wrapping non si anima e nemmeno la pillola fa acrobazie: scivola e si ferma, perché è un indicatore di posizione, non un fuoco d'artificio.</p>
+  </div>
+</Demo>
+
+## La scelta che si conferma dopo
+
+Terzo parente: la checkbox. Se lo switch agisce adesso, la checkbox è una promessa — «questo lo voglio, e lo confermerò al submit». Per questo non scivola: si *spunta*. È il gesto di una conferma che prende corpo.
+
+<Demo title="Checkbox custom · appearance:none senza tradire la semantica" tag="09.c">
+  <CustomCheckbox locale="it" />
+  <div slot="note">
+    <p>Le caselle sono ridisegnate da zero — <code>appearance: none</code> sul vestito — e lo spunto <em>si disegna</em> invece di apparire di colpo (un tratto SVG con <code>stroke-dashoffset</code> che va da nascosto a pieno). Ma l'<code>&lt;input type="checkbox"&gt;</code> reale resta lì sotto, solo reso invisibile, mai sostituito: è l'errore classico del «checkbox custom» rifatto con un <code>&lt;div&gt;</code>, che butta via tastiera, focus, partecipazione al form e stato indeterminato per reimplementarli a mano, peggio. <code>appearance: none</code> è sul vestito, mai sulla semantica.</p>
+    <p>Il «Seleziona tutto» mostra il parente più dimenticato degli stati: l'<em>indeterminato</em>. Spunta solo alcuni figli e la casella in alto non è né accesa né spenta — è a metà, disegnata con un trattino. <code>indeterminate</code> è una proprietà DOM vera (non un attributo HTML), e lo screen reader la annuncia «parzialmente spuntata»: lo stato del genitore è <em>derivato</em> dai figli, non deciso a mano. È la dimostrazione che vestire un controllo nativo, invece di rifarlo, ti regala anche gli stati che non avevi pensato di dover gestire.</p>
+  </div>
+</Demo>
+
+## La posizione che si conquista
+
+Torniamo allo switch, ma stavolta guardiamo il *movimento*. Uno switch fisico ha un detent: una molletta che resiste, cede e fa «clac». È quello scatto a dirti, col polpastrello, che la posizione è stata raggiunta fino in fondo. Sullo schermo non c'è polpastrello — ma il cervello accetta un surrogato visivo.
+
+<Demo title="Switch con aptica visiva · lo squash dell'arrivo" tag="09.d">
+  <HapticSwitch locale="it" />
+  <div slot="note">
+    <p>Al toggle, il thumb non si limita a scivolare: arriva, si schiaccia un istante contro il fondo corsa (uno <em>squash</em>: si allarga e si appiattisce) e si ricompone, mentre un lampo di colore attraversa il binario. È la differenza fra un bottone e uno switch portata all'estremo — il bottone si preme e torna, lo switch si impegna in una posizione, e l'overshoot vende proprio quell'arrivo nel detent. Sul mobile, dove esiste l'hardware, un <code>navigator.vibrate</code> brevissimo aggiunge il «clac» vero.</p>
+    <p>Qui l'onestà è tutta nel dosaggio. L'overshoot dev'essere minuscolo e meritato — feel <em>«expressive»</em>, non un rimbalzo da cartone animato che fa sembrare rotto il controllo. È la stessa soglia del capitolo 01: <code>0.97</code> sembra premuto, <code>0.95</code> sembra guasto. E sotto <code>prefers-reduced-motion</code> lo squash sparisce e il lampo non parte: il thumb è semplicemente già in posizione. La regola non cambia mai — non si rallenta un'animazione, la si toglie, lasciando intatto lo stato finale.</p>
+  </div>
+</Demo>
+
+## Lo switch che si lascia toccare con cautela
+
+L'ultimo parente rovescia la tesi di tutto il playground. Quasi ovunque rincorriamo la rimozione dell'attrito; qui, per una volta, lo aggiungiamo apposta — ed è il caso più delicato sul piano dell'onestà.
+
+<Demo title="Toggle sorvegliato · tieni premuto per confermare" tag="09.e">
+  <GuardedToggle locale="it" />
+  <div slot="note">
+    <p>Alcuni switch hanno conseguenze grosse: mettere un sito in manutenzione, spegnere la 2FA, disattivare un backup. Lì un tap accidentale non è un fastidio, è un danno. La risposta non è un modal «Sei sicuro?» che si clicca via senza leggere: è rendere il gesto <em>fisicamente</em> deliberato. Tieni premuto — col puntatore o con <kbd>Spazio</kbd> — finché l'anello si chiude, circa 700ms, e solo allora commuta. Molli prima, non succede nulla. L'anello è progresso <em>funzionale</em>, non decorazione: per questo resta anche con reduced motion, perché dice quanto manca.</p>
+    <p>E qui sta la regola che tiene insieme il capitolo: l'attrito si mette <strong>solo dove la conseguenza è reale</strong>, e <strong>solo nella direzione pericolosa</strong>. Accendere la manutenzione richiede la pressione lunga; <em>spegnerla è immediato</em> — riportare il sito online non ha bisogno di guardie. Mettere attrito su un toggle banale, o «per sicurezza» ovunque, sarebbe un dark pattern: frizione fabbricata, il contrario del rispetto. La guardia è onesta solo finché custodisce qualcosa che vale davvero la pena custodire.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque parenti, un'unica intuizione: il toggle non è un'icona, è un *gesto*, e il gesto cambia col peso di ciò che commuta. Lo switch che agisce subito, il segmento che sceglie fra pari, la checkbox che promette per dopo, lo squash che vende l'arrivo, la guardia che chiede di insistere — ognuno racconta una relazione diversa fra l'intenzione dell'utente e la sua conseguenza. Disegnare un controllo binario, alla fine, è soprattutto decidere quanto deve essere facile cambiarne la posizione: facilissimo per «non disturbare», deliberato per «metti offline il sito». La grafica viene dopo. Prima c'è la domanda su cosa, davvero, sta per succedere.
+
+Il prossimo capitolo resta tra i componenti ma cambia registro: dall'oggetto che si tocca al messaggio che arriva. *Anatomia di un toast* — come si dà un'informazione senza interrompere, e come la si lascia andare quando ha finito di servire.

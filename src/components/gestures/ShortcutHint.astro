@@ -1,0 +1,318 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ShortcutHint — la legenda che appare solo dove serve.
+
+   Premi `?` MENTRE il componente ha il focus e si apre un pannello
+   con le scorciatoie disponibili. Chiuso con Esc. Diversamente dal
+   KeyboardOverlay del capitolo 04 — che ascolta `?` su tutta la
+   pagina — qui il trigger è *scoped*: legato al keydown del
+   componente, non a document. Così la legenda non irrompe mentre
+   l’utente è altrove nella pagina, e più "isole" di scorciatoie
+   possono convivere senza litigare per lo stesso tasto.
+
+   Onestà: il `?` è un acceleratore. C’è sempre il pulsante visibile
+   "Scorciatoie" che apre lo stesso pannello — chi non sa del tasto
+   non resta tagliato fuori. E `?` non scatta se stai scrivendo in un
+   campo: chi digita "perché?" vuole il punto interrogativo, non un
+   overlay.
+
+   Usiamo <dialog>.showModal(): focus trap, Esc, top-layer e
+   restituzione del focus arrivano nativi, senza trappola manuale.
+   Reduced motion: l’entrata/uscita del pannello collassa; il
+   contenuto e il focus restano identici.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Pannello con scorciatoie locali',
+    hint: 'Dai il focus qui sotto e premi',
+    open: 'Scorciatoie',
+    title: 'Scorciatoie di questo pannello',
+    close: 'Chiudi',
+    focusMe: 'Mettimi a fuoco, poi premi ? — fuori di qui il tasto non fa nulla',
+    typeHere: 'Scrivi qui: “perché?” resta testo, non apre la legenda',
+    rows: [
+      { keys: ['j'], desc: 'Elemento successivo' },
+      { keys: ['k'], desc: 'Elemento precedente' },
+      { keys: ['Invio'], desc: 'Apri l’elemento a fuoco' },
+      { keys: ['?'], desc: 'Apri / chiudi questa legenda' },
+      { keys: ['Esc'], desc: 'Chiudi la legenda' },
+    ],
+    footer: 'Locale: il tasto ? agisce solo quando questo pannello è a fuoco.',
+  },
+  en: {
+    label: 'Panel with local shortcuts',
+    hint: 'Focus below and press',
+    open: 'Shortcuts',
+    title: 'Shortcuts for this panel',
+    close: 'Close',
+    focusMe: 'Focus me, then press ? — outside here the key does nothing',
+    typeHere: 'Type here: “why?” stays text, it won’t open the legend',
+    rows: [
+      { keys: ['j'], desc: 'Next item' },
+      { keys: ['k'], desc: 'Previous item' },
+      { keys: ['Enter'], desc: 'Open the focused item' },
+      { keys: ['?'], desc: 'Open / close this legend' },
+      { keys: ['Esc'], desc: 'Close the legend' },
+    ],
+    footer: 'Scoped: the ? key acts only while this panel is focused.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="sh" tabindex="-1" aria-label={c.label}>
+  <div class="sh__bar">
+    <button type="button" class="sh__focusable" data-role="focusable">{c.focusMe}</button>
+    <button type="button" class="sh__open" data-action="open">
+      {c.open}<kbd class="sh__kbd">?</kbd>
+    </button>
+  </div>
+
+  <input class="sh__field" type="text" placeholder={c.typeHere} aria-label={c.typeHere} />
+
+  <p class="sh__hint">{c.hint} <kbd class="sh__kbd">?</kbd></p>
+
+  <dialog class="sh__dialog" aria-labelledby="sh-title">
+    <div class="sh__panel">
+      <header class="sh__head">
+        <h4 id="sh-title" class="sh__title">{c.title}</h4>
+        <button type="button" class="sh__close" data-action="close" aria-label={c.close}>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      </header>
+      <dl class="sh__list">
+        {c.rows.map((r) => (
+          <div class="sh__row">
+            <dt class="sh__chord">{r.keys.map((k) => <kbd class="sh__kbd">{k}</kbd>)}</dt>
+            <dd>{r.desc}</dd>
+          </div>
+        ))}
+      </dl>
+      <p class="sh__footer">{c.footer}</p>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .sh {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-sm);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+  }
+  .sh:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sh__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .sh__focusable {
+    flex: 1 1 12rem;
+    text-align: start;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .sh__focusable:hover { border-color: var(--border-strong); }
+  .sh__focusable:focus-visible { outline: none; box-shadow: var(--halo-focus); border-color: var(--border-strong); }
+
+  .sh__open {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    border: 0;
+    color: var(--bg);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .sh__open:hover { transform: translateY(-1px); }
+  .sh__open:active { transform: translateY(0); }
+  .sh__open:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sh__field {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+  }
+  .sh__field:focus { outline: none; border-color: var(--border-strong); box-shadow: var(--halo-focus); }
+
+  .sh__hint { margin: 0; font-size: var(--text-2xs); color: var(--ink-subtle); }
+
+  .sh__kbd {
+    display: inline-grid;
+    place-items: center;
+    min-inline-size: 1.4rem;
+    block-size: 1.4rem;
+    padding: 0 0.35rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 1px 0 var(--border-strong), inset 0 -1px 0 var(--border);
+    color: var(--ink-strong);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: 1;
+  }
+  .sh__open .sh__kbd { background-color: var(--surface-raised); }
+
+  /* ── Dialog ── */
+  .sh__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(26rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .sh__dialog:not([open]) { display: none; }
+
+  @keyframes sh-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes sh-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+  .sh__dialog[open] .sh__panel { animation: sh-in 220ms var(--ease-out-soft); }
+  .sh__dialog[data-closing='true'] .sh__panel { animation: sh-out 160ms var(--ease-out-soft) forwards; }
+
+  .sh__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.35);
+    backdrop-filter: blur(2px);
+  }
+
+  .sh__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .sh__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .sh__title {
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .sh__close {
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .sh__close:hover { background-color: var(--surface-sunken); color: var(--ink); }
+  .sh__close:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .sh__close svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+  .sh__list { display: grid; gap: 0.35rem; margin: 0; }
+  .sh__row { display: flex; align-items: center; gap: var(--space-2xs); }
+  .sh__row dt { margin: 0; display: inline-flex; gap: 0.15rem; flex: 0 0 auto; min-inline-size: 4rem; }
+  .sh__row dd { margin: 0; color: var(--ink); font-size: var(--text-xs); line-height: var(--leading-snug); }
+
+  .sh__footer {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    padding-block-start: var(--space-2xs);
+    border-block-start: 1px solid var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sh__dialog[open] .sh__panel,
+    .sh__dialog[data-closing='true'] .sh__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  const isEditable = (el: EventTarget | null): boolean => {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.isContentEditable) return true;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  };
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sh').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const dialog = root.querySelector<HTMLDialogElement>('.sh__dialog');
+      const openBtn = root.querySelector<HTMLButtonElement>('[data-action="open"]');
+      const closeBtn = root.querySelector<HTMLButtonElement>('[data-action="close"]');
+      if (!dialog || !openBtn || !closeBtn) return;
+
+      const open = () => { if (!dialog.open) dialog.showModal(); };
+
+      const close = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+        };
+        dialog.addEventListener('animationend', onEnd);
+        window.setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 240);
+      };
+
+      openBtn.addEventListener('click', open);
+      closeBtn.addEventListener('click', close);
+
+      // Light dismiss su click backdrop
+      dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
+
+      // `?` SCOPED: ascolta sul componente, non su document.
+      // Agisce solo se il focus è dentro .sh e non in un campo di testo.
+      root.addEventListener('keydown', (e) => {
+        if (e.key !== '?') return;
+        if (isEditable(e.target)) return; // chi scrive "perché?" vuole il ?
+        e.preventDefault();
+        if (dialog.open) close(); else open();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

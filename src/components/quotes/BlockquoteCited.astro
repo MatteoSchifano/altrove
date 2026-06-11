@@ -1,0 +1,111 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BlockquoteCited — la citazione con la fonte, fatta bene.
+
+   Qui si dà davvero la parola a un altro, e la semantica conta.
+   La regola HTML è precisa e quasi sempre ignorata:
+     • <blockquote> avvolge SOLO le parole citate;
+     • l’attribuzione (“— Tizio, in Opera”) sta FUORI dal
+       blockquote, perché non è parte di ciò che la persona ha
+       detto — è il nostro commento su chi l’ha detto;
+     • <cite> avvolge il TITOLO dell’opera, non il nome della
+       persona. È l’errore più diffuso: <cite> è per il titolo
+       della fonte (un libro, un film, un articolo), non per chi
+       parla.
+     • cite="URL" sul <blockquote> dà la fonte machine-readable;
+       non è visibile, ma è onesto verso chi legge il markup.
+
+   Il pattern editoriale: l’attribuzione vive in un <figcaption>,
+   col <blockquote> dentro una <figure>. Così la struttura dice
+   “questa citazione, attribuita a questa fonte”, semanticamente,
+   senza un solo <div> di troppo.
+
+   Niente motion: è una citazione, non un’animazione.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    quote: 'La perfezione si raggiunge non quando non c’è più niente da aggiungere, ma quando non c’è più niente da togliere.',
+    person: 'Antoine de Saint-Exupéry',
+    work: 'Terra degli uomini',
+    sourceUrl: 'https://it.wikipedia.org/wiki/Terra_degli_uomini',
+  },
+  en: {
+    quote: 'Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.',
+    person: 'Antoine de Saint-Exupéry',
+    work: 'Wind, Sand and Stars',
+    sourceUrl: 'https://en.wikipedia.org/wiki/Wind,_Sand_and_Stars',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<figure class="bq" lang={locale}>
+  <blockquote class="bq__quote" cite={c.sourceUrl}>
+    <p>{c.quote}</p>
+  </blockquote>
+  <figcaption class="bq__attr">
+    <span class="bq__dash" aria-hidden="true">—&nbsp;</span>
+    <span class="bq__person">{c.person}</span>,
+    <cite class="bq__work">{c.work}</cite>
+  </figcaption>
+</figure>
+
+<style>
+  .bq {
+    inline-size: min(32rem, 100%);
+    margin: 0;
+    padding-inline-start: var(--space-md);
+    /* Il filetto a sinistra è il segno “questo è di un altro”.
+       Forma + colore: chi non vede il colore legge comunque il
+       rientro e la barra. */
+    border-inline-start: 3px solid var(--accent);
+  }
+
+  .bq__quote {
+    margin: 0;
+    color: var(--ink-strong);
+  }
+
+  .bq__quote p {
+    margin: 0;
+    font-size: var(--text-md);
+    line-height: var(--leading-relaxed);
+    letter-spacing: var(--tracking-snug);
+    /* Le virgolette curve attorno alla citazione, via la proprietà
+       CSS `quotes`, coerenti con la lingua del blocco. */
+    quotes: '«' '»' '‘' '’';
+    text-wrap: pretty;
+  }
+  .bq[lang='en'] .bq__quote p { quotes: '“' '”' '‘' '’'; }
+
+  .bq__quote p::before { content: open-quote; }
+  .bq__quote p::after  { content: close-quote; }
+
+  .bq__attr {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-normal);
+  }
+
+  .bq__person {
+    font-weight: var(--weight-medium);
+    color: var(--ink);
+  }
+
+  /* <cite> di default è in corsivo — qui lo confermiamo: il titolo
+     dell’opera va in corsivo, il nome della persona no. È la
+     distinzione tipografica che riflette quella semantica. */
+  .bq__work {
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  .bq__quote ::selection { background-color: var(--accent-soft); }
+</style>

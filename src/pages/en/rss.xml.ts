@@ -3,13 +3,13 @@
    ───────────────────────────────────────────────────────────── */
 
 import rss from '@astrojs/rss';
-import { getCollection } from 'astro:content';
 import type { APIContext } from 'astro';
+import { getReleasedChapters } from '../../lib/chapters';
 import { t, localizedPath } from '../../lib/i18n';
 
 export async function GET(context: APIContext) {
   const chapters = (
-    await getCollection('chapters', ({ data }) => data.lang === 'en' && !data.draft)
+    await getReleasedChapters((data) => data.lang === 'en')
   ).sort((a, b) => Number(b.data.number) - Number(a.data.number));
 
   return rss({

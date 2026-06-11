@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-17"
+number: "17"
+title: "The quotation"
+excerpt: "Giving someone else the floor looks like a matter of two quotation marks. But which marks, in which language, with which source, and with how much emphasis: each choice changes who is speaking, and how much you trust them."
+date: "July 31, 2026"
+releaseDate: "2026-07-31"
+readMinutes: 10
+tags: ["editorial", "typography"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import PullQuoteType from '../../../components/quotes/PullQuoteType.astro';
+import BlockquoteCited from '../../../components/quotes/BlockquoteCited.astro';
+import InlineQuote from '../../../components/quotes/InlineQuote.astro';
+import DropCapQuote from '../../../components/quotes/DropCapQuote.astro';
+import TranslatedQuote from '../../../components/quotes/TranslatedQuote.astro';
+
+The last chapter was still inside the page, between weight and measure; this one stops on an ancient editorial gesture that's almost never done well: giving someone else the floor. “When you quote, how do you present it?” The question sounds trivial — you add two quotation marks and you're done — but underneath sit at least four separate decisions, each with its own trap. Which marks, because the convention changes with language. Which tag, because quoting someone else's words *now* isn't the same as pulling a sentence from your own text. Which source, and where to put it. How much emphasis to give, because a quotation can be a whisper mid-line or a monument at the head of a chapter.
+
+The quotation is where typography stops being decoration and becomes *semantics*: here the typographic mark tells you who is speaking. A straight quote betrays text banged out on a typewriter; a `<cite>` placed on the person's name instead of the work's title betrays someone who doesn't know the rule; a block in two languages without the right `lang` betrays the screen reader and the hyphenation. These are errors invisible to anyone who can't name them, and together they make a page feel less serious without anyone knowing why — exactly as in the micro-typography chapter.
+
+Five demos, five ways to present someone else's words. And as always, no libraries: HTML already knows `<blockquote>`, `<cite>`, `<q>`, and CSS knows how to nest quotation marks in the right language with the `quotes` property. Our job is to dress them without betraying the semantics they carry.
+
+## The pull quote, which quotes no one
+
+The first isn't even a real quotation, and that's the most common misunderstanding. The pull quote is a sentence from the text itself, pulled out and enlarged to give the reading rhythm: it carries no attribution, because the source is the page in front of you.
+
+<Demo title="Typographic pull quote · out of grid, hanging mark" tag="17.a">
+  <PullQuoteType locale="en" />
+  <div slot="note">
+    <p>It's large, it steps out of the prose column, and the opening mark <em>hangs</em> past the left margin (<code>hanging punctuation</code> done by hand with a negative margin): so the edge of the text stays optically straight instead of looking indented. That's the detail that separates a <em>typeset</em> pull quote from one merely pasted in. No <code>&lt;blockquote&gt;</code> here, and that's a precise semantic choice: it isn't someone else's words, it's internal editorial material — using one would be lying to the screen reader.</p>
+    <p>The huge mark is <code>aria-hidden</code>: it's pure ornament, and the text reads perfectly without it. The accent colour is the <em>second</em> signal, not the first — the scale and the hanging position already say “quotation” to anyone who can't tell the colours apart. And no motion: a pull quote presents itself still, it doesn't animate. Its job is to let the reading breathe, not to ask for attention.</p>
+  </div>
+</Demo>
+
+## The quotation with a source, done right
+
+Here you give someone else the floor for real, and the semantics matter down to the last tag. The HTML rule is precise and almost always wrong: `<blockquote>` wraps *only* the quoted words, the attribution stays outside, and `<cite>` is for the title of the work — not for the person's name.
+
+<Demo title="Cited blockquote · cite for the work, not the speaker" tag="17.b">
+  <BlockquoteCited locale="en" />
+  <div slot="note">
+    <p>The <code>&lt;blockquote&gt;</code> holds only Saint-Exupéry's sentence; the “— Antoine de Saint-Exupéry, <em>Wind, Sand and Stars</em>” lives in a <code>&lt;figcaption&gt;</code> outside the block, because it isn't something <em>he</em> said: it's our note about who said it. And we avoid the most common error here: <code>&lt;cite&gt;</code> wraps the <em>title of the work</em>, not the person's name — that's why the title is italic and the name isn't. The <code>cite="URL"</code> on the blockquote gives a machine-readable source, invisible but honest toward anyone reading the markup.</p>
+    <p>The rule on the left is the “this is someone else's” sign: shape plus colour, never colour alone, so someone who can't see the accent still reads the indent and the bar. The quotation marks around the sentence aren't typed by hand in the text — CSS adds them via <code>quotes</code> and <code>open-quote</code>/<code>close-quote</code>, consistent with the block's language. Typing them by hand would be the surest way to get them wrong when the language changes.</p>
+  </div>
+</Demo>
+
+## The quotation inside the line, nested
+
+Quoting inside a sentence looks like the simplest case, and it hides two refinements almost no one tends to: the right tag is `<q>`, not quotation marks banged out by hand — and `<q>` can do something that's impossible by hand, nest the levels.
+
+<Demo title="Inline quote · nested marks, language-aware" tag="17.c">
+  <InlineQuote locale="en" />
+  <div slot="note">
+    <p>A <code>&lt;q&gt;</code> inside another <code>&lt;q&gt;</code>: the browser adds the marks itself and <em>automatically</em> uses the right level — in English the double curlies “” at the first level and the single ones ‘’ at the second. We don't write a single quotation mark in the markup: CSS resolves them from the <code>quotes</code> property. Trying to compose them by hand would be the guaranteed error, because correct nesting has to be computed, not guessed.</p>
+    <p>And here's the most common silent bug: <em>which</em> marks <code>&lt;q&gt;</code> uses depends on the declared language. Without the right <code>lang</code>, the browser would use its default convention — and on Italian text it would still reach for the English “”. Here the block carries its <code>lang</code> and the <code>quotes</code> property to match: in Italian, guillemets «» outside and single curlies inside; in English, double curlies outside and singles inside. The convention changes with the language, and pretending it's universal is the first mistake.</p>
+  </div>
+</Demo>
+
+## The celebratory quotation, with a drop cap
+
+When a quotation has to open something — a chapter, a section, a solemn moment — the editorial gesture is the drop cap: the first letter enlarged, sinking several lines deep. It gives weight without a single extra word, and its honesty lies entirely in how well the browser supports it.
+
+<Demo title="Quotation with a drop cap · initial-letter + first-letter fallback" tag="17.d">
+  <DropCapQuote locale="en" />
+  <div slot="note">
+    <p>The <em>right</em> property is <code>initial-letter: 3</code>: it says “this letter is worth three lines” and the browser computes the sink and the baseline alignment itself. Real support is mostly in Safari. For everyone else there's the universal <em>fallback</em>, <code>::first-letter</code> with <code>float</code> and a big scale: less precise on the baseline, but robust everywhere. Where <code>initial-letter</code> is supported it wins via <code>@supports</code>; elsewhere the float carries it. Progressive enhancement, not a promise the browser can't keep.</p>
+    <p>It stays a real <code>&lt;blockquote&gt;</code>, with the source in <code>&lt;cite&gt;</code>: the drop cap is clothing, not semantics. That's why the enlarged letter is still <em>inside</em> the text, not a separate glyph: the screen reader reads “While”, the whole word, not “W” followed by “hile”. It's the same discipline as the whole playground — the visual effect must never break what the control, or here the text, actually means.</p>
+  </div>
+</Demo>
+
+## The translated quotation, with two languages
+
+The last case is when you quote someone who spoke another language: you give the original *and* the translation. The design question is which of the two is primary — and here we let the reader decide, with a toggle that swaps the emphasis without touching the content.
+
+<Demo title="Translated quotation · original + translation, correct lang on each" tag="17.e">
+  <TranslatedQuote locale="en" />
+  <div slot="note">
+    <p>The French original and the English translation sit side by side; the <code>&lt;button&gt;</code> with <code>aria-pressed</code> swaps <em>only</em> the visual hierarchy — who's large and opaque, who's small and dimmed — not the text. The hierarchy runs through scale plus opacity, not colour alone, and the transition uses the duration tokens: with <code>prefers-reduced-motion</code> it switches crisply, same final state without the journey. It's a real control, so the keyboard and the focus ring come for free.</p>
+    <p>The non-negotiable part is the <code>lang</code> on each block: <code>fr</code> on the original, <code>en</code> on the translation. It serves the screen reader, which changes pronunciation; the hyphenation, which wants the right dictionary (the chapter 08 lesson); and the quotation marks, because the <code>quotes</code> property follows the language — so French takes guillemets with the thin space, English the double curlies. A single block with two languages mixed would get both wrong, silently.</p>
+  </div>
+</Demo>
+
+---
+
+Five ways to give someone else the floor, one shared insight: the quotation is where the typographic mark stops being ornament and declares *who is speaking*. The pull quote that quotes the page itself, the blockquote that attributes with the right source in the right tag, the `<q>` that nests its marks in the correct language, the drop cap that opens with solemnity, the two languages side by side each with its own `lang`. None of these details is noticed when it's done well — you only notice that the page can hold different voices together without confusing them. Presenting someone else's words, in the end, is mostly a matter of respect: for whoever spoke, for the language they spoke in, and for the reader who has to grasp at a glance whose sentence it is.
+
+The next chapter stays on the seam between the author's text and the reader's, but lowers its voice further: *the marginal note*. “How do you talk to your reader without breaking the thread?” — the aside, the footnote, the gloss that adds without interrupting, and where you put it when the screen is too narrow to sit truly “in the margin”.

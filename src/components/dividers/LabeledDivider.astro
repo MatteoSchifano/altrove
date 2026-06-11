@@ -1,0 +1,110 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   LabeledDivider — il divider con etichetta inline ("oppure").
+
+   Il pattern classico: due vie di accesso — un bottone primario e
+   un’alternativa — separate da una parolina al centro, con una riga
+   per lato. È il modo in cui una pagina dice "questa strada, o quella",
+   senza che le due sembrino in conflitto.
+
+   L’errore comune è costruirlo con tre <div> e una <span>: graficamente
+   identico, semanticamente muto. Qui invece la separazione è onesta —
+   un elemento con role="separator" e aria-orientation="horizontal" —
+   mentre l’etichetta visibile resta leggibile e il separatore vero
+   è marcato per chi non vede. Le righe ai lati sono decorazione pura,
+   quindi aria-hidden: la parola "oppure" basta da sola.
+
+   Niente motion: è struttura, non gesto. Il colore non è l’unico
+   canale: la separazione è data dalla geometria (riga · parola · riga),
+   non da una tinta.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    primary: 'Entra con email',
+    secondary: 'Continua con Passkey',
+    or: 'oppure',
+  },
+  en: {
+    primary: 'Sign in with email',
+    secondary: 'Continue with Passkey',
+    or: 'or',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="labeled">
+  <button type="button" class="labeled__btn labeled__btn--primary">{c.primary}</button>
+
+  <div class="labeled__rule" role="separator" aria-orientation="horizontal" aria-label={c.or}>
+    <span class="labeled__line" aria-hidden="true"></span>
+    <span class="labeled__word" aria-hidden="true">{c.or}</span>
+    <span class="labeled__line" aria-hidden="true"></span>
+  </div>
+
+  <button type="button" class="labeled__btn labeled__btn--ghost">{c.secondary}</button>
+</div>
+
+<style>
+  .labeled {
+    inline-size: min(22rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .labeled__btn {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.7rem var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .labeled__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .labeled__btn--primary {
+    border: 1px solid transparent;
+    background-color: var(--accent);
+    color: var(--accent-on);
+  }
+  .labeled__btn--ghost {
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-raised);
+    color: var(--ink-strong);
+  }
+
+  /* ── Il separatore con etichetta ──
+     flex a tre colonne: riga elastica · parola · riga elastica. */
+  .labeled__rule {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .labeled__line {
+    flex: 1 1 0;
+    block-size: 1px;
+    background-color: var(--border);
+  }
+  .labeled__word {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wide);
+    text-transform: lowercase;
+  }
+</style>

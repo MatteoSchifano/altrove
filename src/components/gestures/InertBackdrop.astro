@@ -1,0 +1,301 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   InertBackdrop — l’attributo `inert` come gesto di onestà.
+
+   Quando un pannello si apre sopra del contenuto, il resto NON deve
+   restare raggiungibile: nessun Tab che finisce dietro al pannello,
+   nessun click che colpisce qualcosa che l’utente non vede più. Il
+   <dialog> nativo lo fa da solo; ma quando il pannello è in-page
+   (non un modal a top-layer), tocca a noi rendere `inert` il fondale.
+
+   `inert` toglie in un colpo solo: focus (l’intero sottoalbero esce
+   dall’ordine di tabulazione), eventi del puntatore, e visibilità
+   per le tecnologie assistive (come aria-hidden). È la cosa giusta —
+   e qui la mostriamo a confronto: lo stesso fondale, con e senza
+   `inert`. Senza, il Tab cade dietro al pannello e i bottoni del
+   fondo rispondono ai click pur essendo "coperti"; con, il fondale è
+   davvero fuori gioco.
+
+   Questo non è un gesto del dito ma il gesto *strutturale* che ogni
+   overlay deve fare: dichiarare cosa è interagibile e cosa no. È
+   l’altra faccia del capitolo — un’interfaccia che si tocca deve
+   sapere, in ogni istante, cosa si può toccare.
+
+   Reduced motion: l’apertura del pannello collassa via token; lo
+   stato inerte è identico, perché `inert` è correttezza, non
+   decorazione.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Confronto inert / non-inert',
+    useInert: 'Usa inert sul fondale',
+    open: 'Apri il pannello',
+    close: 'Chiudi',
+    bgTitle: 'Contenuto di sfondo',
+    bgHint: 'Prova a premere Tab o a cliccare questi bottoni mentre il pannello è aperto.',
+    bgA: 'Bottone A',
+    bgB: 'Bottone B',
+    panelTitle: 'Pannello in primo piano',
+    panelBody: 'Mentre sono aperto, il fondale dovrebbe essere fuori gioco. Con inert attivo, Tab non ci arriva e i click non passano. Disattiva inert e prova la differenza.',
+    panelOk: 'Capito',
+    touched: 'Hai toccato il fondale: ecco perché serve inert.',
+  },
+  en: {
+    legend: 'inert / non-inert comparison',
+    useInert: 'Use inert on the backdrop',
+    open: 'Open the panel',
+    close: 'Close',
+    bgTitle: 'Background content',
+    bgHint: 'Try pressing Tab or clicking these buttons while the panel is open.',
+    bgA: 'Button A',
+    bgB: 'Button B',
+    panelTitle: 'Foreground panel',
+    panelBody: 'While I am open, the backdrop should be out of play. With inert on, Tab can’t reach it and clicks don’t pass through. Turn inert off and feel the difference.',
+    panelOk: 'Got it',
+    touched: 'You reached the backdrop: that’s why inert exists.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="inert" data-open="false">
+  <label class="inert__opt">
+    <input type="checkbox" class="inert__check" data-role="use-inert" checked />
+    <span>{c.useInert}</span>
+  </label>
+
+  <div class="inert__scene">
+    <div class="inert__bg" data-role="backdrop">
+      <p class="inert__bg-title">{c.bgTitle}</p>
+      <p class="inert__bg-hint">{c.bgHint}</p>
+      <div class="inert__bg-actions">
+        <button type="button" class="inert__bg-btn" data-role="bg-btn">{c.bgA}</button>
+        <button type="button" class="inert__bg-btn" data-role="bg-btn">{c.bgB}</button>
+      </div>
+      <p class="inert__touched" data-msg={c.touched} role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="inert__panel" data-role="panel" aria-labelledby="inert-title" role="dialog" aria-modal="false">
+      <h4 id="inert-title" class="inert__panel-title">{c.panelTitle}</h4>
+      <p class="inert__panel-body">{c.panelBody}</p>
+      <button type="button" class="inert__panel-ok" data-action="close">{c.panelOk}</button>
+    </div>
+  </div>
+
+  <button type="button" class="inert__open" data-action="open">{c.open}</button>
+</div>
+
+<style>
+  .inert {
+    inline-size: min(28rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .inert__opt {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    align-self: flex-start;
+    font-size: var(--text-xs);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .inert__check { accent-color: var(--accent); inline-size: 1rem; block-size: 1rem; }
+  .inert__check:focus-visible { outline: none; box-shadow: var(--halo-focus); border-radius: var(--radius-xs); }
+
+  .inert__scene {
+    position: relative;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    overflow: hidden;
+    min-block-size: 9rem;
+  }
+
+  .inert__bg {
+    padding: var(--space-sm) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    transition: filter var(--dur-normal) var(--ease-out-soft);
+  }
+  .inert[data-open='true'] .inert__bg { filter: blur(1.5px); }
+  /* segnale oltre il colore: il fondale inerte è visibilmente attenuato */
+  .inert[data-open='true'] .inert__bg[inert] { opacity: 0.55; }
+
+  .inert__bg-title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+  .inert__bg-hint { margin: 0; font-size: var(--text-xs); color: var(--ink-muted); line-height: var(--leading-snug); }
+  .inert__bg-actions { display: flex; gap: var(--space-2xs); margin-block-start: var(--space-2xs); }
+
+  .inert__bg-btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .inert__bg-btn:hover { background-color: var(--surface-sunken); }
+  .inert__bg-btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .inert__touched {
+    margin: 0;
+    min-block-size: 1rem;
+    font-size: var(--text-2xs);
+    color: var(--accent-ink);
+  }
+
+  .inert__panel {
+    position: absolute;
+    inset-block-end: var(--space-sm);
+    inset-inline: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    transform: translateY(calc(100% + var(--space-md)));
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      transform var(--dur-normal) var(--ease-out-snug),
+      opacity var(--dur-fast) var(--ease-out-soft),
+      visibility 0s linear var(--dur-normal);
+  }
+  .inert[data-open='true'] .inert__panel {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    transition:
+      transform var(--dur-normal) var(--ease-out-snug),
+      opacity var(--dur-fast) var(--ease-out-soft),
+      visibility 0s;
+  }
+
+  .inert__panel-title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .inert__panel-body { margin: 0; font-size: var(--text-xs); color: var(--ink-muted); line-height: var(--leading-snug); }
+
+  .inert__panel-ok {
+    align-self: flex-start;
+    margin-block-start: var(--space-2xs);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    border: 0;
+    color: var(--accent-on);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .inert__panel-ok:hover { transform: translateY(-1px); }
+  .inert__panel-ok:active { transform: translateY(0); }
+  .inert__panel-ok:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .inert__open {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    border: 0;
+    color: var(--bg);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .inert__open:hover { transform: translateY(-1px); }
+  .inert__open:active { transform: translateY(0); }
+  .inert__open:focus-visible { outline: none; box-shadow: var(--halo-focus), var(--shadow-xs); }
+  .inert[data-open='true'] .inert__open { visibility: hidden; }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.inert').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const backdrop = root.querySelector<HTMLElement>('[data-role="backdrop"]');
+      const panel = root.querySelector<HTMLElement>('[data-role="panel"]');
+      const openBtn = root.querySelector<HTMLButtonElement>('[data-action="open"]');
+      const okBtn = root.querySelector<HTMLButtonElement>('[data-action="close"]');
+      const useInert = root.querySelector<HTMLInputElement>('[data-role="use-inert"]');
+      const touched = root.querySelector<HTMLElement>('.inert__touched');
+      const bgBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-role="bg-btn"]'));
+      if (!backdrop || !panel || !openBtn || !okBtn || !useInert || !touched) return;
+
+      const touchedMsg = touched.dataset.msg ?? '';
+
+      const applyInert = () => {
+        const isOpen = root.dataset.open === 'true';
+        // inert sul fondale solo quando il pannello è aperto E l’opzione è attiva
+        if (isOpen && useInert.checked) backdrop.setAttribute('inert', '');
+        else backdrop.removeAttribute('inert');
+      };
+
+      const open = () => {
+        root.dataset.open = 'true';
+        touched.textContent = '';
+        applyInert();
+        // sposta il focus nel pannello (come farebbe un dialog)
+        window.setTimeout(() => okBtn.focus(), 60);
+      };
+
+      const close = () => {
+        root.dataset.open = 'false';
+        backdrop.removeAttribute('inert');
+        window.setTimeout(() => openBtn.focus(), 60);
+      };
+
+      openBtn.addEventListener('click', open);
+      okBtn.addEventListener('click', close);
+      useInert.addEventListener('change', applyInert);
+
+      // Esc chiude (scoped: solo se il focus è dentro il componente)
+      root.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && root.dataset.open === 'true') { e.preventDefault(); close(); }
+      });
+
+      // Dimostra la differenza: senza inert, i bottoni del fondale
+      // rispondono ancora pur essendo "coperti".
+      bgBtns.forEach((b) => {
+        b.addEventListener('click', () => {
+          if (root.dataset.open === 'true' && !useInert.checked) {
+            touched.textContent = touchedMsg;
+          }
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

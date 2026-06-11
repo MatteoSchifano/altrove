@@ -1,0 +1,256 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   TwelveColumnGrid — la griglia che non si vede ma si sente.
+
+   La domanda del capitolo: cosa rende una pagina elegante prima
+   ancora di essere bella? Spesso la risposta non è un colore o un
+   font: è il fatto che ogni blocco si appoggia a una linea comune.
+   L’occhio non conta le colonne, ma percepisce quando i margini
+   *non* sono allineati — e lo legge come disordine.
+
+   Qui costruiamo una griglia a 12 colonne fluide con *named lines*:
+   invece di contare "dalla 4 alla 7", un blocco dice di appoggiarsi
+   a [col-4] / [col-8]. Le linee hanno un nome, e il layout diventa
+   un linguaggio leggibile invece che un conteggio fragile.
+
+   L’overlay che rivela le colonne è puro ponteggio: serve a chi
+   *progetta*, non a chi legge. Per questo è aria-hidden — decorazione
+   diagnostica — e i blocchi reali restano nel flusso, leggibili
+   anche a overlay spento. Un toggle (button role=switch nativo) lo
+   accende e spegne: tastiera e stato annunciato gratis.
+
+   Motion: minima. L’overlay sfuma con durate-token; sotto
+   prefers-reduced-motion le durate collassano a 1ms — lo stato
+   finale è identico, sparisce solo la dissolvenza.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    toggle: 'Mostra la griglia',
+    on: 'Visibile',
+    off: 'Nascosta',
+    blocks: [
+      { name: 'Titolo', span: 'da [col-1] a [col-9]' },
+      { name: 'Meta', span: 'da [col-9] a [col-13]' },
+      { name: 'Corpo', span: 'da [col-1] a [col-8]' },
+      { name: 'Nota', span: 'da [col-8] a [col-13]' },
+    ],
+  },
+  en: {
+    toggle: 'Show the grid',
+    on: 'Visible',
+    off: 'Hidden',
+    blocks: [
+      { name: 'Title', span: 'from [col-1] to [col-9]' },
+      { name: 'Meta', span: 'from [col-9] to [col-13]' },
+      { name: 'Body', span: 'from [col-1] to [col-8]' },
+      { name: 'Note', span: 'from [col-8] to [col-13]' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="twelve">
+  <button
+    type="button"
+    class="twelve__toggle"
+    role="switch"
+    aria-checked="false"
+    data-on={c.on}
+    data-off={c.off}
+  >
+    <span class="twelve__toggle-track" aria-hidden="true">
+      <span class="twelve__toggle-thumb"></span>
+    </span>
+    <span class="twelve__toggle-label">{c.toggle}</span>
+    <span class="twelve__toggle-state tabular" aria-hidden="true">{c.off}</span>
+  </button>
+
+  <div class="twelve__page">
+    <!-- Overlay: ponteggio diagnostico, fuori dal flusso di lettura -->
+    <div class="twelve__overlay" aria-hidden="true">
+      {Array.from({ length: 12 }).map(() => <span class="twelve__col"></span>)}
+    </div>
+
+    <!-- Blocchi reali, appoggiati alle named lines -->
+    <div class="twelve__block twelve__block--title">
+      <span class="twelve__block-name">{c.blocks[0].name}</span>
+      <span class="twelve__block-span">{c.blocks[0].span}</span>
+    </div>
+    <div class="twelve__block twelve__block--meta">
+      <span class="twelve__block-name">{c.blocks[1].name}</span>
+      <span class="twelve__block-span">{c.blocks[1].span}</span>
+    </div>
+    <div class="twelve__block twelve__block--body">
+      <span class="twelve__block-name">{c.blocks[2].name}</span>
+      <span class="twelve__block-span">{c.blocks[2].span}</span>
+    </div>
+    <div class="twelve__block twelve__block--note">
+      <span class="twelve__block-name">{c.blocks[3].name}</span>
+      <span class="twelve__block-span">{c.blocks[3].span}</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .twelve {
+    inline-size: min(40rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* ── Toggle (switch nativo) ── */
+  .twelve__toggle {
+    appearance: none;
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: var(--space-2xs) var(--space-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+  .twelve__toggle:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .twelve__toggle-track {
+    position: relative;
+    inline-size: 2.2rem;
+    block-size: 1.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    transition: background-color var(--dur-normal) var(--ease-out-soft);
+    flex-shrink: 0;
+  }
+  .twelve__toggle-thumb {
+    position: absolute;
+    inset-block: 0.15rem;
+    inset-inline-start: 0.15rem;
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .twelve__toggle[aria-checked='true'] .twelve__toggle-track { background-color: var(--accent); }
+  .twelve__toggle[aria-checked='true'] .twelve__toggle-thumb { transform: translateX(0.95rem); }
+
+  .twelve__toggle-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .twelve__toggle-state {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    inline-size: 4rem;
+    text-align: start;
+  }
+  .twelve__toggle[aria-checked='true'] .twelve__toggle-state { color: var(--accent-ink); }
+
+  /* ── La pagina con la griglia a 12 colonne fluide e named lines ── */
+  .twelve__page {
+    position: relative;
+    display: grid;
+    /* Named lines: [col-1] … [col-13]. Le 12 tracce sono fluide (1fr). */
+    grid-template-columns:
+      [col-1] 1fr [col-2] 1fr [col-3] 1fr [col-4] 1fr
+      [col-5] 1fr [col-6] 1fr [col-7] 1fr [col-8] 1fr
+      [col-9] 1fr [col-10] 1fr [col-11] 1fr [col-12] 1fr [col-13];
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  /* Overlay: una colonna decorativa per traccia, allineata alla griglia */
+  .twelve__overlay {
+    position: absolute;
+    inset: var(--space-md);
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--space-xs);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-normal) var(--ease-out-soft);
+  }
+  .twelve__col {
+    border-radius: var(--radius-xs);
+    background-color: color-mix(in oklab, var(--accent) 12%, transparent);
+    border: 1px dashed color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  .twelve:has(.twelve__toggle[aria-checked='true']) .twelve__overlay { opacity: 1; }
+
+  /* ── Blocchi reali: si appoggiano alle named lines ── */
+  .twelve__block {
+    position: relative;
+    z-index: var(--z-raised);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-block-size: 3.25rem;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+  .twelve__block--title { grid-column: col-1 / col-9; }
+  .twelve__block--meta  { grid-column: col-9 / col-13; }
+  .twelve__block--body  { grid-column: col-1 / col-8; }
+  .twelve__block--note  { grid-column: col-8 / col-13; }
+
+  .twelve__block-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+  .twelve__block-span {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--ink-muted);
+  }
+
+  /* Su schermo stretto, 12 colonne minuscole diventano illeggibili:
+     i blocchi collassano a tutta larghezza, in ordine di lettura. */
+  @media (max-width: 34rem) {
+    .twelve__block--title,
+    .twelve__block--meta,
+    .twelve__block--body,
+    .twelve__block--note { grid-column: col-1 / col-13; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.twelve').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const toggle = root.querySelector<HTMLButtonElement>('.twelve__toggle');
+      const state = root.querySelector<HTMLElement>('.twelve__toggle-state');
+      if (!toggle) return;
+
+      const on = toggle.dataset.on ?? 'On';
+      const off = toggle.dataset.off ?? 'Off';
+
+      toggle.addEventListener('click', () => {
+        const next = toggle.getAttribute('aria-checked') !== 'true';
+        toggle.setAttribute('aria-checked', String(next));
+        if (state) state.textContent = next ? on : off;
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

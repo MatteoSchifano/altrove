@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-26"
+number: "26"
+title: "The farewell"
+excerpt: "For almost the whole book we worked to make the user stay. This chapter asks the opposite: how do you let someone go without holding them by force, without punishing them, without making them feel that leaving is a mistake."
+date: "October 2, 2026"
+releaseDate: "2026-10-02"
+readMinutes: 12
+tags: ["components", "editorial", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import BeforeUnloadConfirm from '../../../components/farewell/BeforeUnloadConfirm.astro';
+import SaveBeforeLeave from '../../../components/farewell/SaveBeforeLeave.astro';
+import SessionExpireWarning from '../../../components/farewell/SessionExpireWarning.astro';
+import LogoutCelebrated from '../../../components/farewell/LogoutCelebrated.astro';
+import PersistentUndo from '../../../components/farewell/PersistentUndo.astro';
+
+For twenty-five chapters we worked to make the user *stay*: the button that answers before the network, the wait that doesn't frighten, the emptiness that isn't a dead end, the number that doesn't lie. All of it aimed at keeping them inside, comfortable, calm. This chapter — the last — asks for the hardest thing to design with honesty: how you let someone *go*. Because sooner or later every user leaves, and the way you say goodbye tells more about the relationship than a thousand welcome screens.
+
+The moment of leaving is where interfaces show their true character. It's where some of the most common dark patterns nest: the reflexive "are you sure?" that fires even when there's nothing to lose, the expiry countdown that breeds anxiety instead of reassuring, the sign-out dressed up as a failure, the `beforeunload` armed at all times only to make closing a tab annoying. Holding people with friction is easy and dishonest. Letting them go gracefully is harder — and, paradoxically, it's what brings people back.
+
+Five demos, one for each shape of the farewell. And a technical caveat that is also a promise: none of these demos actually touches the site's navigation. No real `beforeunload`, no handlers that trap the tab. Every "exit" is simulated inside a container — a fake document, a fake session — with its own "Exit" button and its own state. The playground does not imprison itself to explain how not to imprison the user.
+
+## The confirmation that asks only when it should
+
+The browser's real `beforeunload` is honest by construction: it fires only if the page arms it explicitly. The abuse is arming it *always*, so every tab close becomes a "do you really want to leave?" — even when there isn't a comma of unsaved work. That's manufactured friction, and you feel it.
+
+<Demo title="Exit confirmation · only if there's something to lose" tag="26.a">
+  <BeforeUnloadConfirm locale="en" />
+  <div slot="note">
+    <p>Press "Exit" with the draft empty: you just leave, no question — because there's nothing to lose, and asking would only be a toll. Now type something: the status flips to "unsaved changes", and <em>only then</em> does "Exit" open the confirmation. It's the whole rule in one gesture: the guard appears when it protects something real, and vanishes when it has nothing to protect. An empty "are you sure?" protects no one: it only trains the user to click it away without reading.</p>
+    <p>Inside the dialog, the default sits on the safe side: "Stay" gets the initial focus, <kbd>Esc</kbd> means stay, and the action that burns the notes ("Leave and lose the notes") carries the danger tone and is the second choice, not the first. Everything is contained inside the fake document: the real tab is never captured. It's the difference between a guard and a cage — the guard stops you for an instant when you're about to lose something, the cage stops you always, on principle.</p>
+  </div>
+</Demo>
+
+## The "save before you leave?" fork
+
+Sometimes leaving isn't binary: not "stay or leave", but "save, leave without saving, or think again". Three roads that aren't equal — one keeps the work, one burns it. Designing that fork is mostly deciding which answer is the default, because that's the one a tired finger will press without thinking.
+
+<Demo title="Save before leaving · default on the safe side" tag="26.b">
+  <SaveBeforeLeave locale="en" />
+  <div slot="note">
+    <p>Close the document and the three-way dialog opens. Focus starts on "Save and leave": whoever hits <kbd>Enter</kbd> on impulse keeps the work, doesn't lose it. "Leave without saving" is there, has to be there — but it's set aside: text only, danger tone, placed to the left, far from where the eye and the thumb land. The visual hierarchy <em>is</em> the safety: the reversible action is the easy one, the irreversible one asks for an extra, deliberate step.</p>
+    <p>And <kbd>Esc</kbd> here doesn't mean "leave without saving" — it means "cancel, back to the document". It's a detail that saves real work: the reflex of pressing <kbd>Esc</kbd> to close a panel must never coincide with the gesture that destroys. We saw it already in the chapter on destructive confirmations — the machine works <em>to say no for you</em> — and here it returns in the most loaded moment, the one where what's at stake is the time you just spent.</p>
+  </div>
+</Demo>
+
+## The expiry that reassures
+
+Almost every expiring session announces it as a threat: a red countdown, a "you'll be signed out!" that breeds anxiety. But the user did nothing wrong — time simply passed. The honest tone is that of someone who warns gently and offers, without punishment, a way to stay.
+
+<Demo title="Session expiry · gentle countdown, not a threat" tag="26.c">
+  <SessionExpireWarning locale="en" />
+  <div slot="note">
+    <p>Start the fake session: for a few seconds all is calm, then the warning appears with a countdown rendered in tabular figures (so it doesn't jitter going from 10 to 9 — the lesson from the chapter on numbers). The tone doesn't shout: "it'll close in N seconds… no rush, one tap keeps you here". "Stay signed in" resets the wait, and focus starts right there, because it's the action the user will almost always want. The warning lives in an <code>aria-live="polite"</code>: it informs without interrupting, explains without yelling.</p>
+    <p>And if the session really does expire, it's neither a dead end nor a reproach: "session closed, calmly — your data is safe, pick up whenever you like". A sign-out for inactivity is a safety measure, not the user's fault, and the farewell says so in the body of the message before the words even land. The bar that empties is an <em>honest</em> countdown: it really does say how much is left, which is why it keeps moving even under reduced motion — it's information, not decoration.</p>
+  </div>
+</Demo>
+
+## The logout that's a goodbye, not an error
+
+Almost everywhere logout is treated as a failure: a bare screen, "you've been signed out", sometimes even an alarm colour. But leaving is a legitimate act, not an accident. A celebrated farewell closes the relationship with dignity, instead of making it look like a malfunction.
+
+<Demo title="Celebrated logout · a warm farewell" tag="26.d">
+  <LogoutCelebrated locale="en" />
+  <div slot="note">
+    <p>Press "Sign out" and instead of the sterile "signed out" a warm screen arrives: a waving hand, a "see you soon", a thank-you for the time spent, and the concrete promise that the door stays open — "when you're back, everything waits where you left it". No alarm colour, no error tone: logout is a door that opens outward, not a wall. It's the same principle as the emptiness that says "for now" — you close the present moment without denying the future.</p>
+    <p>The waving hand is an expressive touch, dosed: it fires once, on the screen's entrance, and doesn't repeat — animate once, never re-animate, because what repeats becomes noise. Under <code>prefers-reduced-motion</code> the wave doesn't fire at all: the warm message stays, intact. The celebration is never an end in itself — it doesn't celebrate, it <em>sees you off</em>; and a send-off done well is what makes the return feel light.</p>
+  </div>
+</Demo>
+
+## The undo that stays open
+
+The gentle way to let an item go isn't to ask for confirmation *before* — "are you sure you want to archive?" — but to act at once and keep a back door open. No friction up front, a safety net behind: the action happens, and for a generous window it can still be undone.
+
+<Demo title="Persistent undo · reversible for the whole window" tag="26.e">
+  <PersistentUndo locale="en" />
+  <div slot="note">
+    <p>Archive an entry: it disappears at once, with no pre-emptive modal, and a toast "archived · Undo" appears that <strong>persists about ten seconds</strong> with a bar that genuinely empties. As long as the bar runs, "Undo" puts the entry back exactly where it was — same position, not at the bottom of the list. When the bar finishes, the archiving becomes final. It's the opposite of "are you sure?": it doesn't interrupt the common gesture (archiving) to defend against the rare one (archiving by mistake) — it lets it flow, and puts the net underneath.</p>
+    <p>The bar is an <em>honest</em> countdown: ten real seconds, not a decorative three-second animation pretending to be ten. That's why the window is generous — an undo that vanishes in two seconds is a promise you can't use in time, a cruelty dressed as courtesy. And if you archive a second entry while the first is still undoable, the first becomes final: the window is one, clear, never a maze of pending actions. Letting go with a way back is the most mature form of respect: it trusts the user <em>and</em> covers their back.</p>
+  </div>
+</Demo>
+
+---
+
+And so we've reached the end. We began with a button that's pressed and dips by a breath — `0.97`, not `0.95` — and from there we crossed the wait that doesn't frighten, the emptiness that promises "for now", the dialogue that works to say no for you, the scroll that makes atmosphere and not spectacle, the numbers that don't flinch, the patient input that corrects in due time, the micro-typography that lets the page breathe, the toggle that's a gesture and not an icon — all the way to this farewell, which is the gesture of letting go. Every chapter, from different angles, told the same thing: that care is felt in the negative, that the absence of friction is noticed more than its presence, and that the truth — even when a small lie would land better — is the only foundation on which trust accumulates.
+
+Because the principle that held the whole book together is simple, and a little against the grain of how we usually talk about interfaces: the best UX isn't the one that gets noticed, it's the one that leaves you *elsewhere*. While you read, while you write, while you decide, while you live — the hand stays on the control, the mind is free to be somewhere else. An interface that works in silence, that interrupts only when it's worth it, that says goodbye to you warmly when you leave, is an interface that gives back the most precious thing it has: your attention. It gives it back intact, to spend where it truly counts. Thank you for spending it, for a while, here with us. Now go ahead and be elsewhere: that's exactly what we worked for.

@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-11"
+number: "11"
+title: "The anatomy of a menu"
+excerpt: "A menu offers a choice, but every choice steals a little context: it covers what you were looking at, moves the focus, asks you to remember where you were. The craft isn't opening a list — it's offering the roads while keeping the user anchored to where they stand."
+date: "June 19, 2026"
+releaseDate: "2026-06-19"
+readMinutes: 12
+tags: ["components", "accessibility", "keyboard"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import AnchoredDropdown from '../../../components/menus/AnchoredDropdown.astro';
+import ContextMenu from '../../../components/menus/ContextMenu.astro';
+import AccessibleListbox from '../../../components/menus/AccessibleListbox.astro';
+import SplitButton from '../../../components/menus/SplitButton.astro';
+import CommandPalette from '../../../components/menus/CommandPalette.astro';
+
+The last chapter was about the single control; this one widens the view to a gesture that sounds trivial and is in fact among the most delicate in the interface: offering a choice. A menu is exactly that — a list of roads to take one of. But every list that opens pays a hidden price: it covers something, moves the focus, asks the user to remember *where they were* before opening it. The chapter's question is all here: how do you offer a choice without hiding the context?
+
+There's no single answer, because menus aren't all the same object. There's the dropdown that grows attached to its button, so the eye never loses the thread. There's the right-click menu, born where you click and which must never escape the screen. There's the listbox, the choice that stays visible while you navigate it. There's the split button, which gives the most likely action at once and hides the variants behind a little arrow. And there's the command palette, which turns it all over: instead of navigating hierarchies, you type what you want. Five ways of answering the same question, each with a different trade-off between speed and context.
+
+Five demos, and as always no libraries. The web of 2026 finally has the native tools: the Popover API that opens and closes in the top layer, CSS Anchor Positioning that anchors a panel to its trigger with no JS, the `<dialog>` that traps focus on its own. Our job is to stitch them together with the right ARIA — `role="menu"`, `role="listbox"`, `aria-expanded`, `aria-activedescendant` — because an inaccessible menu is a menu that, for half the people, simply doesn't open.
+
+## The menu that stays attached to the button
+
+The first is the dropdown in its most honest form: it grows from under the trigger that opened it, doesn't fly to the centre and doesn't cover the page. It's the form that least disturbs the context, because the eye stays exactly where it was.
+
+<Demo title="Anchored dropdown · Popover API + CSS Anchor Positioning" tag="11.a">
+  <AnchoredDropdown locale="en" />
+  <div slot="note">
+    <p>Under the skin there are two native APIs, finally mature, that do almost everything on their own. The <strong>Popover API</strong> (<code>popover</code> + <code>popovertarget</code>) hands you opening, closing with <kbd>Esc</kbd>, light-dismiss on outside click, and — for free — rising into the <em>top layer</em>, above any <code>overflow:hidden</code>: no <code>z-index</code> wars, no hand-rolled portals. <strong>CSS Anchor Positioning</strong> (<code>anchor-name</code>/<code>position-anchor</code>) anchors the panel to the button in pure CSS, without a single <code>getBoundingClientRect</code> in a scroll loop. It's the “native beats libraries” chapter taken to its peak.</p>
+    <p>Honesty lives in the <em>dignified fallback</em>: where anchor positioning isn't there yet, an <code>@supports</code> leaves the panel absolutely positioned under the trigger — same result, one line of magic less. Accessibility isn't an afterthought: the trigger carries <code>aria-haspopup</code> and <code>aria-expanded</code>, the panel is a <code>role="menu"</code> with <kbd>↑</kbd>/<kbd>↓</kbd> and <kbd>Home</kbd>/<kbd>End</kbd> arrows, and on close the focus returns to the button. With <code>prefers-reduced-motion</code> the entrance animation collapses to 1ms: the menu is simply already there, no slide.</p>
+  </div>
+</Demo>
+
+## The menu born where you click
+
+Second way, opposite to the first: instead of a fixed point, the menu appears at the pointer. It's the right-click menu — very handy because it's born where your hand already is, but with a concrete danger: the pointer can be flush with the edge, and a menu that runs off the screen is an unusable menu.
+
+<Demo title="Context menu · always inside the viewport" tag="11.b">
+  <ContextMenu locale="en" />
+  <div slot="note">
+    <p>The rule is sharp: the menu <strong>never leaves</strong> the window. It starts at the click point, but if it doesn't fit down-and-right it flips left and/or upward, back toward the pointer. We do it by measuring the real panel after rendering it and then <em>clamping</em> to the viewport edges: it's the calculation every “floating” library hides, but in a context menu you need it by hand, because the origin point is decided by the user, not by us. We intercept the <code>contextmenu</code> event and prevent the browser's native menu only inside the marked surface.</p>
+    <p>Right-click is a mouse gesture, and here's the accessibility trap: keyboard users press the <em>menu</em> key or <kbd>Shift</kbd>+<kbd>F10</kbd>, which still emit a <code>contextmenu</code> — so we open it centred on the surface, not at coordinate zero. Inside, <kbd>↑</kbd>/<kbd>↓</kbd> move, <kbd>Esc</kbd> closes and focus returns to the surface. The “Delete” item is dangerous, but red isn't the <em>only</em> signal: the text stays legible and hover marks it with a background, not just a tint — because someone who can't tell red apart must be able to recognise it all the same.</p>
+  </div>
+</Demo>
+
+## The choice that stays in sight
+
+Third way: sometimes the choice shouldn't be hidden at all. The listbox keeps the list always visible and you navigate inside it — it's the right control when you want the user to compare the options, not discover them one at a time.
+
+<Demo title="Accessible listbox · aria-activedescendant + typeahead" tag="11.c">
+  <AccessibleListbox locale="en" />
+  <div slot="note">
+    <p>Native HTML has no generic, stylable <code>&lt;listbox&gt;</code>, so this is the most “pure ARIA” pattern of the chapter, built by the book according to the APG: <code>role="listbox"</code> on the container, <code>role="option"</code> on every item, <code>aria-selected</code> on the choice. The crux is <code>aria-activedescendant</code>: the real DOM focus stays on the container, and the attribute <em>points</em> to the active option. The screen reader announces it without the focus actually moving — it's the technique that lets you have “the highlighted option” distinct from “the focused element”, impossible with DOM focus alone.</p>
+    <p>The keyboard is the real, complete one: <kbd>↑</kbd>/<kbd>↓</kbd> move the active option, <kbd>Home</kbd>/<kbd>End</kbd> to the ends, <kbd>Enter</kbd>/<kbd>Space</kbd> select. And <em>typeahead</em> — you type “lo” and it jumps to “London” — because in long lists that's the gesture people actually use, not arrow-scrolling. Selection isn't only colour: there's the check that draws itself in and the text weight that grows, a double channel. With <code>prefers-reduced-motion</code> the scroll toward the active option goes from smooth to instant: same result, no scrolling.</p>
+  </div>
+</Demo>
+
+## The action that carries its cousins
+
+Fourth way, the subtlest: sometimes you don't need a menu *at all*. The split button gives the most likely action at once and hides the variants behind a little arrow — those who know what they want open nothing, those looking for an alternative find it one click away.
+
+<Demo title="Split button · primary action + variants menu" tag="11.d">
+  <SplitButton locale="en" />
+  <div slot="note">
+    <p>They're two real buttons, side by side, that <em>look</em> like a single object: the primary action on the left, the arrow that opens the variants on the right. The UX value is the dosage of context — the user has to choose nothing to do the most common thing (“Save”), and the alternatives stay within reach without cluttering. It's the opposite of the menu that forces you to decide before you even know what you want: here the default <em>is</em> the decision, until you ask for more.</p>
+    <p>The ARIA is where almost everyone slips. The “menu open” state belongs <strong>only to the arrow</strong>: it's the one that carries <code>aria-haspopup="menu"</code> and <code>aria-expanded</code>. Putting <code>aria-expanded</code> on the whole group, or worse on the primary action — which opens nothing — is the classic mistake that confuses the screen reader. From the arrow, <kbd>↓</kbd> opens and goes to the first item; in the menu <kbd>↑</kbd>/<kbd>↓</kbd> move, <kbd>Esc</kbd> closes and focus returns to the arrow. The entrance is ~220ms, the exit quicker; with reduced motion the animation collapses to 1ms.</p>
+  </div>
+</Demo>
+
+## The choice that starts from what you type
+
+Fifth way, and it overturns all the others: instead of navigating hierarchies, you type what you want and the action emerges. The ⌘K-style command palette is the most radical answer to the chapter's question, because it hides *no* context: it starts from the user's typed intent.
+
+<Demo title="Command palette · ⌘K inside a <dialog>" tag="11.e">
+  <CommandPalette locale="en" />
+  <div slot="note">
+    <p>The container is a native <code>&lt;dialog&gt;</code>, and here's the chapter's manifesto win: <code>showModal()</code> hands you the <strong>focus trap for free</strong> — <kbd>Tab</kbd> stays trapped inside without a single handler to cycle the focusable elements — plus <kbd>Esc</kbd> that closes (the <code>cancel</code> event) and the <code>::backdrop</code> that dims everything else. Above it, a textbox with <code>role="combobox"</code> wired to a <code>role="listbox"</code>: you type, the list filters in real time, the arrows move the active option via <code>aria-activedescendant</code>, <kbd>Enter</kbd> runs it. <kbd>⌘K</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> open it from anywhere.</p>
+    <p>Honest in the void too: if no command matches, we <em>say so</em> — “No command found” — instead of showing a fake list or the full list as if nothing happened. It's the same rule as the empty-states chapters: nothing must be named, not masked. The palette is immensely powerful for those who live on the keyboard, but it stays an <em>accelerator</em>, not the only path: every command that lives here must also exist in a visible menu, because not everyone knows <kbd>⌘K</kbd> exists. With <code>prefers-reduced-motion</code> the panel's entrance collapses to 1ms — it appears resolved, no journey.</p>
+  </div>
+</Demo>
+
+---
+
+Five ways, one single tension: every menu is a trade-off between giving you the roads and keeping you anchored to where you are. The anchored dropdown chooses not to move the eye; the context menu to be born under the hand yet stay on screen; the listbox not to hide at all; the split button to decide for you until you ask for more; the palette to start from what you type. None is “the” right menu: the right one is the one whose trade-off matches how much context the user can afford to lose at that moment. Offering a choice, in the end, is mostly deciding how much of the rest you're willing to cover to show it.
+
+The next chapter stays among components but shifts register again: from the menu that offers roads to the *tab* that swaps one out from under you. *The anatomy of a tab* — how to change context without disorienting, when it's the panel itself, not an overlay, that transforms.

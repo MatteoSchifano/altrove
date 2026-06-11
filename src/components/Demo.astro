@@ -38,6 +38,12 @@ const { title, tag } = Astro.props;
   .demo__stage {
     position: relative;
     display: grid;
+    /* Colonna piena ma con minimo 0: senza, una traccia `auto` cresce al
+       max-content del contenuto (es. una barra di tab `nowrap`), e un
+       figlio largo `min(Xrem, 100%)` resta a Xrem sforando lo stage. Con
+       minmax(0,1fr) il `100%` si risolve alla larghezza reale dello stage,
+       così i contenuti larghi si restringono invece di essere tagliati. */
+    grid-template-columns: minmax(0, 1fr);
     place-items: center;
     min-block-size: 12rem;
     padding: var(--space-xl) var(--space-lg);

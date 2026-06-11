@@ -1,0 +1,228 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ContainerRecompose — la scheda che ascolta il CONTENITORE.
+
+   La media query guarda la *finestra*. Ma un componente non vive
+   nella finestra: vive in uno slot — una sidebar, una colonna, una
+   card dentro una card. La stessa scheda può stare larga in un punto
+   e stretta in un altro *della stessa pagina*. Decidere il layout in
+   base alla finestra significa, lì, indovinare.
+
+   La container query rovescia la domanda: non "quanto è larga la
+   pagina?" ma "quanto spazio ho *io*?". La scheda si ricompone in
+   base alla larghezza del suo contenitore — da orizzontale (media a
+   sinistra, testo a destra) a verticale (media sopra, testo sotto) —
+   indipendentemente dalla finestra.
+
+   Per dimostrarlo senza ridimensionare il browser, un controllo
+   restringe il contenitore (uno <input type=range> nativo: tastiera,
+   trascinamento e valore gratis). La scheda dentro non sa nulla del
+   cursore: reagisce solo alla larghezza che le resta, ed è proprio il
+   punto.
+
+   Accessibilità: lo slider ha una <label> reale e aria-valuetext in
+   parole ("largo"/"stretto"), così il valore non è solo un numero
+   astratto. Il "media" è un placeholder a gradiente (aria-hidden,
+   nessun file). Il riflusso non è un’animazione: è un cambio di
+   struttura, e cambiarne il timing sarebbe finto.
+
+   Motion: la larghezza del contenitore transita con durate-token
+   mentre si trascina; sotto prefers-reduced-motion collassa a 1ms —
+   lo stato finale è identico, sparisce solo lo scivolamento.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    sliderLabel: 'Larghezza del contenitore',
+    wide: 'largo',
+    narrow: 'stretto',
+    kicker: 'Capitolo 16',
+    title: 'La griglia editoriale',
+    body: 'Questa scheda non guarda la finestra: guarda lo spazio che ha intorno. Restringi il contenitore e vedila passare da orizzontale a verticale da sola.',
+  },
+  en: {
+    sliderLabel: 'Container width',
+    wide: 'wide',
+    narrow: 'narrow',
+    kicker: 'Chapter 16',
+    title: 'The editorial grid',
+    body: 'This card doesn’t watch the window: it watches the space around it. Narrow the container and watch it shift from horizontal to vertical on its own.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="recompose">
+  <label class="recompose__control">
+    <span class="recompose__control-label">{c.sliderLabel}</span>
+    <input
+      type="range"
+      class="recompose__range"
+      min="46"
+      max="100"
+      value="100"
+      step="1"
+      data-wide={c.wide}
+      data-narrow={c.narrow}
+      aria-valuetext={c.wide}
+    />
+  </label>
+
+  <!-- Il contenitore osservabile: la sua larghezza guida la scheda -->
+  <div class="recompose__viewport">
+    <div class="recompose__container" style="--w: 100%;">
+      <article class="recompose__card">
+        <div class="recompose__media" aria-hidden="true"></div>
+        <div class="recompose__copy">
+          <span class="recompose__kicker">{c.kicker}</span>
+          <h4 class="recompose__title">{c.title}</h4>
+          <p class="recompose__body">{c.body}</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+
+<style>
+  .recompose {
+    inline-size: min(42rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* ── Controllo: restringe il contenitore ── */
+  .recompose__control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+  .recompose__control-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .recompose__range {
+    inline-size: 100%;
+    accent-color: var(--accent);
+    cursor: ew-resize;
+  }
+  .recompose__range:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+    border-radius: var(--radius-pill);
+  }
+
+  .recompose__viewport {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  /* Il contenitore osservato: dichiara container-type, la sua larghezza
+     è guidata da --w (mossa dallo slider). */
+  .recompose__container {
+    inline-size: var(--w);
+    container-type: inline-size;
+    container-name: card;
+    transition: inline-size var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .recompose__card {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    /* Default (stretto): impilato — media sopra, testo sotto */
+    grid-template-columns: 1fr;
+  }
+
+  .recompose__media {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(
+        ellipse at 70% 25%,
+        color-mix(in oklab, var(--accent) 30%, transparent),
+        transparent 60%
+      ),
+      linear-gradient(135deg, var(--surface-sunken), color-mix(in oklab, var(--accent) 8%, var(--surface-raised)));
+  }
+
+  .recompose__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-self: center;
+  }
+  .recompose__kicker {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--accent-ink);
+  }
+  .recompose__title {
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    color: var(--ink-strong);
+  }
+  .recompose__body {
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+  }
+
+  /* ── La RICOMPOSIZIONE: reagisce alla larghezza del CONTENITORE,
+     non della finestra. Sopra una soglia, la scheda va orizzontale. ── */
+  @container card (min-width: 30rem) {
+    .recompose__card {
+      grid-template-columns: 12rem 1fr;
+      align-items: center;
+    }
+    .recompose__media { aspect-ratio: 4 / 3; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.recompose').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const range = root.querySelector<HTMLInputElement>('.recompose__range');
+      const container = root.querySelector<HTMLElement>('.recompose__container');
+      if (!range || !container) return;
+
+      const wide = range.dataset.wide ?? 'wide';
+      const narrow = range.dataset.narrow ?? 'narrow';
+
+      const apply = () => {
+        const pct = Number(range.value);
+        container.style.setProperty('--w', `${pct}%`);
+        // Valore in parole, non solo numero: due canali, non uno.
+        range.setAttribute('aria-valuetext', pct >= 73 ? wide : narrow);
+      };
+
+      range.addEventListener('input', apply);
+      apply();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

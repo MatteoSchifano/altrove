@@ -24,6 +24,10 @@ const chapters = defineCollection({
     title: z.string(),
     excerpt: z.string(),
     date: z.string().optional(),
+    /** Data di rilascio in produzione (ISO "YYYY-MM-DD"). In dev tutti i
+        capitoli sono visibili; in produzione un capitolo compare solo
+        quando questa data è passata (build-time). Assente = sempre visibile. */
+    releaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     readMinutes: z.number().int().positive().optional(),
     tags: z.array(z.string()).default([]),
     /** Marca un capitolo come bozza — non viene listato in produzione */

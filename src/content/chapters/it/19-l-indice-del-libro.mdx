@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-19"
+number: "19"
+title: "L’indice del libro"
+excerpt: "Un sito che parla di sé deve sapersi orientare al suo interno: indici che si espandono, briciole che omettono i livelli inutili, miniature fatte di tipografia e non di screenshot. La navigazione editoriale è prima di tutto una questione di onestà su dove ti trovi."
+date: "14 agosto 2026"
+releaseDate: "2026-08-14"
+readMinutes: 11
+tags: ["navigazione", "editoriale", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SiteToc from '../../../components/bookindex/SiteToc.astro';
+import SmartBreadcrumb from '../../../components/bookindex/SmartBreadcrumb.astro';
+import ChapterMiniature from '../../../components/bookindex/ChapterMiniature.astro';
+import TagIndex from '../../../components/bookindex/TagIndex.astro';
+import YouAreHere from '../../../components/bookindex/YouAreHere.astro';
+
+Questo playground ha passato diciotto capitoli a guardare i componenti uno per uno: il bottone, il toast, il toggle, i numeri. Questo capitolo fa un passo indietro e guarda l’insieme — il sito come *libro*. E un libro, per essere navigabile, ha bisogno di un apparato che non è il contenuto: l’indice in testa, l’indice analitico in coda, le briciole che dicono in che capitolo sei, il «tu sei qui» della mappa. La domanda è una sola: un sito che parla di sé, come si orienta al suo interno?
+
+La tentazione, qui, è trattare la navigazione come decorazione — un menu carino, un fil rouge animato. Ma l’orientamento è la più seria delle responsabilità UX, perché un utente disorientato non si lamenta: se ne va. E il disorientamento non nasce dalla mancanza di link, nasce da link che *mentono* — un breadcrumb che si srotola e nasconde proprio le due voci che contano, un’anteprima che è una foto vecchia di tre redesign, un indice che evidenzia una sezione che non stai leggendo.
+
+Cinque strumenti d’orientamento, una sola regola di fondo, la stessa di sempre: dire la verità su dove ti trovi. L’indice deve sapere quale sezione stai leggendo *davvero*; la briciola deve mostrare la radice e la foglia, non il ventre molle in mezzo; la miniatura deve essere il contenuto, non una sua fotografia che invecchia. E ogni «sei qui» va annunciato con `aria-current`, non solo dipinto, perché orientarsi è un diritto di chi non vede lo schermo quanto di chi lo vede.
+
+## L’indice che sa dove sei
+
+Il primo strumento è l’indice generale: capitoli, e sotto ogni capitolo le sezioni, espandibili. Ma la carta qui ha un limite che il digitale supera: l’indice di un libro è muto, identico per tutti. Quello di un sito può evidenziare la riga che stai leggendo *adesso*.
+
+<Demo title="Indice del sito · espandibile, con scroll-spy" tag="19.a">
+  <SiteToc locale="it" />
+  <div slot="note">
+    <p>Due gesti tenuti separati, perché sono due responsabilità diverse. Espandere un capitolo è una <em>scelta tua</em>: un <code>&lt;button aria-expanded&gt;</code> apre la lista delle sue sezioni. Evidenziare la sezione corrente è invece una <em>conseguenza dello scroll</em>, non un click: un <code>IntersectionObserver</code> guarda la colonna a destra e marca nell’indice la sezione che hai davvero sotto gli occhi — non «quella più in alto», ma quella con più sé sopra la riga di lettura. Se la sezione attiva sta in un capitolo chiuso, l’indice lo apre da solo: non può evidenziare una riga nascosta.</p>
+    <p>L’evidenza della sezione corrente non è solo colore. C’è <code>aria-current="true"</code> sul link — che lo screen reader annuncia come «pagina corrente» — più un marker a sinistra e un cambio di peso. Tre canali per una cosa sola, così chi non distingue l’accento legge comunque dov’è. E l’apertura non anima l’altezza a strappi: usa una griglia che passa da <code>0fr</code> a <code>1fr</code>, fluida; sotto <code>prefers-reduced-motion</code> salta allo stato aperto senza il viaggio. Stesso esito, nessun srotolamento.</p>
+  </div>
+</Demo>
+
+## La briciola che non si srotola tutta
+
+Il breadcrumb è il filo d’Arianna: «sei qui, ed ecco la strada per tornare». Onesto finché è corto. Ma su un sito profondo diventa un serpente che va a capo e nasconde le due voci che davvero contano — la radice da cui sei partito e la foglia dove sei adesso.
+
+<Demo title="Breadcrumb intelligente · omette il centro, espandibile" tag="19.b">
+  <SmartBreadcrumb locale="it" />
+  <div slot="note">
+    <p>La soluzione è la stessa dei giornali di carta: quando il sommario è lungo, si tengono il primo e l’ultimo e si mette un «…» in mezzo. Qui quel «…» non è muto: è un <code>&lt;button aria-expanded&gt;</code> con un’etichetta parlante — «Mostra N livelli nascosti» — che, premuto, srotola i livelli intermedi e poi annuncia «nascondi». La briciola resta corta e leggibile per default, ma la profondità completa è a un click di distanza, non amputata.</p>
+    <p>Niente accessibilità barattata per estetica. È un <code>&lt;nav&gt;</code> con una <code>&lt;ol&gt;</code>, perché un breadcrumb <em>è</em> una lista ordinata: l’ordine è informazione, è la gerarchia genitore→figlio. La pagina corrente è l’ultima voce, marcata <code>aria-current="page"</code> e non resa un link, perché non si naviga dove già si è. E i livelli nascosti restano nel DOM con <code>hidden</code> — fuori dal flusso e dallo screen reader finché sono chiusi, ma presenti: la struttura del documento non mente sulla profondità reale del percorso.</p>
+  </div>
+</Demo>
+
+## La miniatura fatta di parole
+
+Come si dà l’anteprima di un capitolo in un indice? Il riflesso facile è lo screenshot: una foto della pagina rimpicciolita. Ma a quella scala il testo è una macchia grigia, e la foto invecchia a ogni redesign. La miniatura onesta di un testo è il testo stesso, in piccolo ma vero.
+
+<Demo title="Miniatura del capitolo · tipografia, non screenshot" tag="19.c">
+  <ChapterMiniature locale="it" />
+  <div slot="note">
+    <p>Ogni miniatura è un mini-impaginato: occhiello, titolo, lede, in scala tipografica ridotta. È leggibile — almeno il titolo lo è — è sempre aggiornata perché <em>è</em> il contenuto, non un PNG cotto, e rispetta il tema chiaro/scuro perché usa i token, non un’immagine ferma a ieri. Uno screenshot mente due volte: finge contenuto dove c’è solo grigio, e mostra un layout che potrebbe non esistere più. Le parole, no.</p>
+    <p>C’è una regola tipografica nascosta nel rimpicciolire: non si scala tutto in modo uniforme. Il titolo, in miniatura, vuole un filo di peso e di crenatura in meno per non impastarsi; il lede vuole una riga corta — <code>measure-tight</code> — e un clamp a poche righe, perché è respiro, non corpo intero. La gerarchia si conserva con i <em>rapporti</em>, non con uno zoom cieco. Tutta la card è un <code>&lt;a&gt;</code> con un <code>aria-label</code> che riassume cosa apre: chi usa lo screen reader non «vede» la miniatura, ne deve sentire il senso in una frase.</p>
+  </div>
+</Demo>
+
+## L’indice analitico dei tag
+
+In fondo a un saggio c’è l’indice analitico: ogni voce, le pagine che la trattano. È l’altra metà dell’indice generale. Quello in testa dice «di cosa parla, nell’ordine»; questo in coda dice «dove si parla *di questo*», saltando l’ordine. Qui le voci sono i tag.
+
+<Demo title="Indice dei tag · filtro a stato locale" tag="19.d">
+  <TagIndex locale="it" />
+  <div slot="note">
+    <p>Tutti i tag del sito, ordinati per frequenza — i più portanti per primi — e sotto la lista dei capitoli. Cliccando un tag, i capitoli che non lo portano si tolgono; ri-cliccando lo stesso tag il filtro sparisce e tornano tutti. È uno stato puramente <em>locale</em>: nessuna navigazione, nessuna query alla content collection, solo un attributo che decide chi resta. I tag sono <code>&lt;button aria-pressed&gt;</code> in una <code>toolbar</code>, perché sono interruttori di filtro, non link a pagine.</p>
+    <p>L’onestà è nei numeri e nel modo di togliere. Accanto a ogni tag il conteggio dei capitoli, in <code>tabular-nums</code> così non sussulta passando da 1 a 2 cifre; e quando un filtro è attivo, una riga «N di M capitoli» che <em>riferisce</em>, invece di svuotare la lista in silenzio lasciando temere un bug. I capitoli esclusi non sono solo sbiaditi: sono <code>hidden</code>, fuori dal tab order e dallo screen reader, perché un filtro deve filtrare davvero anche per chi non vede l’opacità. Il chip che ha causato il match si illumina: dice <em>perché</em> quel capitolo è rimasto.</p>
+  </div>
+</Demo>
+
+## La mappa col punto rosso
+
+«Tu sei qui» è il più antico pattern d’orientamento: una mappa con un punto che dice dove ti trovi. Su un sito è un mini-ToC che non serve solo a navigare, ma a *collocare* — prima di muoverti, sapere dov’è il tuo passo nel cammino.
+
+<Demo title="Tu sei qui · posizione corrente con aria-current" tag="19.e">
+  <YouAreHere locale="it" />
+  <div slot="note">
+    <p>La differenza con un indice qualunque è tutta nella voce corrente. Qui non è solo «evidenziata»: è l’unica che <em>non</em> è un link — non si naviga dove già si è — è marcata <code>aria-current="true"</code> e porta un’etichetta «sei qui» leggibile, non un semplice cambio di colore. Tre canali — testo, posizione sul cammino, colore — per dire una cosa sola, perché chi non distingue l’accento deve comunque capire dov’è. Anche le tappe passate e future si separano oltre il colore: una spunta per «letto», un cerchietto per «da leggere».</p>
+    <p>Il pallino corrente respira appena, una pulsazione lenta che attira l’occhio senza agitarsi — ed è puro accento, quindi sparisce del tutto sotto <code>prefers-reduced-motion</code>: la posizione resta marcata da tutto il resto, che non dipende dall’animazione. È la prova del nove di un orientamento onesto: l’informazione su «dove sei» non deve mai vivere solo dentro un movimento. Se togli il movimento e non sai più dove sei, il movimento stava facendo un lavoro che non gli spettava.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque strumenti, un’unica intuizione: orientarsi non è decorazione, è dire la verità su dove ti trovi. L’indice che evidenzia la sezione che leggi davvero, la briciola che mostra radice e foglia e tiene il resto a portata ma non in faccia, la miniatura che è contenuto e non una sua foto stantia, l’indice dei tag che riferisce quanti capitoli restano, il «sei qui» che non affida la posizione a una pulsazione. Un sito che parla di sé si orienta bene quando il suo apparato di navigazione è onesto come il suo contenuto — e quando, da bravo strumento, lo noti solo nel momento in cui lo cerchi.
+
+Il prossimo capitolo resta nell’editoria ma passa dalle parole alle figure. *Le immagini in editoria* — quando un’immagine è informazione, e va trattata con il rigore di un dato, e quando invece è respiro, e il suo compito è solo dare aria alla pagina.

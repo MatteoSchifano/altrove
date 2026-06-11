@@ -1,0 +1,254 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   UnderlineTabs — la tab nella sua forma più pura, con
+   l’indicatore underline che *fluisce* tra le posizioni.
+
+   Prima distinzione, da non perdere: una tab non è un controllo
+   segmentato (cap. 09). Il segmented sceglie un *valore* — la
+   densità di una lista, un’unità di misura — e quella scelta
+   resta lì. La tab cambia il *contesto*: sotto ognuna c’è un
+   pannello di contenuto diverso, e il gesto significa "portami
+   altrove senza farmi perdere il filo". Per questo la semantica
+   non è un radio group, è il pattern ARIA tabs completo:
+     • role="tablist" → role="tab" → role="tabpanel";
+     • aria-selected sulla tab attiva, aria-controls al pannello;
+     • roving tabindex: una sola tab è tabbabile (tabindex=0), le
+       altre escono dal Tab order e si raggiungono con ←/→;
+     • frecce ←/→ ciclano, Home/End saltano agli estremi.
+
+   L’underline non "appare" sotto la nuova tab: ci *scorre*. Stile
+   FLIP — misuriamo la posizione/larghezza della tab attiva e le
+   scriviamo in due custom property (--ind-x, --ind-w); il resto è
+   una transizione CSS di transform e width. Una barra sola che si
+   sposta, non quattro barre che lampeggiano: è un indicatore di
+   posizione, e gli indicatori scivolano, non sfarfallano.
+
+   Cambiando pannello NON ri-animiamo il contenuto già visto: lo
+   show/hide è istantaneo (l’underline porta la continuità). La
+   regola del playground — animare una volta, mai ri-animare.
+
+   Reduced motion: l’underline non viaggia (durate-token → 1ms),
+   si trova già sotto la tab scelta. Stesso stato, nessun viaggio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Progetto',
+    tabs: [
+      { id: 'overview', tab: 'Panoramica', body: 'La panoramica raccoglie lo stato del progetto in un colpo d’occhio: scadenze vicine, chi sta facendo cosa, cosa è in attesa di una tua risposta. È la prima scheda perché è la più richiesta — apri, capisci, decidi se serve andare oltre.' },
+      { id: 'activity', tab: 'Attività', body: 'Qui scorre il diario: commit, commenti, file caricati, in ordine di tempo. Cambiare scheda non ricarica la pagina e non ti fa perdere il punto — torni alla panoramica e la ritrovi com’era. Il contesto cambia, l’orientamento resta.' },
+      { id: 'files', tab: 'File', body: 'Gli allegati del progetto, dal più recente. Una tab è onesta quando ogni pannello è davvero un contesto a sé: se due schede mostrano quasi la stessa cosa, non erano due schede — era una sola, divisa per finta.' },
+    ],
+  },
+  en: {
+    label: 'Project',
+    tabs: [
+      { id: 'overview', tab: 'Overview', body: 'The overview gathers the project’s state at a glance: near deadlines, who’s doing what, what’s waiting on a reply from you. It’s the first tab because it’s the most asked-for — open, understand, decide whether you need to go further.' },
+      { id: 'activity', tab: 'Activity', body: 'Here the log scrolls by: commits, comments, uploaded files, in time order. Switching tabs doesn’t reload the page and doesn’t lose your place — go back to the overview and you find it as it was. The context changes, the orientation stays.' },
+      { id: 'files', tab: 'Files', body: 'The project’s attachments, newest first. A tab set is honest when each panel is genuinely its own context: if two tabs show nearly the same thing, they weren’t two tabs — it was one, split for show.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const initial = 0;
+const uid = `ult-${locale}`;
+---
+
+<div class="ult" data-initial={String(initial)}>
+  <span class="ult__heading">{c.label}</span>
+  <div class="ult__list" role="tablist" aria-label={c.label}>
+    <span class="ult__indicator" aria-hidden="true"></span>
+    {c.tabs.map((t, i) => (
+      <button
+        type="button"
+        class="ult__tab"
+        role="tab"
+        id={`${uid}-tab-${t.id}`}
+        aria-controls={`${uid}-panel-${t.id}`}
+        aria-selected={i === initial ? 'true' : 'false'}
+        tabindex={i === initial ? '0' : '-1'}
+        data-idx={String(i)}
+      >
+        {t.tab}
+      </button>
+    ))}
+  </div>
+  {c.tabs.map((t, i) => (
+    <div
+      class="ult__panel"
+      role="tabpanel"
+      id={`${uid}-panel-${t.id}`}
+      aria-labelledby={`${uid}-tab-${t.id}`}
+      tabindex="0"
+      hidden={i !== initial}
+    >
+      <p>{t.body}</p>
+    </div>
+  ))}
+</div>
+
+<style>
+  .ult {
+    inline-size: min(34rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .ult__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .ult__list {
+    position: relative;
+    display: flex;
+    gap: 0.25rem;
+    border-block-end: 1px solid var(--border);
+  }
+
+  /* L’underline: una barra sola, posizionata e dimensionata via
+     custom property, che scivola. translateX + width animati. */
+  .ult__indicator {
+    position: absolute;
+    inset-block-end: -1px;
+    inset-inline-start: 0;
+    block-size: 2px;
+    inline-size: var(--ind-w, 0);
+    transform: translateX(var(--ind-x, 0));
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    transition:
+      transform var(--dur-normal) var(--ease-out-soft),
+      inline-size var(--dur-normal) var(--ease-out-soft);
+  }
+
+  .ult__tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.6rem 0.85rem;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .ult__tab:hover { color: var(--ink); }
+  .ult__tab[aria-selected='true'] { color: var(--accent-ink); }
+  .ult__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .ult__panel {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    border-radius: var(--radius-sm);
+  }
+  .ult__panel[hidden] { display: none; }
+  .ult__panel:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .ult__panel p { margin: 0; }
+</style>
+
+<script>
+  type TabsCleanup = () => void;
+
+  function activate(
+    root: HTMLElement,
+    tabs: HTMLButtonElement[],
+    panels: HTMLElement[],
+    indicator: HTMLElement,
+    idx: number,
+    focus: boolean,
+  ) {
+    tabs.forEach((tab, i) => {
+      const selected = i === idx;
+      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+      // Roving tabindex: solo la tab attiva è nel Tab order.
+      tab.tabIndex = selected ? 0 : -1;
+      if (panels[i]) panels[i].hidden = !selected;
+    });
+    if (focus) tabs[idx]?.focus();
+
+    // FLIP: misura la geometria della tab attiva relativa alla lista,
+    // e spostaci l’underline. Niente quattro barre, una sola che scorre.
+    const active = tabs[idx];
+    if (active) {
+      indicator.style.setProperty('--ind-x', `${active.offsetLeft}px`);
+      indicator.style.setProperty('--ind-w', `${active.offsetWidth}px`);
+    }
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ult').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.ult__tab'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.ult__panel'));
+      const indicator = root.querySelector<HTMLElement>('.ult__indicator');
+      if (!tabs.length || !indicator) return;
+
+      let current = Number(root.dataset.initial ?? '0');
+
+      const set = (idx: number, focus: boolean) => {
+        current = idx;
+        activate(root, tabs, panels, indicator, idx, focus);
+      };
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => set(i, false));
+        tab.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          set(next, true);
+        });
+      });
+
+      // Posiziona l’underline al primo paint, senza transizione di partenza.
+      const prev = indicator.style.transition;
+      indicator.style.transition = 'none';
+      set(current, false);
+      // forza il reflow così il primo cambio reale anima
+      void indicator.offsetWidth;
+      indicator.style.transition = prev;
+
+      // Se la lista cambia larghezza (resize, font), riallinea senza animare.
+      const ro = new ResizeObserver(() => {
+        const t = indicator.style.transition;
+        indicator.style.transition = 'none';
+        const active = tabs[current];
+        if (active) {
+          indicator.style.setProperty('--ind-x', `${active.offsetLeft}px`);
+          indicator.style.setProperty('--ind-w', `${active.offsetWidth}px`);
+        }
+        void indicator.offsetWidth;
+        indicator.style.transition = t;
+      });
+      ro.observe(root);
+
+      const cleanup: TabsCleanup = () => ro.disconnect();
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

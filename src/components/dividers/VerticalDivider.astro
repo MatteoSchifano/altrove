@@ -1,0 +1,93 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   VerticalDivider — il divider verticale fra micro-azioni.
+
+   La barra di azioni è il suo habitat naturale: un gruppetto di
+   verbi vicini — Rispondi · Inoltra · Archivia — dove un filo
+   verticale dice "questi sono parenti ma distinti". È il taglio
+   che separa senza allontanare.
+
+   Onestà semantica: un separatore verticale non è un <hr> (che è
+   orizzontale per natura), quindi usiamo role="separator" con
+   aria-orientation="vertical". Lo screen reader lo riconosce e lo
+   annuncia per quello che è; non è un <div> decorativo travestito.
+
+   Due dettagli che si dimenticano sempre:
+   - il filo non arriva ai bordi: ha un piccolo respiro sopra e sotto
+     (inset), altrimenti "taglia" invece di "separare";
+   - la separazione è geometrica, non cromatica — la barra resta
+     leggibile anche se il filo sparisse.
+
+   Niente motion: è struttura.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    a: 'Rispondi',
+    b: 'Inoltra',
+    c: 'Archivia',
+  },
+  en: {
+    a: 'Reply',
+    b: 'Forward',
+    c: 'Archive',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="vbar" role="group">
+  <button type="button" class="vbar__act">{c.a}</button>
+  <span class="vbar__div" role="separator" aria-orientation="vertical"></span>
+  <button type="button" class="vbar__act">{c.b}</button>
+  <span class="vbar__div" role="separator" aria-orientation="vertical"></span>
+  <button type="button" class="vbar__act">{c.c}</button>
+</div>
+
+<style>
+  .vbar {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0.2rem;
+    padding: 0.3rem;
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .vbar__act {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.45rem var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vbar__act:hover {
+    background-color: var(--surface-sunken);
+  }
+  .vbar__act:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  /* ── Il filo verticale ──
+     non arriva ai bordi: margine verticale che gli dà respiro,
+     così separa invece di tagliare. */
+  .vbar__div {
+    inline-size: 1px;
+    margin-block: 0.4rem;
+    background-color: var(--border);
+    flex-shrink: 0;
+  }
+</style>

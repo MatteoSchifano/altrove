@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-22"
+number: "22"
+title: "La ricerca as-you-type"
+excerpt: "Una ricerca che risponde mentre scrivi sembra magia, ma è regia: debounce, token che invalidano le risposte vecchie, una soglia sotto cui lo spinner non deve apparire. Tutto succede tra un tasto e l'altro, dove l'utente non guarda."
+date: "4 settembre 2026"
+releaseDate: "2026-09-04"
+readMinutes: 12
+tags: ["componenti", "interazione", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import DebouncedSearch from '../../../components/search/DebouncedSearch.astro';
+import MatchHighlight from '../../../components/search/MatchHighlight.astro';
+import GroupedSuggestions from '../../../components/search/GroupedSuggestions.astro';
+import NoResultsSuggest from '../../../components/search/NoResultsSuggest.astro';
+import ComboboxNav from '../../../components/search/ComboboxNav.astro';
+
+La ricerca as-you-type — i risultati che appaiono mentre digiti, senza premere Invio — è una delle interazioni che sembrano più semplici e sono fra le più insidiose. A guardarla da fuori è una sola cosa: scrivo, e la lista si aggiorna. Ma fra una battitura e l'altra c'è una piccola regia invisibile, e la domanda di questo capitolo è proprio quella: *cosa succede tra ogni tasto premuto?* La risposta decide se l'esperienza è calma o nevrotica, onesta o ansiogena.
+
+Il rischio non è di non funzionare — funziona quasi sempre, anche fatta male. Il rischio è il rumore: una richiesta per ogni lettera, risultati che lampeggiano e si riscrivono, uno spinner che appare e sparisce a ogni respiro, una risposta lenta di «ric» che sovrascrive quella già arrivata di «ricerca». Sono tutti difetti di *regia*, non di logica. E si risolvono con tre strumenti che tornano in ogni demo: il debounce che aspetta una pausa, il token che invalida le risposte vecchie, la soglia di pudore sotto cui non si mostra alcun loader.
+
+In tutto il capitolo i dati sono statici e dentro il componente; la latenza è simulata con `setTimeout`, e la cancellazione delle richieste con un token monotòno che fa da `AbortController`. Niente rete vera — ma la regia è esattamente quella che servirebbe con una rete vera. Cinque demo, cinque pezzi del mestiere: la temporizzazione, l'evidenziazione, il raggruppamento, il vuoto onesto e la navigazione da tastiera.
+
+## La temporizzazione tra un tasto e l'altro
+
+Il primo pezzo è il più nascosto e il più importante: *quando* si interroga, e *quando* si mostra che si sta interrogando. Sbagliare qui rende rumorosa qualunque ricerca, per quanto belli siano i risultati.
+
+<Demo title="Ricerca con debounce, token e soglia di pudore" tag="22.a">
+  <DebouncedSearch locale="it" />
+  <div slot="note">
+    <p>Scrivi in fretta e guarda cosa <em>non</em> succede: non parte una richiesta per ogni lettera. Il debounce (~250ms) aspetta che le dita si fermino un attimo, poi interroga una volta sola. E lo spinner appare <em>solo</em> se l'attesa supera i ~400ms — la «soglia di pudore» del capitolo 02: per una risposta lampo non vedi nulla, perché un loader che vive 120ms è solo sfarfallio, «cattiveria gratuita». La latenza qui è finta e variabile apposta, così a volte il loader appare e a volte no: è la dimostrazione che la soglia è una decisione, non un caso.</p>
+    <p>Il difetto più sottile è invisibile a occhio nudo: le richieste partono in ordine ma non tornano in ordine. «ric» può rispondere dopo «ricerca» e sovrascrivere il risultato giusto con uno vecchio. La difesa è un token monotòno: ogni query nuova lo incrementa, e una risposta che torna con un token superato viene <em>ignorata</em>. È l'<code>AbortController</code> dei poveri — l'unica regola che garantisce che a schermo finisca sempre l'ultima cosa che hai digitato, non l'ultima che è tornata dalla rete. Il conteggio dei risultati è annunciato via <code>aria-live</code>, così la ricerca esiste anche per chi non vede la lista cambiare.</p>
+  </div>
+</Demo>
+
+## Far vedere perché un risultato è lì
+
+Una volta arrivati i risultati, c'è una seconda domanda di onestà: *perché* questo risultato corrisponde alla mia query? Evidenziare la porzione di testo che ha fatto match non è decorazione — è la spiegazione del risultato, resa visibile.
+
+<Demo title="Evidenziazione delle corrispondenze con mark semantico" tag="22.b">
+  <MatchHighlight locale="it" />
+  <div slot="note">
+    <p>Scrivi «anat» e nel risultato la sotto-stringa corrispondente si accende. Il tag giusto è <code>&lt;mark&gt;</code>, non uno <code>&lt;span&gt;</code> colorato: <code>&lt;mark&gt;</code> ha un significato — «porzione rilevante per il contesto corrente» — e alcuni screen reader la annunciano. Il colore è il <em>secondo</em> canale, il tag e il peso sono il primo: chi non distingue il giallo legge comunque che quella parte è marcata. La corrispondenza è anche accent-insensitive — «citta» trova «città» — ma il testo mostrato resta quello vero, accenti compresi: si evidenzia senza riscrivere.</p>
+    <p>C'è una trappola di sicurezza qui sotto. L'evidenziazione non si costruisce <em>mai</em> concatenando stringhe HTML attorno alla query: sarebbe un'iniezione in attesa, perché la query è testo dell'utente. Si lavora sui nodi del DOM — si spezza la stringa in segmenti match/non-match e si creano <code>&lt;mark&gt;</code> e nodi di testo reali. La query diventa <code>textContent</code>, mai markup. È la stessa disciplina del capitolo sugli input: la comodità non vale un buco, e il modo nativo di costruire nodi è anche quello sicuro.</p>
+  </div>
+</Demo>
+
+## Una lista che diventa una mappa
+
+Quando i risultati arrivano da fonti diverse — capitoli, tag, persone — una lista piatta li mescola e costringe l'occhio a smistarli da solo. Raggrupparli per tipo trasforma l'elenco in una mappa: l'utente capisce *dove* sta guardando prima ancora di leggere le voci.
+
+<Demo title="Suggerimenti raggruppati per tipo, con intestazioni" tag="22.c">
+  <GroupedSuggestions locale="it" />
+  <div slot="note">
+    <p>Cerca «a» e i risultati si dividono in colonne logiche: Capitoli, Tag, Persone, ognuno con la sua intestazione. L'ordine dei gruppi è <em>fisso</em> — la gerarchia non deve ballare a ogni tasto — e i gruppi vuoti spariscono del tutto: un'intestazione senza voci sotto è un cassetto vuoto che mente sulla presenza di contenuto. Lo smistamento riduce il carico cognitivo: l'occhio salta al tipo che gli interessa invece di leggere una colonna indistinta.</p>
+    <p>Sul piano dell'accessibilità, l'intestazione di gruppo è un cartello, non una scelta: è <code>aria-hidden</code>, e il gruppo porta il nome del tipo via <code>role="group"</code> + <code>aria-label</code>, così lo screen reader annuncia «gruppo Capitoli» senza trasformare il titolo in una falsa opzione selezionabile. Le voci sono <code>role="option"</code> dentro una <code>role="listbox"</code>. Qui la listbox è solo presentativa — la navigazione completa da tastiera è il mestiere dell'ultima demo — ma la struttura semantica è già quella giusta, pronta a reggere la tastiera quando serve.</p>
+  </div>
+</Demo>
+
+## Il vuoto che non è un vicolo cieco
+
+Lo stato «nessun risultato» è il momento più fragile di una ricerca: è facile lasciare l'utente davanti a un muro. Ma quasi sempre dietro il muro c'è una porta — un refuso, una lettera di troppo, un sinonimo.
+
+<Demo title="Nessun risultato che propone alternative oneste" tag="22.d">
+  <NoResultsSuggest locale="it" />
+  <div slot="note">
+    <p>Scrivi «toogle» con la O di troppo: invece di un secco «niente», il pannello propone «forse intendevi… <em>toggle</em>?», e la correzione è un <code>&lt;button&gt;</code> vero — ci arrivi con la tastiera, lo premi con Invio, e la ricerca riparte corretta. L'alternativa si trova con la distanza di edit (Levenshtein) fra la query e ogni voce nota: se c'è qualcosa a una o due modifiche, lo si propone. È la differenza fra una ricerca che sbatte la porta e una che ti accompagna alla maniglia.</p>
+    <p>Ma c'è una linea di onestà da non superare. Se <em>niente</em> è abbastanza vicino, non si inventa un suggerimento pur di riempire il vuoto: si è onesti fino in fondo — «nessun risultato, prova un'altra parola». Proporre un'alternativa lontana solo per non lasciare la pagina vuota sarebbe un suggerimento che mente, e mina la fiducia in <em>tutti</em> i suggerimenti successivi. La soglia cresce con la lunghezza della query (un errore ogni ~4 lettere, mai oltre due): un «forse intendevi» si guadagna la riga solo quando è davvero probabile.</p>
+  </div>
+</Demo>
+
+## La ricerca che si guida da tastiera
+
+L'ultima demo raccoglie tutto il capitolo nel pattern che rende la ricerca usabile *senza* mouse: l'ARIA combobox completo. Non è un vezzo per power-user — è ciò che permette a uno screen reader di annunciare «menu aperto, quattro opzioni, opzione uno di quattro evidenziata».
+
+<Demo title="Combobox ARIA completo, navigabile da tastiera" tag="22.e">
+  <ComboboxNav locale="it" />
+  <div slot="note">
+    <p>Scrivi qualche lettera e la listbox si apre con il <em>primo risultato pertinente già evidenziato</em>: così Invio sceglie subito la cosa più probabile, senza nemmeno premere ↓. Da lì la tastiera fa tutto — <kbd>↓</kbd>/<kbd>↑</kbd> muovono l'evidenziazione (con ciclo ai bordi), <kbd>Home</kbd>/<kbd>End</kbd> saltano al primo e all'ultimo, <kbd>Invio</kbd> seleziona, <kbd>Esc</kbd> chiude. Il cuore del pattern è che il focus del DOM <em>resta nell'input</em> mentre l'evidenziazione viaggia: continui a scrivere, e <code>aria-activedescendant</code> dice allo screen reader quale opzione è attiva senza spostargli il focus sotto le dita.</p>
+    <p>Il contratto ARIA è per intero: l'input è <code>role="combobox"</code> con <code>aria-expanded</code> e <code>aria-controls</code> verso la <code>role="listbox"</code>, ogni voce è <code>role="option"</code> con un id stabile. L'evidenziazione non si affida al solo colore: l'opzione attiva ha anche un peso tipografico diverso, e la corrispondenza è sottolineata, non solo colorata. È la sintesi del capitolo: la regia invisibile della demo 22.a, l'onestà del vuoto della 22.d, l'evidenziazione sicura della 22.b — tutte dentro un controllo che una persona può usare interamente con la tastiera e con lo screen reader, dall'inizio alla fine.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque demo, un'unica idea: la ricerca as-you-type è quasi tutta nello spazio fra un tasto e l'altro, dove l'utente non guarda. Il debounce che aspetta una pausa, il token che butta via le risposte sorpassate, la soglia che tace finché l'attesa non è reale, l'evidenziazione che spiega, il raggruppamento che orienta, il vuoto che propone, la tastiera che guida — nessuno di questi pezzi si vede da solo, e proprio per questo funzionano. Una buona ricerca non sembra intelligente: sembra solo che capisca, e lo fa lavorando in silenzio mentre tu pensi a cosa stai cercando, non a come cercarlo.
+
+Il prossimo capitolo resta sugli input ma cambia oggetto, e affronta uno dei controlli più maltrattati del web: il calendario. *Come si chiede una data senza odiare il browser?* — fra il campo nativo che nessuno ama e il date-picker custom che rompe la tastiera, c'è una strada onesta, e vale la pena percorrerla.

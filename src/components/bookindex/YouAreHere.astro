@@ -1,0 +1,225 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   YouAreHere — la mappa del centro commerciale, in piccolo.
+
+   "Tu sei qui" è il pattern più antico dell’orientamento: una mappa
+   con un punto che dice dove ti trovi. Su un sito è un mini-ToC che
+   non serve solo a navigare, ma a *collocare* — prima di muoverti,
+   sapere dov’è il tuo passo nel cammino.
+
+   La differenza con un indice qualunque è tutta nella voce corrente.
+   Qui non è "evidenziata" e basta: è marcata aria-current="true",
+   l’unica voce che NON è un link (non si naviga dove già si è), e
+   porta un’etichetta "sei qui" leggibile, non solo un cambio di
+   colore. Tre canali — testo, posizione, colore — per dire una cosa
+   sola, perché chi non distingue il colore deve comunque capirlo.
+
+   Le voci passate e future si distinguono anch’esse oltre il colore:
+   un piccolo segno di stato (✓ fatto, • corrente, ◦ ancora da
+   leggere) accanto al pallino. Il colore resta il secondo segnale.
+
+   Statica e onesta: i dati sono qui dentro, niente query alla
+   collection. È una "tu sei qui" di esempio, ma si comporta come
+   quella vera.
+
+   Reduced motion: niente animazioni d’ingresso; lo stato corrente è
+   già lì. Il pallino corrente non pulsa sotto reduced motion.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Step = { id: string; label: string };
+
+const COPY = {
+  it: {
+    aria: 'La tua posizione nel capitolo',
+    title: 'Tu sei qui',
+    here: 'sei qui',
+    done: 'letto',
+    todo: 'da leggere',
+    currentIndex: 2,
+    steps: [
+      { id: 'apertura', label: 'Apertura' },
+      { id: 'metodo', label: 'Il metodo' },
+      { id: 'indice', label: 'L’indice del sito' },
+      { id: 'breadcrumb', label: 'Il breadcrumb' },
+      { id: 'congedo', label: 'Il congedo' },
+    ] as Step[],
+  },
+  en: {
+    aria: 'Your position in the chapter',
+    title: 'You are here',
+    here: 'you are here',
+    done: 'read',
+    todo: 'to read',
+    currentIndex: 2,
+    steps: [
+      { id: 'apertura', label: 'Opening' },
+      { id: 'metodo', label: 'The method' },
+      { id: 'indice', label: 'The site index' },
+      { id: 'breadcrumb', label: 'The breadcrumb' },
+      { id: 'congedo', label: 'The send-off' },
+    ] as Step[],
+  },
+} as const;
+const c = COPY[locale];
+const cur = c.currentIndex;
+---
+
+<nav class="yah" aria-label={c.aria}>
+  <p class="yah__title">{c.title}</p>
+  <ol class="yah__list">
+    {c.steps.map((step, i) => {
+      const isCurrent = i === cur;
+      const isDone = i < cur;
+      const stateLabel = isCurrent ? c.here : isDone ? c.done : c.todo;
+      const stateClass = isCurrent ? 'is-current' : isDone ? 'is-done' : 'is-todo';
+      return (
+        <li class={`yah__item ${stateClass}`}>
+          <span class="yah__node" aria-hidden="true">
+            <span class="yah__dot"></span>
+          </span>
+          {isCurrent ? (
+            <span class="yah__label" aria-current="true">
+              <span class="yah__text">{step.label}</span>
+              <span class="yah__badge">{c.here}</span>
+            </span>
+          ) : (
+            <a class="yah__label" href={`#${step.id}`}>
+              <span class="yah__text">{step.label}</span>
+              <span class="yah__badge yah__badge--quiet">{stateLabel}</span>
+            </a>
+          )}
+        </li>
+      );
+    })}
+  </ol>
+</nav>
+
+<style>
+  .yah {
+    inline-size: min(22rem, 100%);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .yah__title {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .yah__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .yah__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.7rem;
+    padding-block: 0.2rem;
+  }
+
+  /* La linea che connette i nodi (il "cammino") */
+  .yah__node {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 1rem;
+    block-size: 100%;
+  }
+  .yah__node::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inline-size: 1.5px;
+    background-color: var(--border);
+  }
+  .yah__item:first-child .yah__node::before { inset-block-start: 50%; }
+  .yah__item:last-child .yah__node::before { inset-block-end: 50%; }
+
+  .yah__dot {
+    position: relative;
+    z-index: 1;
+    inline-size: 0.6rem;
+    block-size: 0.6rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    border: 1.5px solid var(--border-strong);
+  }
+
+  .yah__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    text-decoration: none;
+    padding: 0.3rem 0.4rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  a.yah__label:hover { color: var(--ink-strong); background-color: var(--surface-sunken); }
+  a.yah__label:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .yah__text { font-size: var(--text-sm); }
+  .yah__badge {
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+  .yah__badge--quiet { color: var(--ink-subtle); }
+
+  /* ── Già letti: spunta + nodo pieno tenue ── */
+  .yah__item.is-done .yah__dot {
+    background-color: var(--ink-subtle);
+    border-color: var(--ink-subtle);
+  }
+  .yah__item.is-done .yah__node::before { background-color: var(--ink-subtle); }
+  .yah__item.is-done .yah__badge--quiet::before { content: '✓ '; }
+
+  /* ── Da leggere: nodo vuoto, cerchietto ◦ ── */
+  .yah__item.is-todo .yah__badge--quiet::before { content: '◦ '; }
+
+  /* ── Corrente: il "tu sei qui" — testo + posizione + colore ── */
+  .yah__item.is-current .yah__dot {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: var(--halo-accent);
+  }
+  .yah__item.is-current .yah__label {
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+  }
+  .yah__item.is-current .yah__badge {
+    color: var(--accent-on);
+    background-color: var(--accent);
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-pill);
+  }
+
+  /* Il pallino corrente respira appena — pulsa per attirare l’occhio,
+     ma è puro accento: si toglie del tutto sotto reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .yah__item.is-current .yah__dot { animation: yah-pulse 2.4s var(--ease-in-out) infinite; }
+    @keyframes yah-pulse {
+      0%, 100% { box-shadow: var(--halo-accent); }
+      50% { box-shadow: 0 0 0 6px transparent; }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .yah__label { transition: none; }
+  }
+</style>

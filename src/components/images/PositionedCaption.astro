@@ -1,0 +1,237 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PositionedCaption — la didascalia non è un sottotitolo fisso.
+
+   La stessa immagine cambia significato a seconda di dove le
+   mettiamo la voce. Sotto: la didascalia è una nota, distinta e
+   leggibile (il caso editoriale classico). Di fianco: diventa un
+   margine, dialoga con l’immagine alla pari. In overlay: si fonde
+   con la scena, ma deve restare leggibile su qualunque pixel —
+   per questo il velo, non solo il testo bianco.
+
+   Una sola <figure>/<figcaption>: cambia solo il data-pos. Niente
+   file: l’immagine è un gradient SVG con aspect-ratio fissato.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Posizione della didascalia',
+    positions: [
+      { id: 'below', label: 'Sotto' },
+      { id: 'beside', label: 'Di fianco' },
+      { id: 'overlay', label: 'In overlay' },
+    ],
+    alt: 'Veduta astratta di colline al tramonto, in toni caldi.',
+    caption: 'Colline al crepuscolo, studio n.4 — la luce radente racconta più del soggetto.',
+    credit: 'Archivio Altrove',
+  },
+  en: {
+    label: 'Caption position',
+    positions: [
+      { id: 'below', label: 'Below' },
+      { id: 'beside', label: 'Beside' },
+      { id: 'overlay', label: 'Overlay' },
+    ],
+    alt: 'Abstract view of hills at sunset, in warm tones.',
+    caption: 'Hills at dusk, study no.4 — the raking light tells more than the subject.',
+    credit: 'Altrove Archive',
+  },
+} as const;
+const c = COPY[locale];
+
+const scene = `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200'>
+  <defs>
+    <linearGradient id='sky' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#f6dab9'/>
+      <stop offset='0.5' stop-color='#dca07f'/>
+      <stop offset='1' stop-color='#5e3a52'/>
+    </linearGradient>
+    <linearGradient id='hill' x1='0' x2='0' y1='0' y2='1'>
+      <stop offset='0' stop-color='#3d2b3c'/>
+      <stop offset='1' stop-color='#1c1322'/>
+    </linearGradient>
+  </defs>
+  <rect width='320' height='200' fill='url(#sky)'/>
+  <circle cx='232' cy='66' r='26' fill='#f9e8cb' opacity='0.9'/>
+  <path d='M0 148 Q 70 126 130 142 T 320 146 L 320 200 L 0 200 Z' fill='url(#hill)'/>
+  <path d='M0 174 Q 90 156 170 168 T 320 166 L 320 200 L 0 200 Z' fill='#0e0916' opacity='0.85'/>
+</svg>`)}`;
+const uid = `poc-${locale}`;
+---
+
+<div class="poc">
+  <div class="poc__bar" role="group" aria-label={c.label}>
+    {c.positions.map((p, i) => (
+      <button
+        type="button"
+        class="poc__seg"
+        data-pos={p.id}
+        aria-pressed={i === 0 ? 'true' : 'false'}
+      >{p.label}</button>
+    ))}
+  </div>
+
+  <figure class="poc__figure" data-pos="below">
+    <div class="poc__media">
+      <img src={scene} alt={c.alt} />
+    </div>
+    <figcaption class="poc__caption" id={`${uid}-cap`}>
+      <span class="poc__text">{c.caption}</span>
+      <span class="poc__credit">{c.credit}</span>
+    </figcaption>
+  </figure>
+</div>
+
+<style>
+  .poc {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .poc__bar {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  .poc__seg {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .poc__seg:hover { color: var(--ink); }
+  .poc__seg[aria-pressed='true'] {
+    color: var(--ink-strong);
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+  }
+  .poc__seg:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .poc__media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    inline-size: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: var(--surface-sunken);
+    box-shadow: var(--shadow-md);
+  }
+  .poc__media img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .poc__caption {
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .poc__credit {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  /* ─── Sotto (default): didascalia come nota distinta ─── */
+  .poc__figure {
+    margin: 0;
+    display: grid;
+    gap: var(--space-2xs);
+    transition: grid-template-columns var(--dur-normal) var(--ease-out-soft);
+  }
+
+  /* ─── Di fianco: due colonne, la voce diventa un margine ─── */
+  .poc__figure[data-pos='beside'] {
+    grid-template-columns: 1.7fr 1fr;
+    align-items: end;
+    gap: var(--space-sm);
+  }
+  .poc__figure[data-pos='beside'] .poc__caption {
+    border-inline-start: 2px solid var(--border-strong);
+    padding-inline-start: var(--space-2xs);
+  }
+
+  /* ─── Overlay: il testo si fonde con la scena, ma con velo ─── */
+  .poc__figure[data-pos='overlay'] {
+    position: relative;
+  }
+  .poc__figure[data-pos='overlay'] .poc__caption {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    padding: var(--space-sm) var(--space-md) var(--space-xs);
+    margin: 0;
+    color: oklch(0.98 0.01 var(--hue-warm));
+    /* Il velo garantisce il contrasto su qualunque pixel sotto. */
+    background: linear-gradient(
+      to top,
+      oklch(0 0 0 / 0.78),
+      oklch(0 0 0 / 0.4) 55%,
+      transparent
+    );
+    border-end-start-radius: var(--radius-lg);
+    border-end-end-radius: var(--radius-lg);
+  }
+  .poc__figure[data-pos='overlay'] .poc__credit {
+    color: oklch(0.9 0.01 var(--hue-warm));
+  }
+
+  @media (max-width: 28rem) {
+    .poc__figure[data-pos='beside'] {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.poc').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const segs = Array.from(root.querySelectorAll<HTMLButtonElement>('.poc__seg'));
+      const figure = root.querySelector<HTMLElement>('.poc__figure')!;
+
+      const set = (pos: string) => {
+        figure.dataset.pos = pos;
+        segs.forEach((s) => s.setAttribute('aria-pressed', s.dataset.pos === pos ? 'true' : 'false'));
+      };
+
+      segs.forEach((s) => {
+        s.addEventListener('click', () => set(s.dataset.pos!));
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

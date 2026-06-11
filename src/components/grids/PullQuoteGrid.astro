@@ -1,0 +1,108 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PullQuoteGrid — la citazione che spezza la griglia.
+
+   Una pull quote esiste per *rompere* il ritmo: solleva una frase
+   dal corpo e la mette in mostra. Ma una rottura è elegante solo se
+   la griglia che rompe è chiara. Qui il testo vive in una colonna di
+   lettura stretta (la "content"), mentre la pull quote esce nella
+   colonna larga (la "full-bleed"): non galleggia a caso, *occupa una
+   linea precisa* della griglia, e proprio per questo lo scarto si
+   legge come intenzione, non come errore di impaginazione.
+
+   La griglia ha tre tracce nominate: due margini elastici ai lati e
+   una colonna di contenuto al centro. Il testo sta in [content]; la
+   citazione si stende da [full-start] a [full-end], sconfinando nei
+   margini. È la stessa griglia, due ampiezze diverse.
+
+   Accessibilità: la pull quote è un duplicato *visivo* di una frase
+   già presente nel corpo, quindi è aria-hidden — non vogliamo che lo
+   screen reader la legga due volte. È decorazione editoriale, non
+   nuovo contenuto. (Se invece citasse una fonte esterna, sarebbe un
+   <blockquote> reale nel flusso.)
+
+   Motion: nessuna. La rottura è strutturale, vive nel layout; non
+   ha bisogno di entrare in scena.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    p1: 'Per anni ho pensato che una pagina diventasse elegante con il font giusto o il colore giusto. È un’illusione comoda, perché sposta il problema su una scelta singola e visibile.',
+    quote: 'L’eleganza non è ciò che aggiungi: è il fatto che ogni cosa si appoggia alla stessa linea.',
+    p2: 'L’allineamento viene prima della bellezza. Una pagina con un solo font e una griglia onesta batte sempre una pagina ricca di font ma senza una struttura sotto. La griglia è il silenzio su cui poi la bellezza può parlare.',
+  },
+  en: {
+    p1: 'For years I thought a page became elegant with the right font or the right colour. It’s a comfortable illusion, because it moves the problem onto a single, visible choice.',
+    quote: 'Elegance isn’t what you add: it’s the fact that everything rests on the same line.',
+    p2: 'Alignment comes before beauty. A page with one font and an honest grid always beats a page rich in fonts but with no structure underneath. The grid is the silence on which beauty can then speak.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<article class="pullquote">
+  <p class="pullquote__body">{c.p1}</p>
+
+  <!-- Duplicato visivo di una frase del corpo → fuori dalla lettura -->
+  <blockquote class="pullquote__quote" aria-hidden="true">
+    <p>{c.quote}</p>
+  </blockquote>
+
+  <p class="pullquote__body">{c.p2}</p>
+</article>
+
+<style>
+  .pullquote {
+    inline-size: min(46rem, 100%);
+    display: grid;
+    /* Tre tracce nominate: margine | contenuto | margine.
+       I margini sono elastici; il contenuto è la colonna di lettura. */
+    grid-template-columns:
+      [full-start] minmax(var(--space-md), 1fr)
+      [content-start] minmax(0, var(--measure))
+      [content-end] minmax(var(--space-md), 1fr)
+      [full-end];
+    row-gap: var(--space-md);
+    padding-block: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  /* Il testo vive nella colonna di lettura */
+  .pullquote__body {
+    grid-column: content;
+    margin: 0;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink);
+  }
+
+  /* La pull quote SPEZZA la griglia: si stende a tutta larghezza,
+     sconfinando nei margini che il corpo non tocca. */
+  .pullquote__quote {
+    grid-column: full;
+    margin: 0;
+    padding-block: var(--space-sm);
+    padding-inline: var(--space-lg);
+    border-block: 1px solid var(--border);
+    background-color: color-mix(in oklab, var(--accent) 6%, transparent);
+  }
+  .pullquote__quote p {
+    margin: 0;
+    max-inline-size: 28ch;
+    margin-inline: auto;
+    text-align: center;
+    text-wrap: balance;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    color: var(--accent-ink);
+  }
+</style>

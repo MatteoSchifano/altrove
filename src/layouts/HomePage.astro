@@ -12,7 +12,7 @@ import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
 import ChapterCard from '../components/ChapterCard.astro';
 import RoadmapSection from '../components/RoadmapSection.astro';
-import { getCollection } from 'astro:content';
+import { getReleasedChapters } from '../lib/chapters';
 import { t, localizedPath, getOtherLocales, type Locale } from '../lib/i18n';
 import { resolveReadingTime } from '../lib/readingTime';
 
@@ -31,7 +31,7 @@ function slugOf(id: string, lang: Locale): string {
   return id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
 }
 
-const chapters = (await getCollection('chapters', ({ data }) => data.lang === locale && !data.draft))
+const chapters = (await getReleasedChapters((data) => data.lang === locale))
   .sort((a, b) => Number(a.data.number) - Number(b.data.number));
 ---
 

@@ -1,0 +1,248 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   AccessibleListbox — la lista che si naviga con le dita sulla
+   tastiera, non solo col mouse.
+
+   Un listbox è una scelta singola fra molte voci, dove la lista
+   resta visibile (a differenza del dropdown che si apre e chiude).
+   È il pattern più "ARIA puro" del capitolo: l’HTML nativo non ha
+   un <listbox> generico stilabile, quindi lo costruiamo a regola
+   d’arte secondo l’APG (ARIA Authoring Practices):
+
+     • role="listbox" sul contenitore, role="option" su ogni voce;
+     • UNA sola tabindex="0" (la voce attiva), le altre tabindex=-1
+       — il "roving tabindex" non serve qui perché usiamo
+       aria-activedescendant: il focus DOM resta sul listbox, e
+       l’opzione "attiva" è indicata dall’attributo che punta al
+       suo id. Lo screen reader annuncia la voce senza spostare il
+       focus reale;
+     • aria-selected sulla voce scelta.
+
+   Tastiera completa (APG): ↑/↓ muovono l’opzione attiva, Home/End
+   ai capi, Invio/Spazio selezionano, e il *typeahead* — si digita
+   "ma" e salta a "Marrakech" — che è il gesto che la gente usa
+   davvero nelle liste lunghe.
+
+   Reduced motion: lo scroll-into-view dell’opzione attiva passa da
+   smooth a istantaneo. Stesso esito, nessuno scorrimento.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Città di partenza',
+    hint: 'Frecce per muoverti, digita per cercare, Invio per scegliere.',
+    options: [
+      'Bologna', 'Cagliari', 'Catania', 'Firenze', 'Genova',
+      'Lecce', 'Milano', 'Napoli', 'Palermo', 'Torino',
+    ],
+    chosen: (o: string) => `Scelta: ${o}`,
+  },
+  en: {
+    label: 'Departure city',
+    hint: 'Arrows to move, type to search, Enter to choose.',
+    options: [
+      'Amsterdam', 'Berlin', 'Copenhagen', 'Dublin', 'Lisbon',
+      'London', 'Madrid', 'Oslo', 'Prague', 'Vienna',
+    ],
+    chosen: (o: string) => `Chosen: ${o}`,
+  },
+} as const;
+const c = COPY[locale];
+const labelId = `lbx-label-${locale}`;
+const listId = `lbx-list-${locale}`;
+const optId = (i: number) => `${listId}-opt-${i}`;
+const initial = 0;
+---
+
+<div class="lbx">
+  <span class="lbx__label" id={labelId}>{c.label}</span>
+
+  <ul
+    class="lbx__list"
+    id={listId}
+    role="listbox"
+    tabindex="0"
+    aria-labelledby={labelId}
+    aria-activedescendant={optId(initial)}
+  >
+    {c.options.map((opt, i) => (
+      <li
+        class="lbx__opt"
+        id={optId(i)}
+        role="option"
+        aria-selected={i === initial ? 'true' : 'false'}
+        data-active={i === initial ? 'true' : undefined}
+        data-label={opt}
+      >
+        <span class="lbx__check" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>
+        </span>
+        <span class="lbx__text">{opt}</span>
+      </li>
+    ))}
+  </ul>
+
+  <p class="lbx__hint">{c.hint}</p>
+  <p class="lbx__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .lbx {
+    inline-size: min(20rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .lbx__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .lbx__list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-3xs);
+    max-block-size: 13rem;
+    overflow-y: auto;
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  /* Il focus reale resta sul contenitore: l’anello va lì. */
+  .lbx__list:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .lbx__opt {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .lbx__opt:hover { background-color: var(--surface-sunken); }
+  /* L’opzione "attiva" (aria-activedescendant) è marcata visibilmente —
+     non basta lo screen reader, serve anche il segno per chi guarda. */
+  .lbx__opt[data-active='true'] {
+    background-color: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .lbx__check {
+    inline-size: 1rem;
+    block-size: 1rem;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    color: var(--accent-ink);
+    opacity: 0;
+    transform: scale(0.7);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .lbx__check svg { inline-size: 0.9rem; block-size: 0.9rem; }
+  /* La selezione: spunta + peso. Doppio canale, non il solo colore. */
+  .lbx__opt[aria-selected='true'] { color: var(--ink-strong); font-weight: var(--weight-medium); }
+  .lbx__opt[aria-selected='true'] .lbx__check { opacity: 1; transform: scale(1); }
+
+  .lbx__hint {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lbx__check { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.lbx').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const list = root.querySelector<HTMLElement>('.lbx__list')!;
+      const options = Array.from(root.querySelectorAll<HTMLElement>('.lbx__opt'));
+      const live = root.querySelector<HTMLElement>('.lbx__live')!;
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      let active = options.findIndex((o) => o.dataset.active === 'true');
+      if (active < 0) active = 0;
+
+      // typeahead: accumuliamo i tasti per ~600ms.
+      let typed = '';
+      let typedTimer: number | undefined;
+
+      const setActive = (i: number) => {
+        if (i < 0 || i >= options.length) return;
+        options[active]?.removeAttribute('data-active');
+        active = i;
+        const opt = options[active];
+        opt.dataset.active = 'true';
+        list.setAttribute('aria-activedescendant', opt.id);
+        opt.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      };
+
+      const select = (i: number) => {
+        options.forEach((o, j) => o.setAttribute('aria-selected', String(j === i)));
+        live.textContent = options[i]?.dataset.label ?? '';
+      };
+
+      list.addEventListener('keydown', (e) => {
+        switch (e.key) {
+          case 'ArrowDown': e.preventDefault(); setActive(Math.min(active + 1, options.length - 1)); break;
+          case 'ArrowUp':   e.preventDefault(); setActive(Math.max(active - 1, 0)); break;
+          case 'Home':      e.preventDefault(); setActive(0); break;
+          case 'End':       e.preventDefault(); setActive(options.length - 1); break;
+          case 'Enter':
+          case ' ':         e.preventDefault(); select(active); break;
+          default:
+            // typeahead: solo caratteri stampabili singoli
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              typed += e.key.toLowerCase();
+              window.clearTimeout(typedTimer);
+              typedTimer = window.setTimeout(() => { typed = ''; }, 600);
+              const match = options.findIndex((o, j) =>
+                j > active && (o.dataset.label ?? '').toLowerCase().startsWith(typed)
+              );
+              const wrap = options.findIndex((o) =>
+                (o.dataset.label ?? '').toLowerCase().startsWith(typed)
+              );
+              const target = match >= 0 ? match : wrap;
+              if (target >= 0) setActive(target);
+            }
+        }
+      });
+
+      // Click: rende attiva e seleziona insieme.
+      options.forEach((opt, i) => {
+        opt.addEventListener('click', () => { setActive(i); select(i); list.focus(); });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

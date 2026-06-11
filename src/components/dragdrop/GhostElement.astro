@@ -1,0 +1,270 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   GhostElement — l’oggetto in volo, e il posto che lascia vuoto.
+
+   La domanda guida del capitolo è "come si tiene un oggetto in
+   volo?". Questa demo la prende alla lettera. Mentre trascini, non
+   muovi l’elemento originale: ne sollevi un *fantasma* — una copia
+   che segue il puntatore con un filo di scale e un filo di opacity,
+   come se fosse a mezz’aria. L’originale resta dov’è, ma diventa un
+   *placeholder* attenuato: un’ombra del proprio contorno, che dice
+   "il mio posto è ancora qui, sto solo volando".
+
+   Perché due elementi e non uno? Perché separano due informazioni
+   che la mente tiene distinte: *cosa* sto spostando (il fantasma,
+   sotto il dito) e *da dove* l’ho preso (il placeholder, fermo).
+   Confonderle — far sparire l’originale — disorienta: l’oggetto
+   sembra teleportato, non trasportato.
+
+   Accessibilità: questa demo isola UN fenomeno — il fantasma in
+   volo — e non ha un esito spaziale (non c’è un "dove" in cui
+   posarlo). Per questo il fantasma è puro feedback visivo
+   (aria-hidden) e la tastiera qui non avrebbe un significato da
+   navigare: il riordino e lo spostamento veri, 100% da tastiera,
+   sono nelle altre demo del capitolo (21.a, 21.d, 21.e). Resta però
+   onesto annunciare presa e rilascio via aria-live, così anche chi
+   usa il puntatore con uno screen reader sente cosa accade. Pointer
+   Events, nessun drag-image del browser. Reduced motion: niente
+   scale né transizioni — il fantasma compare già nella sua forma,
+   segue il puntatore in modo netto, e al rilascio l’originale torna
+   pieno senza dissolvenze.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Tessera',
+    title: 'Palette d’autunno',
+    meta: '6 colori · salvata',
+    hint: 'Trascina la tessera: il fantasma vola, l’originale resta come segnaposto.',
+    grab: 'Tieni e trascina la tessera',
+    picked: 'Tessera sollevata. Trascinala dove vuoi; rilascia per posarla.',
+    dropped: 'Tessera posata.',
+  },
+  en: {
+    label: 'Tile',
+    title: 'Autumn palette',
+    meta: '6 colours · saved',
+    hint: 'Drag the tile: the ghost flies, the original stays as a placeholder.',
+    grab: 'Hold and drag the tile',
+    picked: 'Tile lifted. Drag it anywhere; release to set it down.',
+    dropped: 'Tile set down.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="ghost" data-picked={c.picked} data-dropped={c.dropped}>
+  <span class="ghost__hint">{c.hint}</span>
+
+  <div class="ghost__field">
+    <button type="button" class="ghost__tile" aria-label={c.grab}>
+      <span class="ghost__swatches" aria-hidden="true">
+        <i style="--s: oklch(0.72 0.14 60)"></i>
+        <i style="--s: oklch(0.62 0.16 35)"></i>
+        <i style="--s: oklch(0.5 0.12 25)"></i>
+        <i style="--s: oklch(0.78 0.1 95)"></i>
+      </span>
+      <span class="ghost__text">
+        <span class="ghost__title">{c.title}</span>
+        <span class="ghost__meta">{c.meta}</span>
+      </span>
+    </button>
+  </div>
+
+  <span class="ghost__live" role="status" aria-live="polite"></span>
+</div>
+
+<style>
+  .ghost {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .ghost__hint { font-size: var(--text-xs); color: var(--ink-muted); }
+
+  .ghost__field {
+    position: relative;
+    min-block-size: 8rem;
+    display: grid;
+    place-items: center;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border);
+    background-color: var(--surface-sunken);
+  }
+
+  .ghost__tile {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    cursor: grab;
+    touch-action: none;
+    text-align: start;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .ghost__tile:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* L’originale, mentre il fantasma vola: diventa placeholder. */
+  .ghost__tile[data-placeholder] {
+    opacity: 0.4;
+    cursor: grabbing;
+    border-style: dashed;
+    box-shadow: var(--shadow-pressed);
+  }
+
+  .ghost__swatches { display: inline-flex; }
+  .ghost__swatches i {
+    inline-size: 1.1rem;
+    block-size: 1.6rem;
+    background-color: var(--s);
+    border: 1px solid var(--surface-raised);
+    margin-inline-start: -0.35rem;
+    border-radius: var(--radius-xs);
+  }
+  .ghost__swatches i:first-child { margin-inline-start: 0; }
+
+  .ghost__text { display: flex; flex-direction: column; gap: 0.05rem; }
+  .ghost__title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+  .ghost__meta { font-size: var(--text-xs); color: var(--ink-subtle); }
+
+  /* Il fantasma: copia clonata, in position:fixed, che segue il
+     puntatore. Sollevato con scale + opacity = "in volo". */
+  .ghost__phantom {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    margin: 0;
+    pointer-events: none;
+    z-index: var(--z-modal);
+    opacity: 0.92;
+    box-shadow: var(--shadow-xl);
+    border-color: var(--accent) !important;
+    transform: translate(var(--gx, 0), var(--gy, 0)) scale(1.06) rotate(-1.5deg);
+    transition: none;
+  }
+
+  .ghost__live {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Reduced motion: il fantasma non "cresce", appare già pronto. */
+  @media (prefers-reduced-motion: reduce) {
+    .ghost__phantom {
+      transform: translate(var(--gx, 0), var(--gy, 0));
+      box-shadow: var(--shadow-lg);
+    }
+  }
+</style>
+
+<script>
+  type Cleanup = () => void;
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ghost').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tile = root.querySelector<HTMLButtonElement>('.ghost__tile');
+      const live = root.querySelector<HTMLElement>('.ghost__live');
+      if (!tile || !live) return;
+
+      const announce = (s: string) => { live.textContent = s; };
+      const msgPicked = root.dataset.picked ?? '';
+      const msgDropped = root.dataset.dropped ?? '';
+
+      let phantom: HTMLElement | null = null;
+      let dragging = false;
+      let offX = 0;
+      let offY = 0;
+
+      const buildPhantom = (e: PointerEvent) => {
+        const rect = tile.getBoundingClientRect();
+        offX = e.clientX - rect.left;
+        offY = e.clientY - rect.top;
+        const clone = tile.cloneNode(true) as HTMLElement;
+        clone.classList.add('ghost__phantom');
+        clone.removeAttribute('aria-label');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.style.inlineSize = `${rect.width}px`;
+        clone.style.blockSize = `${rect.height}px`;
+        clone.style.setProperty('--gx', `${rect.left}px`);
+        clone.style.setProperty('--gy', `${rect.top}px`);
+        document.body.appendChild(clone);
+        phantom = clone;
+      };
+
+      const moveTo = (x: number, y: number) => {
+        if (!phantom) return;
+        phantom.style.setProperty('--gx', `${x - offX}px`);
+        phantom.style.setProperty('--gy', `${y - offY}px`);
+      };
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging) return;
+        moveTo(e.clientX, e.clientY);
+      };
+
+      const endDrag = (e: PointerEvent) => {
+        if (!dragging) return;
+        dragging = false;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+        try { tile.releasePointerCapture(e.pointerId); } catch {}
+        if (phantom) { phantom.remove(); phantom = null; }
+        delete tile.dataset.placeholder;
+        announce(msgDropped);
+      };
+
+      const start = (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        dragging = true;
+        tile.dataset.placeholder = '';
+        buildPhantom(e);
+        try { tile.setPointerCapture(e.pointerId); } catch {}
+        announce(msgPicked);
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', endDrag);
+        document.addEventListener('pointercancel', endDrag);
+      };
+
+      tile.addEventListener('pointerdown', start);
+      // Click nativo non commuta nulla: la presa è solo via drag/tastiera.
+      tile.addEventListener('click', (e) => e.preventDefault());
+
+      const cleanup: Cleanup = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', endDrag);
+        document.removeEventListener('pointercancel', endDrag);
+        if (phantom) { phantom.remove(); phantom = null; }
+      };
+      document.addEventListener('astro:before-swap', cleanup, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

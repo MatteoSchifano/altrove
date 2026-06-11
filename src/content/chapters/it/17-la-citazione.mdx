@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-17"
+number: "17"
+title: "La citazione"
+excerpt: "Dare la parola a un altro sembra questione di due virgolette. Ma quali virgolette, in che lingua, con quale fonte, e con quanta enfasi: ogni scelta cambia chi sta parlando, e quanto ci si fida di lui."
+date: "31 luglio 2026"
+releaseDate: "2026-07-31"
+readMinutes: 10
+tags: ["editoriale", "tipografia"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import PullQuoteType from '../../../components/quotes/PullQuoteType.astro';
+import BlockquoteCited from '../../../components/quotes/BlockquoteCited.astro';
+import InlineQuote from '../../../components/quotes/InlineQuote.astro';
+import DropCapQuote from '../../../components/quotes/DropCapQuote.astro';
+import TranslatedQuote from '../../../components/quotes/TranslatedQuote.astro';
+
+Il capitolo scorso era ancora dentro la pagina, fra peso e misura; questo si ferma su un gesto editoriale antichissimo e quasi mai fatto bene: dare la parola a qualcun altro. «Quando si cita, come la si presenta?» La domanda sembra banale — si mettono due virgolette e via — ma sotto ci sono almeno quattro decisioni separate, ognuna con la sua trappola. Quali virgolette, perché la convenzione cambia con la lingua. Quale tag, perché citare *adesso* parole altrui non è la stessa cosa che ripescare una frase del proprio testo. Quale fonte, e dove metterla. Quanta enfasi dare, perché una citazione può essere un sussurro in mezzo alla riga o un monumento a inizio capitolo.
+
+La citazione è il punto in cui la tipografia smette di essere decorazione e diventa *semantica*: il segno tipografico, qui, dice chi sta parlando. Una virgoletta dritta tradisce un testo battuto a macchina; un `<cite>` messo sul nome della persona invece che sul titolo dell’opera tradisce chi non conosce la regola; un blocco in due lingue senza `lang` corretto tradisce lo screen reader e la sillabazione. Sono errori invisibili a chi non li sa nominare, e tutti insieme fanno sembrare una pagina meno seria senza che si capisca perché — esattamente come nel capitolo sulla micro-tipografia.
+
+Cinque dimostrazioni, cinque modi di presentare la parola di un altro. E come sempre niente librerie: l’HTML conosce già `<blockquote>`, `<cite>`, `<q>`, e il CSS sa annidare le virgolette nella lingua giusta con la proprietà `quotes`. Il nostro lavoro è vestirli senza tradire la semantica che si portano dentro.
+
+## Il pull quote, che non cita nessuno
+
+Il primo non è nemmeno una citazione vera, ed è il fraintendimento più comune. Il pull quote è una frase del testo stesso, ripescata e ingrandita per dare ritmo alla lettura: non porta attribuzione, perché la fonte è la pagina che hai sotto gli occhi.
+
+<Demo title="Pull quote tipografico · fuori griglia, virgoletta sporgente" tag="17.a">
+  <PullQuoteType locale="it" />
+  <div slot="note">
+    <p>È grande, esce dalla colonna di prosa, e la virgoletta d’apertura <em>sporge</em> oltre il margine sinistro (<code>hanging punctuation</code> fatta a mano con un margine negativo): così il bordo del testo resta otticamente dritto invece di sembrare rientrato. È il dettaglio che separa un pull quote <em>composto</em> da uno semplicemente incollato. Niente <code>&lt;blockquote&gt;</code> qui, ed è una scelta semantica precisa: non è parola di un altro, è materiale editoriale interno — usarne uno sarebbe mentire allo screen reader.</p>
+    <p>La virgoletta enorme è <code>aria-hidden</code>: è puro ornamento, e il testo si legge benissimo senza. Il colore d’accento è il <em>secondo</em> segnale, non il primo — la scala e la posizione sporgente dicono già «citazione» a chi non distingue i colori. E niente motion: un pull quote si presenta fermo, non si anima. Serve a far respirare la lettura, non a chiedere attenzione.</p>
+  </div>
+</Demo>
+
+## La citazione con la fonte, fatta bene
+
+Qui si dà la parola a un altro per davvero, e la semantica conta fino all’ultimo tag. La regola HTML è precisa e quasi sempre sbagliata: `<blockquote>` avvolge *solo* le parole citate, l’attribuzione sta fuori, e `<cite>` è per il titolo dell’opera — non per il nome della persona.
+
+<Demo title="Blockquote con attribuzione · cite per l’opera, non per chi parla" tag="17.b">
+  <BlockquoteCited locale="it" />
+  <div slot="note">
+    <p>Il <code>&lt;blockquote&gt;</code> contiene la sola frase di Saint-Exupéry; l’«— Antoine de Saint-Exupéry, <em>Terra degli uomini</em>» vive in un <code>&lt;figcaption&gt;</code> fuori dal blocco, perché non è una cosa che <em>lui</em> ha detto: è il nostro commento su chi l’ha detta. E l’errore più diffuso lo evitiamo qui: <code>&lt;cite&gt;</code> avvolge il <em>titolo dell’opera</em>, non il nome della persona — per questo il titolo è in corsivo e il nome no. L’<code>cite="URL"</code> sul blockquote dà la fonte leggibile dalla macchina, invisibile ma onesta verso chi legge il markup.</p>
+    <p>Il filetto a sinistra è il segno «questo è di un altro»: forma più colore, mai colore da solo, così chi non vede l’accento legge comunque il rientro e la barra. Le virgolette attorno alla frase non sono scritte a mano nel testo — le mette il CSS via <code>quotes</code> e <code>open-quote</code>/<code>close-quote</code>, coerenti con la lingua del blocco. Scriverle a mano sarebbe il modo più sicuro di sbagliarle quando cambia la lingua.</p>
+  </div>
+</Demo>
+
+## La citazione dentro la riga, annidata
+
+Citare dentro una frase sembra il caso più semplice, e nasconde due raffinatezze che quasi nessuno cura: il tag giusto è `<q>`, non virgolette battute a mano — e `<q>` sa fare una cosa che a mano è impossibile, annidare i livelli.
+
+<Demo title="Citazione inline · virgolette annidate, consapevoli della lingua" tag="17.c">
+  <InlineQuote locale="it" />
+  <div slot="note">
+    <p>Una <code>&lt;q&gt;</code> dentro un’altra <code>&lt;q&gt;</code>: il browser mette i segni da solo e usa <em>automaticamente</em> il livello giusto — in italiano i caporali «» al primo livello e le curve singole ‘’ al secondo. Non scriviamo una sola virgoletta nel markup: le risolve il CSS dalla proprietà <code>quotes</code>. Provare a comporle a mano sarebbe l’errore garantito, perché l’annidamento corretto va calcolato, non indovinato.</p>
+    <p>E qui sta il bug silenzioso più comune: <em>quali</em> segni metta <code>&lt;q&gt;</code> dipende dalla lingua dichiarata. Senza il <code>lang</code> giusto, il browser userebbe la sua convenzione di default — spesso quella inglese «”», anche su testo italiano. Qui il blocco porta <code>lang="it"</code> e la proprietà <code>quotes</code> con i caporali fuori e le curve dentro; la versione inglese cambia in doppie curve fuori, singole dentro. La convenzione cambia con la lingua, e fingere che sia universale è il primo errore.</p>
+  </div>
+</Demo>
+
+## La citazione celebrativa, col capolettera
+
+Quando una citazione deve aprire qualcosa — un capitolo, una sezione, un momento solenne — il gesto editoriale è il capolettera: la prima lettera ingrandita che affonda di alcune righe. Dà peso senza una parola in più, e la sua onestà sta tutta nel grado di supporto del browser.
+
+<Demo title="Citazione con capolettera · initial-letter + fallback first-letter" tag="17.d">
+  <DropCapQuote locale="it" />
+  <div slot="note">
+    <p>La proprietà <em>giusta</em> è <code>initial-letter: 3</code>: dice «questa lettera vale tre righe» e il browser calcola da solo l’affondamento e l’allineamento alla baseline. Ha supporto reale soprattutto su Safari. Per tutti gli altri c’è il <em>fallback</em> universale, <code>::first-letter</code> con <code>float</code> e una scala grande: meno preciso sulla baseline, ma robusto ovunque. Dove <code>initial-letter</code> è supportata vince via <code>@supports</code>, altrove regge il float. Miglioramento progressivo, non una promessa che il browser non può mantenere.</p>
+    <p>Resta un <code>&lt;blockquote&gt;</code> vero, con la fonte in <code>&lt;cite&gt;</code>: il capolettera è vestito, non semantica. Per questo la lettera ingrandita è ancora <em>dentro</em> il testo, non un glifo separato: lo screen reader legge «Mentre», parola intera, non «M» seguita da «entre». È la stessa disciplina di tutto il playground — l’effetto visivo non deve mai rompere quello che il controllo, o qui il testo, significa davvero.</p>
+  </div>
+</Demo>
+
+## La citazione tradotta, con due lingue
+
+L’ultimo caso è quello in cui si cita qualcuno che parlava un’altra lingua: si dà l’originale *e* la traduzione. La domanda di design è quale dei due sia il primario — e qui la lasciamo decidere al lettore, con un toggle che scambia l’enfasi senza toccare il contenuto.
+
+<Demo title="Citazione tradotta · originale + traduzione, lang corretto su ciascuna" tag="17.e">
+  <TranslatedQuote locale="it" />
+  <div slot="note">
+    <p>L’originale francese e la traduzione italiana stanno affiancati; il <code>&lt;button&gt;</code> con <code>aria-pressed</code> scambia <em>solo</em> la gerarchia visiva — chi è grande e opaco, chi è piccolo e attenuato — non il testo. La gerarchia passa per scala più opacità, non solo colore, e la transizione usa le durate-token: con <code>prefers-reduced-motion</code> commuta secca, stesso stato finale senza il viaggio. È un controllo vero, quindi tastiera e anello di focus arrivano gratis.</p>
+    <p>La parte non negoziabile è il <code>lang</code> su ciascun blocco: <code>fr</code> sull’originale, <code>it</code> sulla traduzione. Serve allo screen reader, che cambia pronuncia; alla sillabazione, che vuole il dizionario giusto (la lezione del capitolo 08); e alle virgolette, perché la proprietà <code>quotes</code> segue la lingua — così il francese prende i caporali con lo spazio fine, l’italiano i caporali asciutti, l’inglese le doppie curve. Un solo blocco con due lingue mescolate le sbaglierebbe entrambe, in silenzio.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque modi di dare la parola a un altro, un’unica intuizione: la citazione è il punto in cui il segno tipografico smette di essere ornamento e dichiara *chi sta parlando*. Il pull quote che cita la pagina stessa, il blockquote che attribuisce con la fonte giusta nel tag giusto, la `<q>` che annida le virgolette nella lingua corretta, il capolettera che apre con solennità, le due lingue affiancate con ciascuna il suo `lang`. Nessuno di questi dettagli si nota quando è fatto bene — si nota solo che la pagina sa tenere insieme voci diverse senza confonderle. Presentare la parola di un altro, alla fine, è soprattutto una questione di rispetto: per chi ha parlato, per la lingua in cui l’ha fatto, e per il lettore che deve capire al volo di chi è quella frase.
+
+Il prossimo capitolo resta sul margine fra il testo dell’autore e quello del lettore, ma abbassa ancora la voce: *la nota a margine*. «Come si dialoga col proprio lettore senza interrompere il filo?» — l’aside, il footnote, la postilla che aggiunge senza spezzare, e dove la si mette quando lo schermo è troppo stretto per stare davvero «a margine».

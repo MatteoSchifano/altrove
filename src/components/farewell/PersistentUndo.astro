@@ -1,0 +1,340 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   PersistentUndo — l’azione che si lascia annullare per tutto
+   il tempo della finestra.
+
+   Il modo gentile di lasciar andare un elemento non è chiedere
+   conferma prima ("sei sicuro?"), ma agire subito e tenere aperta
+   una porta sul retro: un toast "Annullato? Annulla" che PERSISTE
+   abbastanza a lungo — ~10s — con un countdown visivo onesto (una
+   barra che si svuota davvero). Finché la barra non è finita,
+   l’azione è reversibile; quando finisce, si rende definitiva.
+
+   È l’opposto del modal preventivo: niente attrito prima, una rete
+   di sicurezza dopo. Demo contenuta su una lista di elementi.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const ITEMS = {
+  it: [
+    { id: '1', title: 'Pensieri di domenica', meta: 'aggiornato il 12 maggio' },
+    { id: '2', title: 'Lista letture', meta: '8 voci' },
+    { id: '3', title: 'Frammenti per il colofone', meta: '3 voci' },
+  ],
+  en: [
+    { id: '1', title: 'Sunday thoughts', meta: 'updated 12 May' },
+    { id: '2', title: 'Reading list', meta: '8 entries' },
+    { id: '3', title: 'Fragments for the colophon', meta: '3 entries' },
+  ],
+} as const;
+
+const COPY = {
+  it: {
+    archive: 'Archivia',
+    archiveLabel: (t: string) => `Archivia ${t}`,
+    archived: (t: string) => `${t} · archiviato`,
+    undo: 'Annulla',
+    restored: (t: string) => `${t} · ripristinato`,
+    empty: 'Tutto archiviato. Niente di perso: era tutto reversibile.',
+  },
+  en: {
+    archive: 'Archive',
+    archiveLabel: (t: string) => `Archive ${t}`,
+    archived: (t: string) => `${t} · archived`,
+    undo: 'Undo',
+    restored: (t: string) => `${t} · restored`,
+    empty: 'All archived. Nothing lost: it was all reversible.',
+  },
+} as const;
+const c = COPY[locale];
+const items = ITEMS[locale];
+---
+
+<div class="pun">
+  <ol class="pun__list" role="list" data-list>
+    {items.map((it) => (
+      <li class="pun__item" data-id={it.id}>
+        <div>
+          <h5 class="pun__item-title">{it.title}</h5>
+          <p class="pun__item-meta tabular">{it.meta}</p>
+        </div>
+        <button class="pun__archive" type="button" aria-label={c.archiveLabel(it.title)} data-archive={it.id}>
+          {c.archive}
+        </button>
+      </li>
+    ))}
+  </ol>
+
+  <p class="pun__empty" data-empty hidden>{c.empty}</p>
+
+  <p class="pun__live sr-only" aria-live="polite" data-live></p>
+
+  <div class="pun__toast" data-toast hidden role="status">
+    <div class="pun__toast-row">
+      <span class="pun__toast-text" data-toast-text></span>
+      <button class="pun__undo" type="button" data-undo>{c.undo}</button>
+    </div>
+    <div class="pun__bar" aria-hidden="true"><span class="pun__fill" data-fill></span></div>
+  </div>
+</div>
+
+<style>
+  .pun {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .pun__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .pun__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: 0.65rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+  .pun__item[data-archiving='true'] {
+    opacity: 0;
+    transform: translateX(-6px);
+    pointer-events: none;
+  }
+
+  .pun__item-title {
+    margin: 0 0 0.1rem;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .pun__item-meta {
+    margin: 0;
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .pun__archive {
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .pun__archive:hover { border-color: var(--border-strong); }
+  .pun__archive:active { transform: scale(0.97); }
+  .pun__archive:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .pun__empty {
+    margin: 0;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    text-align: center;
+  }
+  .pun__empty[hidden] { display: none; }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ── toast ── */
+  .pun__toast {
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--ink-strong);
+    border: 1px solid var(--ink-strong);
+    padding: var(--space-sm) var(--space-md) 0;
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .pun__toast[hidden] { display: none; }
+  .pun__toast[data-shown='true'] { opacity: 1; transform: translateY(0); }
+
+  .pun__toast-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-sm);
+  }
+  .pun__toast-text {
+    color: var(--bg);
+    font-size: var(--text-sm);
+  }
+  .pun__undo {
+    flex-shrink: 0;
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--bg);
+    border: 1px solid color-mix(in oklab, var(--bg) 35%, transparent);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .pun__undo:hover { background-color: color-mix(in oklab, var(--bg) 14%, transparent); }
+  .pun__undo:active { transform: scale(0.97); }
+  .pun__undo:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--bg) 45%, transparent); }
+
+  .pun__bar {
+    inline-size: 100%;
+    block-size: 3px;
+    background-color: color-mix(in oklab, var(--bg) 20%, transparent);
+    overflow: hidden;
+  }
+  .pun__fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    background-color: var(--bg);
+    transition: inline-size 10s linear;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pun__toast { transition-duration: 1ms; }
+    /* la barra resta onesta: il countdown è progresso funzionale,
+       non decorazione, quindi continua a svuotarsi in tempo reale */
+  }
+</style>
+
+<script>
+  type Snapshot = { node: HTMLElement; next: HTMLElement | null };
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.pun').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const list = el.querySelector<HTMLElement>('[data-list]')!;
+      const emptyMsg = el.querySelector<HTMLElement>('[data-empty]')!;
+      const live = el.querySelector<HTMLElement>('[data-live]')!;
+      const toast = el.querySelector<HTMLElement>('[data-toast]')!;
+      const toastText = el.querySelector<HTMLElement>('[data-toast-text]')!;
+      const undoBtn = el.querySelector<HTMLButtonElement>('[data-undo]')!;
+      const fill = el.querySelector<HTMLElement>('[data-fill]')!;
+
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'it';
+      const T = {
+        it: {
+          archived: (t: string) => `${t} · archiviato`,
+          restored: (t: string) => `${t} · ripristinato`,
+        },
+        en: {
+          archived: (t: string) => `${t} · archived`,
+          restored: (t: string) => `${t} · restored`,
+        },
+      }[lang];
+
+      const WINDOW_MS = 10000;
+
+      let pending: Snapshot | null = null;
+      let commitTimer: number | undefined;
+
+      const refreshEmpty = () => {
+        const anyVisible = !!list.querySelector('.pun__item:not([data-archiving="true"])');
+        emptyMsg.hidden = anyVisible;
+      };
+
+      const hideToast = () => {
+        toast.dataset.shown = 'false';
+        setTimeout(() => { toast.hidden = true; }, 280);
+      };
+
+      const commit = () => {
+        if (commitTimer !== undefined) { clearTimeout(commitTimer); commitTimer = undefined; }
+        if (pending) { pending.node.remove(); pending = null; }
+        hideToast();
+        refreshEmpty();
+      };
+
+      const startToast = (title: string) => {
+        toastText.textContent = T.archived(title);
+        live.textContent = T.archived(title);
+        toast.hidden = false;
+        // reset barra a pieno, poi svuota in WINDOW_MS reali
+        fill.style.transition = 'none';
+        fill.style.inlineSize = '100%';
+        void fill.offsetHeight;
+        fill.style.transition = `inline-size ${WINDOW_MS}ms linear`;
+        requestAnimationFrame(() => { toast.dataset.shown = 'true'; fill.style.inlineSize = '0%'; });
+
+        if (commitTimer !== undefined) clearTimeout(commitTimer);
+        commitTimer = window.setTimeout(commit, WINDOW_MS);
+      };
+
+      el.querySelectorAll<HTMLButtonElement>('[data-archive]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          // se c’era un’archiviazione in attesa, la rendiamo definitiva subito
+          if (pending) commit();
+
+          const id = btn.dataset.archive!;
+          const item = list.querySelector<HTMLElement>(`.pun__item[data-id="${id}"]`);
+          if (!item) return;
+          const title = item.querySelector('.pun__item-title')?.textContent ?? '';
+
+          pending = { node: item, next: item.nextElementSibling as HTMLElement | null };
+          item.dataset.archiving = 'true';
+          refreshEmpty();
+          startToast(title);
+        });
+      });
+
+      undoBtn.addEventListener('click', () => {
+        if (commitTimer !== undefined) { clearTimeout(commitTimer); commitTimer = undefined; }
+        if (pending) {
+          const { node, next } = pending;
+          delete node.dataset.archiving;
+          const title = node.querySelector('.pun__item-title')?.textContent ?? '';
+          // ripristina nella posizione originale
+          if (next && next.parentElement === list) list.insertBefore(node, next);
+          else list.appendChild(node);
+          live.textContent = T.restored(title);
+          pending = null;
+        }
+        hideToast();
+        refreshEmpty();
+      });
+
+      // teardown
+      document.addEventListener('astro:before-swap', () => {
+        if (commitTimer !== undefined) clearTimeout(commitTimer);
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-26"
+number: "26"
+title: "Il commiato"
+excerpt: "Per quasi tutto il libro abbiamo lavorato perché l'utente restasse. Questo capitolo chiede l'opposto: come si lascia andare qualcuno senza trattenerlo per forza, senza punirlo, senza fargli credere che andarsene sia un errore."
+date: "2 ottobre 2026"
+releaseDate: "2026-10-02"
+readMinutes: 12
+tags: ["componenti", "editoriale", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import BeforeUnloadConfirm from '../../../components/farewell/BeforeUnloadConfirm.astro';
+import SaveBeforeLeave from '../../../components/farewell/SaveBeforeLeave.astro';
+import SessionExpireWarning from '../../../components/farewell/SessionExpireWarning.astro';
+import LogoutCelebrated from '../../../components/farewell/LogoutCelebrated.astro';
+import PersistentUndo from '../../../components/farewell/PersistentUndo.astro';
+
+Per venticinque capitoli abbiamo lavorato perché l'utente *restasse*: il bottone che risponde prima della rete, l'attesa che non spaventa, il vuoto che non sembra un vicolo cieco, il numero che non mente. Tutto teso a tenerlo dentro, comodo, sereno. Questo capitolo — l'ultimo — chiede la cosa più difficile da disegnare con onestà: come si lascia *andare* qualcuno. Perché prima o poi ogni utente se ne va, e il modo in cui lo si saluta dice della relazione più di mille schermate di benvenuto.
+
+Il momento dell'uscita è il punto in cui le interfacce mostrano la loro vera indole. È qui che si annidano alcuni dei dark pattern più diffusi: il «sei sicuro?» riflesso che scatta anche quando non c'è nulla da perdere, il countdown di scadenza che fa ansia invece di rassicurare, la disconnessione presentata come un guasto, il `beforeunload` armato sempre solo per rendere fastidioso chiudere la scheda. Trattenere con la frizione è facile e disonesto. Lasciar andare con grazia è più difficile — e, paradossalmente, è ciò che fa tornare le persone.
+
+Cinque dimostrazioni, una per ogni forma del commiato. E una cautela tecnica che è anche una promessa: nessuna di queste demo tocca davvero la navigazione del sito. Niente `beforeunload` reale, niente handler che intrappolano la scheda. Ogni «uscita» è simulata dentro un contenitore — un finto documento, una finta sessione — con il suo pulsante «Esci» e il suo stato. Il playground non si auto-imprigiona per spiegare come non imprigionare l'utente.
+
+## La conferma che chiede solo quando serve
+
+Il vero `beforeunload` del browser è onesto per costruzione: scatta solo se la pagina lo arma esplicitamente. L'abuso è armarlo *sempre*, così che ogni chiusura di scheda diventi un «vuoi davvero uscire?» — anche quando non c'è una virgola di non salvato. È frizione fabbricata, e si sente.
+
+<Demo title="Conferma d'uscita · solo se c'è qualcosa da perdere" tag="26.a">
+  <BeforeUnloadConfirm locale="it" />
+  <div slot="note">
+    <p>Premi «Esci» con la bozza vuota: esci e basta, nessuna domanda — perché non c'è nulla da perdere, e chiedere conferma sarebbe solo un dazio. Ora scrivi qualcosa: lo stato passa a «modifiche non salvate», e <em>solo allora</em> «Esci» apre la conferma. È la regola intera in un gesto: la guardia compare quando custodisce qualcosa di vero, e sparisce quando non ha nulla da custodire. Un «sei sicuro?» a vuoto non protegge nessuno: addestra solo l'utente a cliccare via senza leggere.</p>
+    <p>Dentro il dialog, il default è dalla parte sicura: «Resta» ha il fuoco iniziale, <kbd>Esc</kbd> equivale a restare, e l'azione che brucia le note («Esci e perdi le note») porta il tono di pericolo ed è la seconda scelta, non la prima. Tutto è contenuto nel finto documento: la scheda vera non viene mai catturata. È la differenza fra una guardia e una gabbia — la guardia ti ferma un istante quando stai per perdere qualcosa, la gabbia ti ferma sempre, per principio.</p>
+  </div>
+</Demo>
+
+## Il bivio del «vuoi salvare prima?»
+
+A volte l'uscita non è binaria: non «resti o esci», ma «salvi, esci senza salvare, o ci ripensi». Tre strade che non valgono uguale — una conserva il lavoro, una lo brucia. Disegnare quel bivio è soprattutto decidere quale risposta è quella di default, perché è quella che il dito stanco premerà senza pensarci.
+
+<Demo title="Salva prima di uscire · default dalla parte sicura" tag="26.b">
+  <SaveBeforeLeave locale="it" />
+  <div slot="note">
+    <p>Chiudi il documento e si apre il dialog a tre vie. Il fuoco parte su «Salva ed esci»: chi preme <kbd>Invio</kbd> di slancio conserva il lavoro, non lo perde. «Esci senza salvare» c'è, deve esserci — ma è defilata: testo soltanto, tono di pericolo, messa a sinistra, lontana dal punto in cui cade lo sguardo e il pollice. La gerarchia visiva <em>è</em> la sicurezza: l'azione reversibile è quella facile, quella irreversibile chiede un passo in più, deliberato.</p>
+    <p>E <kbd>Esc</kbd> qui non significa «esci senza salvare» — significa «annulla, torna al documento». È un dettaglio che salva lavoro vero: il riflesso di premere <kbd>Esc</kbd> per chiudere un pannello non deve mai coincidere con il gesto che distrugge. Lo abbiamo già visto al capitolo sulle conferme distruttive — la macchina lavora <em>per dirti di no</em> — e qui torna nel momento più carico, quello in cui ciò che è in gioco è il tempo che hai appena speso.</p>
+  </div>
+</Demo>
+
+## La scadenza che rassicura
+
+Quasi ogni sessione che scade lo annuncia come una minaccia: un countdown rosso, un «verrai disconnesso!» che mette ansia. Ma l'utente non ha fatto nulla di male — è solo passato del tempo. Il tono onesto è quello di chi avvisa con gentilezza e offre, senza punire, un modo per restare.
+
+<Demo title="Scadenza sessione · countdown gentile, non minaccia" tag="26.c">
+  <SessionExpireWarning locale="it" />
+  <div slot="note">
+    <p>Avvia la sessione finta: per qualche secondo è tutto tranquillo, poi compare l'avviso con un countdown che si conta in cifre tabulari (così non balla passando da 10 a 9 — la lezione del capitolo sui numeri). Il tono non grida: «si chiuderà tra N secondi… nessuna fretta, un tocco e resti». «Resta connesso» riazzera l'attesa, e il fuoco parte proprio lì, perché è l'azione che l'utente vorrà quasi sempre. L'avviso vive in un <code>aria-live="polite"</code>: informa senza interrompere, spiega senza urlare.</p>
+    <p>E se la sessione scade davvero, non è un vicolo cieco né un rimprovero: «sessione chiusa, in tutta calma — i tuoi dati sono al sicuro, riprendi quando vuoi». La disconnessione per inattività è una misura di sicurezza, non una colpa dell'utente, e il commiato lo dice col corpo del messaggio prima ancora che con le parole. La barra che si svuota è un countdown <em>onesto</em>: dice davvero quanto manca, e per questo continua a muoversi anche con motion ridotto — è informazione, non decorazione.</p>
+  </div>
+</Demo>
+
+## Il logout che è un saluto, non un errore
+
+Quasi ovunque il logout è trattato come un fallimento: schermo spoglio, «sei stato disconnesso», a volte perfino un colore d'allarme. Ma uscire è un atto legittimo, non un incidente. Un commiato celebrato chiude la relazione con dignità, invece di farla somigliare a un guasto.
+
+<Demo title="Logout celebrato · un commiato caldo" tag="26.d">
+  <LogoutCelebrated locale="it" />
+  <div slot="note">
+    <p>Premi «Esci» e al posto dell'asettico «disconnesso» arriva una schermata calda: una mano che saluta, un «ci rivediamo», un grazie per il tempo passato, e la promessa concreta che la porta resta aperta — «quando torni, ti aspetta tutto dov'era». Nessun colore d'allarme, nessun tono di errore: il logout è una porta che si apre verso l'esterno, non un muro. È lo stesso principio del vuoto che dice «per ora» — si chiude il momento presente senza negare il futuro.</p>
+    <p>Il saluto della mano è un tocco espressivo, dosato: parte una volta sola, all'ingresso della schermata, e non si ripete — animare una volta, mai ri-animare, perché ciò che si ripete diventa rumore. Sotto <code>prefers-reduced-motion</code> il saluto non parte affatto: resta il messaggio caldo, intatto. La celebrazione non è mai un fine in sé — non festeggia, <em>congeda</em>; e il congedo, fatto bene, è ciò che rende leggero il ritorno.</p>
+  </div>
+</Demo>
+
+## L'annulla che resta aperto
+
+Il modo gentile di lasciar andare un elemento non è chiedere conferma *prima* — «sei sicuro di voler archiviare?» — ma agire subito e tenere aperta una porta sul retro. Niente attrito davanti, una rete di sicurezza dietro: l'azione accade, e per una finestra generosa si può ancora annullare.
+
+<Demo title="Undo persistente · reversibile per tutta la finestra" tag="26.e">
+  <PersistentUndo locale="it" />
+  <div slot="note">
+    <p>Archivia una voce: sparisce subito, senza modal preventivo, e compare un toast «archiviato · Annulla» che <strong>persiste circa dieci secondi</strong> con una barra che si svuota davvero. Finché la barra scorre, «Annulla» riporta la voce esattamente dov'era — stessa posizione, non in fondo alla lista. Quando la barra finisce, l'archiviazione si rende definitiva. È l'opposto del «sei sicuro?»: non interrompe il gesto comune (archiviare) per difendere quello raro (archiviare per sbaglio) — lo lascia scorrere, e mette la rete sotto.</p>
+    <p>La barra è un countdown <em>onesto</em>: dieci secondi reali, non un'animazione decorativa da tre che finge dieci. Per questo la finestra è generosa — un undo che svanisce in due secondi è una promessa che non si fa in tempo a usare, una crudeltà travestita da cortesia. E se archivi una seconda voce mentre la prima è ancora annullabile, la prima si rende definitiva: la finestra è una, chiara, mai un labirinto di azioni in sospeso. Lasciar andare con una via di ritorno è la forma più matura di rispetto: dà fiducia all'utente <em>e</em> gli copre le spalle.</p>
+  </div>
+</Demo>
+
+---
+
+E così siamo arrivati alla fine. Abbiamo cominciato da un bottone che si preme e si abbassa di un soffio — `0.97`, non `0.95` — e da lì abbiamo attraversato l'attesa che non spaventa, il vuoto che promette «per ora», il dialogo che lavora per dirti di no, lo scroll che fa atmosfera e non spettacolo, i numeri che non sussultano, l'input paziente che corregge a tempo debito, la micro-tipografia che fa respirare la pagina, il toggle che è un gesto e non un'icona — fino a questo commiato, che è il gesto di lasciare la presa. Ogni capitolo, da angolazioni diverse, raccontava la stessa cosa: che la cura si sente nel negativo, che si nota l'assenza dell'attrito più della sua presenza, e che la verità — anche quando una piccola bugia renderebbe meglio — è l'unica fondazione su cui la fiducia si accumula.
+
+Perché il principio che ha tenuto insieme tutto il libro è semplice, e un po' contromano rispetto a come di solito si parla di interfacce: la UX migliore non è quella che si fa notare, è quella che ti lascia *altrove*. Mentre leggi, mentre scrivi, mentre decidi, mentre vivi — la mano resta sul controllo, la mente è libera di stare da un'altra parte. Un'interfaccia che lavora in silenzio, che disturba solo quando vale, che ti saluta con calore quando te ne vai, è un'interfaccia che ti restituisce la cosa più preziosa che ha: la tua attenzione. Te la restituisce intatta, per spenderla dove conta davvero. Grazie di averla spesa, per un poco, qui con noi. Adesso vai pure altrove: è esattamente quello per cui abbiamo lavorato.

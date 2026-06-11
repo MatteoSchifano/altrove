@@ -1,0 +1,221 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ExpandableCard — la card che cresce IN PLACE, senza modal.
+
+   La domanda: dove va il dettaglio in più? La risposta pigra è un
+   modal — ma un modal strappa il contesto, oscura la pagina, chiede
+   di essere chiuso. Per un "ne voglio sapere di più" è troppo. La
+   card può semplicemente *crescere dove sta*, spingendo giù ciò che
+   ha sotto. L’occhio non perde mai il filo.
+
+   Due scelte di mestiere:
+   - Il trigger è un <button aria-expanded> VERO. Lo stato è reale,
+     non un :checked nascosto né un div: lo screen reader annuncia
+     "espanso / compresso", la tastiera funziona gratis, e il
+     pannello è collegato via aria-controls.
+   - La transizione di altezza è onesta: grid-template-rows che va da
+     0fr a 1fr. Niente max-height inventata "abbastanza grande" (che
+     fa scattare l’animazione a metà se il contenuto è più corto);
+     il grid misura il contenuto reale e anima fino a lì, esatto.
+
+   Reduced motion: apre senza animare. La durata-token collassa a 1ms
+   e il pannello è già aperto — stesso stato finale, nessun viaggio.
+   Solo JS: commutare l’attributo. Idempotente, su astro:page-load.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    eyebrow: 'Spedizione',
+    title: 'Pacco in transito',
+    summary: 'Arrivo stimato giovedì. Tre fermate completate su cinque.',
+    toggle: 'Dettagli del percorso',
+    bodyTitle: 'Tappe registrate',
+    steps: [
+      'Lun · Preso in carico al deposito di partenza',
+      'Mar · In transito allo smistamento regionale',
+      'Mer · In consegna al centro cittadino',
+    ],
+    note: 'Gli orari sono quelli del corriere, non stime nostre.',
+  },
+  en: {
+    eyebrow: 'Shipment',
+    title: 'Parcel in transit',
+    summary: 'Estimated arrival Thursday. Three of five stops completed.',
+    toggle: 'Route details',
+    bodyTitle: 'Recorded stops',
+    steps: [
+      'Mon · Collected at the origin depot',
+      'Tue · In transit to the regional hub',
+      'Wed · Out for delivery to the city centre',
+    ],
+    note: 'Times are the carrier’s own, not our estimates.',
+  },
+} as const;
+const c = COPY[locale];
+const panelId = 'expandable-card-panel';
+---
+
+<article class="exp">
+  <span class="exp__eyebrow">{c.eyebrow}</span>
+  <h3 class="exp__title">{c.title}</h3>
+  <p class="exp__summary">{c.summary}</p>
+
+  <button
+    type="button"
+    class="exp__toggle"
+    aria-expanded="false"
+    aria-controls={panelId}
+  >
+    <span class="exp__toggle-label">{c.toggle}</span>
+    <svg class="exp__chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 6l4 4 4-4" />
+    </svg>
+  </button>
+
+  <div class="exp__panel" id={panelId}>
+    <div class="exp__panel-inner">
+      <p class="exp__panel-title">{c.bodyTitle}</p>
+      <ol class="exp__steps">
+        {c.steps.map((s) => <li>{s}</li>)}
+      </ol>
+      <p class="exp__note">{c.note}</p>
+    </div>
+  </div>
+</article>
+
+<style>
+  .exp {
+    inline-size: min(24rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .exp__eyebrow {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .exp__title {
+    font-size: var(--text-md);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    margin: var(--space-3xs) 0 0;
+  }
+
+  .exp__summary {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  .exp__toggle {
+    appearance: none;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    margin-block-start: var(--space-3xs);
+    padding: var(--space-3xs) var(--space-2xs);
+    margin-inline-start: calc(-1 * var(--space-2xs));
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--accent-ink);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .exp__toggle:hover { background-color: var(--surface-sunken); }
+  .exp__toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .exp__chevron {
+    inline-size: 0.85rem;
+    block-size: 0.85rem;
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .exp__toggle[aria-expanded='true'] .exp__chevron {
+    transform: rotate(180deg);
+  }
+
+  /* La crescita onesta: 0fr → 1fr misura il contenuto reale.
+     Niente max-height inventata. */
+  .exp__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-normal) var(--ease-out-soft);
+  }
+  .exp__toggle[aria-expanded='true'] + .exp__panel {
+    grid-template-rows: 1fr;
+  }
+
+  .exp__panel-inner {
+    overflow: hidden;
+    min-block-size: 0; /* necessario perché il figlio grid possa collassare */
+  }
+
+  .exp__panel-title {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    margin: var(--space-2xs) 0 var(--space-3xs);
+  }
+
+  .exp__steps {
+    margin: 0;
+    padding-inline-start: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  .exp__note {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    margin: var(--space-2xs) 0 0;
+    max-inline-size: none;
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.exp__toggle').forEach((btn) => {
+      if (btn.dataset.bound === 'true') return;
+      btn.dataset.bound = 'true';
+
+      btn.addEventListener('click', () => {
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        // Lo stato vero vive nell’attributo; il CSS reagisce da solo.
+        // Sotto reduced motion la durata-token è 1ms: apre senza viaggio.
+        btn.setAttribute('aria-expanded', String(!open));
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

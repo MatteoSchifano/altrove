@@ -1,0 +1,405 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   KeyboardCalendar — il calendario che si usa senza il mouse.
+
+   Un calendario è una griglia, e una griglia ha una grammatica
+   precisa: role="grid", celle che sono gridcell, e una tastiera
+   che ci si muove dentro come su un foglio di carta a quadretti.
+   Le frecce spostano di un giorno, PageUp/PageDown di un mese,
+   Home/End all’inizio e alla fine della settimana. È la stessa
+   tastiera che un utente si aspetta da Excel o da Google Calendar:
+   non la inventiamo, la rispettiamo.
+
+   Il punto difficile è la *gestione del fuoco* (roving tabindex):
+   una sola cella è tabbabile alla volta (tabindex 0), tutte le
+   altre sono -1. Così il Tab entra e esce dalla griglia in un
+   colpo solo, e dentro ci si muove con le frecce. Il giorno
+   selezionato è annunciato a voce (aria-selected + un live region),
+   e il "giorno corrente" porta aria-current="date".
+
+   Localizzazione: i nomi di mese e giorno arrivano da
+   Intl.DateTimeFormat — niente array di stringhe scritte a mano,
+   niente "Gen/Feb/Mar" che è giusto solo in una lingua.
+
+   IMPORTANTE: nessun new Date() nel frontmatter (server). Tutta la
+   matematica delle date vive nel <script> client, ancorata a una
+   data di riferimento fissa, così il render è deterministico.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    caption: 'Scegli una data',
+    prevMonth: 'Mese precedente',
+    nextMonth: 'Mese successivo',
+    selectedNone: 'Nessuna data selezionata',
+    selectedLabel: 'Selezionato:',
+    hint: 'Frecce per i giorni · PagSu/PagGiù per il mese · Home/Fine per la settimana',
+  },
+  en: {
+    caption: 'Pick a date',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
+    selectedNone: 'No date selected',
+    selectedLabel: 'Selected:',
+    hint: 'Arrows for days · PageUp/PageDown for month · Home/End for the week',
+  },
+} as const;
+const c = COPY[locale];
+const bcp = locale === 'it' ? 'it-IT' : 'en-US';
+---
+
+<div class="cal" data-locale={bcp}>
+  <div class="cal__head">
+    <button type="button" class="cal__nav" data-step="-1" aria-label={c.prevMonth}>
+      <span aria-hidden="true">‹</span>
+    </button>
+    <h4 class="cal__title" data-cal-title aria-live="polite">&nbsp;</h4>
+    <button type="button" class="cal__nav" data-step="1" aria-label={c.nextMonth}>
+      <span aria-hidden="true">›</span>
+    </button>
+  </div>
+
+  <div
+    class="cal__grid"
+    role="grid"
+    aria-label={c.caption}
+    data-cal-grid
+  >
+    <div class="cal__weekdays" role="row" data-cal-weekdays aria-hidden="true"></div>
+    <div class="cal__weeks" data-cal-weeks></div>
+  </div>
+
+  <p class="cal__hint">{c.hint}</p>
+  <p class="cal__selected tabular" aria-live="polite" data-cal-selected>{c.selectedNone}</p>
+</div>
+
+<style>
+  .cal {
+    inline-size: min(22rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .cal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs);
+  }
+
+  .cal__nav {
+    appearance: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    font-size: var(--text-md);
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .cal__nav:hover { color: var(--ink-strong); border-color: var(--border-strong); }
+  .cal__nav:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .cal__title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+    text-align: center;
+    text-transform: capitalize;
+  }
+
+  .cal__grid { display: flex; flex-direction: column; gap: 0.2rem; }
+
+  /* I layout di griglia dei giorni vivono nel blocco is:global qui sotto,
+     perché le celle sono create via JS e gli stili scoped non le
+     raggiungerebbero. Qui restano solo gli elementi resi da Astro. */
+
+  .cal__hint {
+    margin: 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-snug);
+  }
+
+  .cal__selected {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+</style>
+
+<!-- I giorni e le righe-settimana sono creati via JS: gli stili scoped di
+     Astro (che agganciano un data-cid agli elementi del template) non li
+     raggiungerebbero. Questo blocco è globale ma interamente namespacizzato
+     sotto `.cal__*`, classi usate solo da questo componente. -->
+<style is:global>
+  .cal__weekdays,
+  .cal__week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.2rem;
+  }
+  .cal__weekday {
+    text-align: center;
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    padding-block: 0.25rem;
+  }
+  .cal__weeks { display: flex; flex-direction: column; gap: 0.2rem; }
+
+  .cal__day {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-sm);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .cal__day--outside { color: var(--ink-subtle); }
+  .cal__day:hover { background-color: var(--surface-sunken); }
+  .cal__day:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .cal__day[aria-current='date'] {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+  .cal__day[aria-selected='true'] {
+    background-color: var(--accent);
+    color: var(--accent-on);
+    border-color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+  .cal__day[aria-selected='true']:hover { background-color: var(--accent); }
+</style>
+
+<script>
+  type CalState = { year: number; month: number; selected: string | null };
+
+  function ymd(y: number, m: number, d: number): string {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.cal').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bcp = root.dataset.locale ?? 'it-IT';
+      const titleEl = root.querySelector<HTMLElement>('[data-cal-title]')!;
+      const weekdaysEl = root.querySelector<HTMLElement>('[data-cal-weekdays]')!;
+      const weeksEl = root.querySelector<HTMLElement>('[data-cal-weeks]')!;
+      const selectedEl = root.querySelector<HTMLElement>('[data-cal-selected]')!;
+      const navs = root.querySelectorAll<HTMLButtonElement>('.cal__nav');
+      const selectedLabel = bcp === 'it-IT' ? 'Selezionato:' : 'Selected:';
+
+      // Data di riferimento fissa: "oggi" è ancorato e deterministico.
+      const today = new Date(2026, 8, 11); // 11 settembre 2026
+      const todayKey = ymd(today.getFullYear(), today.getMonth(), today.getDate());
+
+      // La settimana parte di lunedì in it-IT, di domenica in en-US.
+      const weekStart = bcp === 'it-IT' ? 1 : 0;
+
+      const titleFmt = new Intl.DateTimeFormat(bcp, { month: 'long', year: 'numeric' });
+      const weekdayFmt = new Intl.DateTimeFormat(bcp, { weekday: 'short' });
+      const fullFmt = new Intl.DateTimeFormat(bcp, { dateStyle: 'full' });
+
+      const state: CalState = {
+        year: today.getFullYear(),
+        month: today.getMonth(),
+        selected: null,
+      };
+
+      // Intestazione giorni: generata da Intl su una settimana qualsiasi
+      // che inizia col giorno giusto, mai da stringhe scritte a mano.
+      const renderWeekdays = () => {
+        weekdaysEl.replaceChildren();
+        for (let i = 0; i < 7; i++) {
+          // 2026-03-01 è una domenica → offset per arrivare al weekStart
+          const d = new Date(2026, 2, 1 + ((weekStart + i) % 7));
+          const cell = document.createElement('span');
+          cell.className = 'cal__weekday';
+          cell.textContent = weekdayFmt.format(d);
+          weekdaysEl.append(cell);
+        }
+      };
+
+      const focusDay = (key: string) => {
+        const el = weeksEl.querySelector<HTMLButtonElement>(`[data-key="${key}"]`);
+        if (el) { el.tabIndex = 0; el.focus(); }
+      };
+
+      // Sposta il fuoco di delta giorni; se esce dal mese visibile,
+      // ridisegna il mese nuovo e mette il fuoco sul giorno d’arrivo.
+      const move = (fromKey: string, delta: number) => {
+        const [y, m, d] = fromKey.split('-').map(Number);
+        const target = new Date(y, m - 1, d + delta);
+        const ty = target.getFullYear();
+        const tm = target.getMonth();
+        const tkey = ymd(ty, tm, target.getDate());
+        if (ty !== state.year || tm !== state.month) {
+          state.year = ty;
+          state.month = tm;
+          render(tkey);
+        } else {
+          weeksEl
+            .querySelectorAll<HTMLButtonElement>('.cal__day')
+            .forEach((b) => (b.tabIndex = -1));
+          focusDay(tkey);
+        }
+      };
+
+      const select = (key: string) => {
+        state.selected = key;
+        weeksEl.querySelectorAll<HTMLButtonElement>('.cal__day').forEach((b) => {
+          b.setAttribute('aria-selected', String(b.dataset.key === key));
+        });
+        const [y, m, d] = key.split('-').map(Number);
+        const label = fullFmt.format(new Date(y, m - 1, d));
+        selectedEl.textContent = `${selectedLabel} ${label}`;
+      };
+
+      const onKey = (e: KeyboardEvent, key: string) => {
+        let handled = true;
+        switch (e.key) {
+          case 'ArrowRight': move(key, 1); break;
+          case 'ArrowLeft':  move(key, -1); break;
+          case 'ArrowDown':  move(key, 7); break;
+          case 'ArrowUp':    move(key, -7); break;
+          case 'PageDown':   move(key, 0 + monthDelta(key, 1)); break;
+          case 'PageUp':     move(key, monthDelta(key, -1)); break;
+          case 'Home':       move(key, -weekdayOffset(key)); break;
+          case 'End':        move(key, 6 - weekdayOffset(key)); break;
+          case 'Enter':
+          case ' ':          select(key); break;
+          default: handled = false;
+        }
+        if (handled) e.preventDefault();
+      };
+
+      // Giorni da aggiungere per restare nello stesso "numero di giorno"
+      // del mese vicino (clampando i mesi più corti).
+      const monthDelta = (key: string, dir: 1 | -1): number => {
+        const [y, m, d] = key.split('-').map(Number);
+        const from = new Date(y, m - 1, d);
+        const to = new Date(y, m - 1 + dir, 1);
+        const lastDay = new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate();
+        to.setDate(Math.min(d, lastDay));
+        return Math.round((to.getTime() - from.getTime()) / 86_400_000);
+      };
+
+      // Quanti giorni dista questa data dall’inizio della sua settimana.
+      const weekdayOffset = (key: string): number => {
+        const [y, m, d] = key.split('-').map(Number);
+        const dow = new Date(y, m - 1, d).getDay();
+        return (dow - weekStart + 7) % 7;
+      };
+
+      const render = (focusKey?: string) => {
+        titleEl.textContent = titleFmt.format(new Date(state.year, state.month, 1));
+
+        const first = new Date(state.year, state.month, 1);
+        const lead = (first.getDay() - weekStart + 7) % 7;
+        const gridStart = new Date(state.year, state.month, 1 - lead);
+
+        weeksEl.replaceChildren();
+        for (let w = 0; w < 6; w++) {
+          const row = document.createElement('div');
+          row.className = 'cal__week';
+          row.setAttribute('role', 'row');
+          for (let i = 0; i < 7; i++) {
+            const offset = w * 7 + i;
+            const day = new Date(
+              gridStart.getFullYear(),
+              gridStart.getMonth(),
+              gridStart.getDate() + offset,
+            );
+            const key = ymd(day.getFullYear(), day.getMonth(), day.getDate());
+            const outside = day.getMonth() !== state.month;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cal__day' + (outside ? ' cal__day--outside' : '');
+            btn.setAttribute('role', 'gridcell');
+            btn.dataset.key = key;
+            btn.textContent = String(day.getDate());
+            btn.tabIndex = -1;
+            btn.setAttribute('aria-label', fullFmt.format(day));
+            if (key === todayKey) btn.setAttribute('aria-current', 'date');
+            btn.setAttribute('aria-selected', String(key === state.selected));
+
+            btn.addEventListener('click', () => select(key));
+            btn.addEventListener('keydown', (e) => onKey(e, key));
+            row.append(btn);
+          }
+          weeksEl.append(row);
+        }
+
+        // Roving tabindex: una sola cella riceve il Tab. Priorità:
+        // il fuoco richiesto → il selezionato → oggi → il primo giorno.
+        const want =
+          focusKey ??
+          (state.selected && inMonth(state.selected) ? state.selected : null) ??
+          (inMonth(todayKey) ? todayKey : firstOfMonthKey());
+        const tabCell =
+          weeksEl.querySelector<HTMLButtonElement>(`[data-key="${want}"]`) ??
+          weeksEl.querySelector<HTMLButtonElement>('.cal__day:not(.cal__day--outside)');
+        if (tabCell) tabCell.tabIndex = 0;
+        if (focusKey && tabCell) tabCell.focus();
+      };
+
+      const inMonth = (key: string) => {
+        const [y, m] = key.split('-').map(Number);
+        return y === state.year && m - 1 === state.month;
+      };
+      const firstOfMonthKey = () => ymd(state.year, state.month, 1);
+
+      navs.forEach((nav) => {
+        nav.addEventListener('click', () => {
+          const step = Number(nav.dataset.step);
+          const next = new Date(state.year, state.month + step, 1);
+          state.year = next.getFullYear();
+          state.month = next.getMonth();
+          render();
+        });
+      });
+
+      renderWeekdays();
+      render();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

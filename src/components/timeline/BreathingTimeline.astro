@@ -1,0 +1,202 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BreathingTimeline — il tempo che "respira" sugli eventi vivi.
+
+   In un feed che si aggiorna (notifiche, attività, una chat) gli
+   eventi più recenti non sono solo "in alto": sono *vivi*. Un pulse
+   delicatissimo sul nodo più nuovo è il modo più onesto di dirlo —
+   non un badge urlante, non un colore acceso, ma un battito lento,
+   come qualcosa che è ancora caldo.
+
+   La soglia è tutta nel dosaggio. Il pulse è quasi impercettibile
+   (scala 1 → 1.06, opacità di un alone) e *lento* (≈ 2.4s a ciclo):
+   un respiro, non un lampeggio. Lampeggiare sarebbe rumore; respirare
+   è presenza. E si applica solo ai pochissimi eventi "recenti", mai
+   a tutta la lista — un feed che pulsa intero è un feed che grida.
+
+   Reduced motion: il battito sparisce *del tutto*. Non rallentato:
+   tolto. Al suo posto resta un segno statico e onesto — un puntino
+   "•" e l’etichetta "ora" — così l’informazione "questo è recente"
+   sopravvive senza un singolo frame di movimento.
+
+   Niente new Date() nel build: gli eventi marcati "recenti" sono un
+   campione fisso (flag is_recent), non un calcolo sull’orologio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+interface Entry {
+  iso: string;
+  label: string;
+  text: string;
+  recent: boolean;
+}
+
+const COPY = {
+  it: {
+    heading: 'Attività recente',
+    liveLabel: 'recente',
+    entries: [
+      { iso: '2026-09-18T08:59:00', label: '2 min fa', text: 'Maya ha lasciato un commento', recent: true },
+      { iso: '2026-09-18T08:46:00', label: '15 min fa', text: 'Nuova revisione richiesta', recent: true },
+      { iso: '2026-09-18T07:30:00', label: '1 ora fa', text: 'Build #482 completata', recent: false },
+      { iso: '2026-09-17T18:10:00', label: 'ieri', text: 'Tre commit sul ramo principale', recent: false },
+      { iso: '2026-09-16T11:00:00', label: '2 giorni fa', text: 'Apertura della discussione', recent: false },
+    ] as Entry[],
+  },
+  en: {
+    heading: 'Recent activity',
+    liveLabel: 'recent',
+    entries: [
+      { iso: '2026-09-18T08:59:00', label: '2 min ago', text: 'Maya left a comment', recent: true },
+      { iso: '2026-09-18T08:46:00', label: '15 min ago', text: 'New review requested', recent: true },
+      { iso: '2026-09-18T07:30:00', label: '1 hour ago', text: 'Build #482 completed', recent: false },
+      { iso: '2026-09-17T18:10:00', label: 'yesterday', text: 'Three commits on main', recent: false },
+      { iso: '2026-09-16T11:00:00', label: '2 days ago', text: 'Discussion opened', recent: false },
+    ] as Entry[],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<section class="br" aria-label={c.heading}>
+  <h4 class="br__heading">{c.heading}</h4>
+
+  <ol class="br__list" role="list">
+    {c.entries.map((e) => (
+      <li class="br__item" data-recent={e.recent ? 'true' : undefined}>
+        <span class="br__node" aria-hidden="true">
+          <span class="br__pulse"></span>
+        </span>
+        <div class="br__body">
+          <p class="br__text">{e.text}</p>
+          <p class="br__meta">
+            <time class="br__time tabular" datetime={e.iso}>{e.label}</time>
+            {e.recent && <span class="br__tag">{c.liveLabel}</span>}
+          </p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .br {
+    inline-size: min(30rem, 100%);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .br__heading {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .br__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .br__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-md);
+  }
+  .br__item:last-child { padding-block-end: 0; }
+
+  /* spina dorsale */
+  .br__item::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.85rem;
+    inset-inline-start: 0.34rem;
+    inline-size: 2px;
+    block-size: calc(100% - 0.5rem);
+    background-color: var(--border);
+  }
+  .br__item:last-child::before { display: none; }
+
+  .br__node {
+    position: relative;
+    z-index: 1;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    margin-block-start: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--border-strong);
+  }
+  .br__item[data-recent] .br__node {
+    background-color: var(--accent);
+  }
+
+  /* L’alone che respira: un cerchio che cresce e svanisce, dietro al
+     nodo. Vive SOLO sugli eventi recenti, e solo con motion attivo. */
+  .br__pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background-color: var(--accent);
+    opacity: 0;
+  }
+  .br__item[data-recent] .br__pulse {
+    animation: br-breathe 2400ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes br-breathe {
+    0%   { transform: scale(1);    opacity: 0.45; }
+    60%  { transform: scale(2.4);  opacity: 0; }
+    100% { transform: scale(2.4);  opacity: 0; }
+  }
+
+  .br__body { min-inline-size: 0; }
+  .br__text {
+    margin: 0.3rem 0 0;
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    line-height: var(--leading-snug);
+  }
+  .br__meta {
+    margin: 0.15rem 0 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+  }
+  .br__time {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+  }
+  /* Il segno statico "recente": resta SEMPRE, anche senza movimento.
+     È il fallback onesto del respiro — un puntino + parola, leggibile
+     anche da chi non vede né colore né animazione. */
+  .br__tag {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    color: var(--accent-ink);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+  .br__tag::before {
+    content: '• ';
+    color: var(--accent);
+  }
+
+  /* Reduced motion: il respiro sparisce del tutto. Lo stato "recente"
+     sopravvive nel solo segno statico (.br__tag), mai nel movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    .br__item[data-recent] .br__pulse {
+      animation: none;
+      opacity: 0;
+    }
+  }
+</style>

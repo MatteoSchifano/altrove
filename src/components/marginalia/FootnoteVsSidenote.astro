@@ -1,0 +1,307 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FootnoteVsSidenote — lo stesso testo, due modi di annotarlo.
+
+   Footnote e sidenote non sono sinonimi grafici: sono due risposte
+   diverse alla stessa domanda — "dove metto questa precisazione?".
+
+   - La FOOTNOTE manda il lettore *via*: un numerino, e la nota sta a
+     piè di pagina (o in fondo). Vince quando la nota è lunga, fitta,
+     bibliografica: roba che a margine non ci sta. Il costo è il
+     salto — l’occhio lascia la riga, scende, torna. Si paga
+     attenzione.
+   - La SIDENOTE tiene il lettore *dov’è*: la nota appare accanto,
+     alla stessa altezza della riga. Vince quando è breve e vuoi che
+     sia letta nel flusso, senza far perdere il segno. Il costo è lo
+     spazio: serve un margine, e la nota dev’essere corta.
+
+   Questo componente mostra le DUE su una frase identica, così la
+   scelta si vede invece di doverla immaginare. Un toggle (vero
+   <fieldset> di radio) commuta la modalità; la frase non cambia,
+   cambia solo dove va la precisazione.
+
+   Accessibilità: il riferimento è un <a href="#…"> reale verso la
+   footnote (navigabile, con back-link), e la sidenote è un <aside>.
+   Niente colore come unico segnale: il numero del richiamo è sempre
+   presente in entrambe le modalità.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Modalità di annotazione',
+    optFoot: 'Footnote (a piè di pagina)',
+    optSide: 'Sidenote (a margine)',
+    before: 'La giustezza ideale di una riga si aggira sui 66 caratteri',
+    after: ', spazi inclusi: abbastanza per non spezzare il pensiero, non così tanta da perdere il rigo successivo tornando a capo.',
+    noteLabel: 'Nota',
+    note: 'Il numero esatto varia per lingua e carattere; 45–75 è l’intervallo accettato. Bringhurst lo chiama il punto in cui l’occhio non fatica.',
+    backToText: 'Torna al testo',
+    hintFoot: 'Il numero è un link: porta giù alla nota, con ritorno.',
+    hintSide: 'La nota resta accanto: nessun salto, nessuna pagina da scorrere.',
+  },
+  en: {
+    legend: 'Annotation mode',
+    optFoot: 'Footnote (at the foot)',
+    optSide: 'Sidenote (in the margin)',
+    before: 'The ideal line length sits around 66 characters',
+    after: ', spaces included: enough not to chop the thought, not so much that you lose the next line on the way back.',
+    noteLabel: 'Note',
+    note: 'The exact number varies by language and typeface; 45–75 is the accepted range. Bringhurst calls it the point where the eye stops straining.',
+    backToText: 'Back to text',
+    hintFoot: 'The number is a link: it jumps down to the note, with a way back.',
+    hintSide: 'The note stays alongside: no jump, no page to scroll.',
+  },
+} as const;
+const c = COPY[locale];
+const refId = 'fvs-ref';
+const noteId = 'fvs-foot';
+---
+
+<div class="fvs" data-mode="foot">
+  <fieldset class="fvs__modes">
+    <legend class="fvs__legend">{c.legend}</legend>
+    <label class="fvs__mode">
+      <input type="radio" name="fvs-mode" value="foot" checked />
+      <span>{c.optFoot}</span>
+    </label>
+    <label class="fvs__mode">
+      <input type="radio" name="fvs-mode" value="side" />
+      <span>{c.optSide}</span>
+    </label>
+  </fieldset>
+
+  <div class="fvs__doc">
+    <p class="fvs__text">
+      {c.before}<sup class="fvs__ref"
+        ><a id={refId} href={`#${noteId}`} aria-describedby={noteId}>1</a></sup
+      >{c.after}
+    </p>
+
+    <!-- SIDENOTE: vive a margine, alla stessa altezza, sempre visibile -->
+    <aside class="fvs__sidenote" aria-label={c.noteLabel}>
+      <span class="fvs__sidenote-num" aria-hidden="true">1</span>
+      <p class="fvs__sidenote-text">{c.note}</p>
+    </aside>
+  </div>
+
+  <!-- FOOTNOTE: vive a piè di "pagina", separata da una linea -->
+  <div class="fvs__feet">
+    <ol class="fvs__footlist" role="list">
+      <li id={noteId} class="fvs__footnote">
+        <span class="fvs__footnote-num" aria-hidden="true">1.</span>
+        <span class="fvs__footnote-text">
+          {c.note}
+          <a href={`#${refId}`} class="fvs__backlink" aria-label={c.backToText}>↩</a>
+        </span>
+      </li>
+    </ol>
+  </div>
+
+  <p class="fvs__hint" data-hint-foot={c.hintFoot} data-hint-side={c.hintSide}>{c.hintFoot}</p>
+</div>
+
+<style>
+  .fvs {
+    inline-size: min(40rem, 100%);
+    container-type: inline-size;
+  }
+
+  /* ── Selettore modalità (radio veri in un fieldset) ── */
+  .fvs__modes {
+    border: 0;
+    padding: 0;
+    margin: 0 0 var(--space-md);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+  .fvs__legend {
+    padding: 0;
+    margin-block-end: var(--space-2xs);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+  .fvs__mode {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    padding: var(--space-3xs) var(--space-sm);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      color var(--dur-fast) var(--ease-out-soft);
+  }
+  .fvs__mode input {
+    accent-color: var(--accent);
+    margin: 0;
+  }
+  .fvs__mode:has(input:checked) {
+    border-color: var(--accent);
+    color: var(--ink-strong);
+  }
+  .fvs__mode:has(input:focus-visible) {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  /* ── Documento ── */
+  .fvs__doc {
+    position: relative;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-block-end: 0;
+  }
+  .fvs__text {
+    font-size: var(--text-base);
+    color: var(--ink);
+    line-height: var(--leading-loose);
+    margin: 0;
+    max-inline-size: 42ch;
+  }
+  .fvs__ref { line-height: 0; }
+  .fvs__ref a {
+    color: var(--accent-ink);
+    text-decoration: none;
+    font-weight: var(--weight-semibold);
+    font-size: 0.7em;
+    padding: 0 0.1em;
+    border-radius: var(--radius-xs);
+  }
+  .fvs__ref a:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* La sidenote: nascosta in modalità footnote, a margine in modalità side. */
+  .fvs__sidenote {
+    margin-block-start: var(--space-sm);
+    padding-inline-start: var(--space-sm);
+    border-inline-start: 2px solid var(--accent);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-2xs);
+    align-items: start;
+  }
+  .fvs__sidenote-num {
+    color: var(--accent-ink);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+    line-height: var(--leading-relaxed);
+  }
+  .fvs__sidenote-text {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    max-inline-size: none;
+  }
+  .fvs[data-mode='foot'] .fvs__sidenote { display: none; }
+
+  /* In contenitore largo + modalità side: la nota va davvero NEL margine. */
+  @container (min-width: 34rem) {
+    .fvs[data-mode='side'] .fvs__doc { padding-inline-end: calc(var(--space-lg) + 13rem); }
+    .fvs[data-mode='side'] .fvs__sidenote {
+      position: absolute;
+      inset-block-start: var(--space-md);
+      inset-inline-end: var(--space-lg);
+      inline-size: 11.5rem;
+      margin-block-start: 0;
+      border-inline-start-color: var(--border-strong);
+    }
+  }
+
+  /* ── Piè di pagina ── */
+  .fvs__feet {
+    padding: var(--space-sm) var(--space-lg) var(--space-md);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    /* la linea sottile sopra è il segno tipografico del "piede" */
+    border-block-start: 1px solid var(--border-strong);
+  }
+  .fvs__footlist { margin: 0; padding: 0; list-style: none; }
+  .fvs__footnote {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-2xs);
+    scroll-margin-block: var(--space-md);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3xs);
+  }
+  .fvs__footnote:target {
+    background-color: var(--accent-soft);
+  }
+  .fvs__footnote-num {
+    font-size: var(--text-2xs);
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+    line-height: var(--leading-relaxed);
+  }
+  .fvs__footnote-text {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+  }
+  .fvs__backlink {
+    color: var(--accent-ink);
+    text-decoration: none;
+    margin-inline-start: 0.25em;
+    border-radius: var(--radius-xs);
+  }
+  .fvs__backlink:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  /* In modalità side il piede non serve: la nota è già a margine. */
+  .fvs[data-mode='side'] .fvs__feet { display: none; }
+  .fvs[data-mode='side'] .fvs__doc { border-radius: var(--radius-lg); border-block-end: 1px solid var(--border); }
+
+  .fvs__hint {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    line-height: var(--leading-normal);
+    max-inline-size: none;
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.fvs').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const radios = root.querySelectorAll<HTMLInputElement>('input[name="fvs-mode"]');
+      const hint = root.querySelector<HTMLElement>('.fvs__hint');
+      const hintFoot = hint?.dataset.hintFoot ?? '';
+      const hintSide = hint?.dataset.hintSide ?? '';
+
+      const sync = () => {
+        const mode = [...radios].find((r) => r.checked)?.value ?? 'foot';
+        root.dataset.mode = mode;
+        if (hint) hint.textContent = mode === 'side' ? hintSide : hintFoot;
+      };
+
+      const onChange = () => sync();
+      radios.forEach((r) => r.addEventListener('change', onChange));
+      sync();
+
+      root.addEventListener('astro:before-swap', () => {
+        radios.forEach((r) => r.removeEventListener('change', onChange));
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

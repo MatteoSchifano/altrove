@@ -1,0 +1,239 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SmartBreadcrumb — il filo d’Arianna che non si srotola tutto.
+
+   Un breadcrumb dice "sei qui, e questa è la strada per tornare
+   indietro". Onesto finché è corto. Ma quando il path è profondo —
+   Home › Sezione › Categoria › Sottocategoria › Pagina — diventa
+   un serpente che va a capo, ruba una riga e nasconde proprio le
+   due voci che contano: la radice (dove sono partito) e la foglia
+   (dove sono adesso).
+
+   La risposta editoriale è la stessa dei giornali di carta: quando
+   il sommario è lungo, si tengono il primo e l’ultimo e si mette un
+   "…" in mezzo. Qui il "…" non è muto: è un <button aria-expanded>
+   che, premuto, srotola i livelli intermedi. Collassato per default,
+   espanso su richiesta.
+
+   Accessibilità non barattata per estetica:
+     • <nav aria-label> + <ol>: un breadcrumb È una lista ordinata,
+       perché l’ordine è informazione (gerarchia genitore→figlio);
+     • la pagina corrente è l’ultima voce, marcata aria-current="page"
+       e NON un link (non si naviga dove già si è);
+     • il "…" ha un aria-label parlante ("Mostra N livelli nascosti"),
+       non un carattere orfano per lo screen reader;
+     • i livelli nascosti restano nel DOM (hidden), non rimossi: la
+       struttura del documento non mente sulla profondità reale.
+
+   Reduced motion: i livelli nascosti compaiono senza animazione
+   (durate-token → 1ms). Stesso esito, nessun srotolamento.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Crumb = { label: string; href: string };
+
+const COPY = {
+  it: {
+    aria: 'Percorso',
+    trail: [
+      { label: 'Home', href: '#' },
+      { label: 'Capitoli', href: '#' },
+      { label: 'Editoriale', href: '#' },
+      { label: 'Navigazione', href: '#' },
+      { label: 'L’indice del libro', href: '#' },
+    ] as Crumb[],
+    expand: (n: number) => `Mostra ${n} livelli nascosti`,
+    collapse: 'Nascondi i livelli intermedi',
+  },
+  en: {
+    aria: 'Breadcrumb',
+    trail: [
+      { label: 'Home', href: '#' },
+      { label: 'Chapters', href: '#' },
+      { label: 'Editorial', href: '#' },
+      { label: 'Navigation', href: '#' },
+      { label: 'The book’s index', href: '#' },
+    ] as Crumb[],
+    expand: (n: number) => `Show ${n} hidden levels`,
+    collapse: 'Hide the intermediate levels',
+  },
+} as const;
+const c = COPY[locale];
+
+// Soglia: oltre 4 voci, si collassa il centro tenendo prima e ultima.
+const trail = c.trail;
+const COLLAPSE_OVER = 4;
+const collapsible = trail.length > COLLAPSE_OVER;
+const hiddenCount = trail.length - 2;
+
+// Una sola lista, costruita in frontmatter, mappata una volta sola.
+// kind: 'root' radice · 'mid' livello intermedio (collassabile) ·
+//       'leaf' pagina corrente · 'ellipsis' il "…" che srotola il centro.
+type Node =
+  | { kind: 'root' | 'leaf'; label: string; href: string }
+  | { kind: 'mid'; label: string; href: string }
+  | { kind: 'ellipsis' };
+
+let nodes: Node[];
+if (collapsible) {
+  nodes = [
+    { kind: 'root', label: trail[0].label, href: trail[0].href },
+    { kind: 'ellipsis' },
+    ...trail.slice(1, -1).map((cr) => ({ kind: 'mid', label: cr.label, href: cr.href }) as Node),
+    { kind: 'leaf', label: trail[trail.length - 1].label, href: '' },
+  ];
+} else {
+  nodes = trail.map((cr, i) =>
+    i === trail.length - 1
+      ? ({ kind: 'leaf', label: cr.label, href: '' } as Node)
+      : ({ kind: i === 0 ? 'root' : 'mid', label: cr.label, href: cr.href } as Node),
+  );
+}
+---
+
+<nav class="crumb" aria-label={c.aria}>
+  <ol class="crumb__list">
+    {nodes.map((node, i) => (
+      <li
+        class:list={[
+          'crumb__item',
+          node.kind === 'ellipsis' && 'crumb__item--toggle',
+          collapsible && node.kind === 'mid' && 'crumb__item--mid',
+        ]}
+        data-mid={collapsible && node.kind === 'mid' ? '' : undefined}
+        hidden={collapsible && node.kind === 'mid'}
+      >
+        {i > 0 && <span class="crumb__sep" aria-hidden="true">/</span>}
+        {node.kind === 'ellipsis' && (
+          <button
+            type="button"
+            class="crumb__ellipsis"
+            aria-expanded="false"
+            aria-label={c.expand(hiddenCount)}
+            data-expand={c.expand(hiddenCount)}
+            data-collapse={c.collapse}
+          >…</button>
+        )}
+        {node.kind === 'leaf' && (
+          <span class="crumb__current" aria-current="page">{node.label}</span>
+        )}
+        {(node.kind === 'root' || node.kind === 'mid') && (
+          <a class="crumb__link" href={node.href}>{node.label}</a>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .crumb {
+    inline-size: min(34rem, 100%);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .crumb__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.1rem;
+    font-size: var(--text-xs);
+  }
+
+  .crumb__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+  /* I livelli intermedi nascosti: hidden li toglie dal flusso e
+     dall’accessibility tree, ma restano nel DOM (la profondità non mente). */
+  .crumb__item[hidden] { display: none; }
+
+  .crumb__sep {
+    color: var(--ink-subtle);
+    margin-inline: 0.35rem;
+    user-select: none;
+  }
+
+  .crumb__link {
+    color: var(--ink-muted);
+    text-decoration: none;
+    padding: 0.15rem 0.35rem;
+    border-radius: var(--radius-xs);
+    white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .crumb__link:hover { color: var(--ink-strong); background-color: var(--surface-sunken); }
+  .crumb__link:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* La foglia: peso e colore dicono "sei qui", oltre ad aria-current */
+  .crumb__current {
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    padding: 0.15rem 0.35rem;
+    white-space: nowrap;
+  }
+
+  /* Il "…": un vero bottone, bersaglio comodo, stato espanso evidente */
+  .crumb__ellipsis {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-sunken);
+    color: var(--ink-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 0 0.45rem;
+    block-size: 1.4rem;
+    line-height: 1;
+    font-size: var(--text-sm);
+    letter-spacing: 0.05em;
+    transition: color var(--dur-fast) var(--ease-out-soft),
+                background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .crumb__ellipsis:hover { color: var(--ink-strong); background-color: var(--surface-raised); }
+  .crumb__ellipsis:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .crumb__ellipsis[aria-expanded='true'] {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.crumb').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const ellipsis = root.querySelector<HTMLButtonElement>('.crumb__ellipsis');
+      if (!ellipsis) return; // breadcrumb corto: niente da espandere
+
+      const mids = Array.from(root.querySelectorAll<HTMLElement>('[data-mid]'));
+      const labelExpand = ellipsis.dataset.expand ?? '';
+      const labelCollapse = ellipsis.dataset.collapse ?? '';
+
+      ellipsis.addEventListener('click', () => {
+        const expanded = ellipsis.getAttribute('aria-expanded') === 'true';
+        const next = !expanded;
+        ellipsis.setAttribute('aria-expanded', String(next));
+        ellipsis.setAttribute('aria-label', next ? labelCollapse : labelExpand);
+        // hidden toglie/rimette le voci dall’accessibility tree e dal flusso.
+        mids.forEach((m) => { m.hidden = !next; });
+        // Una volta srotolato, il "…" mostra i puntini ma annuncia "chiudi";
+        // se richiuso, ridà il focus a sé (il punto da cui si è agito).
+        if (!next) ellipsis.focus();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

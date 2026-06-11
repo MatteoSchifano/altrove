@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-25"
+number: "25"
+title: "Il gesto"
+excerpt: "Toccare non è cliccare: il dito segue, trascina, tira. Ma ogni gesto qui ha un pulsante e una scorciatoia che fanno la stessa cosa — perché un gesto è un acceleratore, non un cancello."
+date: "25 settembre 2026"
+releaseDate: "2026-09-25"
+readMinutes: 12
+tags: ["interazione", "touch", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SwipeToDismiss from '../../../components/gestures/SwipeToDismiss.astro';
+import PullToRefresh from '../../../components/gestures/PullToRefresh.astro';
+import KeyboardVimNav from '../../../components/gestures/KeyboardVimNav.astro';
+import ShortcutHint from '../../../components/gestures/ShortcutHint.astro';
+import InertBackdrop from '../../../components/gestures/InertBackdrop.astro';
+
+Il mouse punta e clicca: un bersaglio, un colpo. Il dito fa qualcosa di diverso — *segue*. Trascina, tira, scarta, mantiene il contatto mentre la cosa si muove. Quando un'interfaccia smette di essere cliccata e comincia a essere toccata, cambia la grammatica: non c'è più un punto e un'azione, c'è una traiettoria continua che il dito guida e l'interfaccia asseconda. Il gesto è un dialogo, non un comando.
+
+Ma qui c'è la trappola in cui cade metà del design "mobile-first": confondere il gesto con la *funzione*. Lo swipe per scartare è elegante — finché è l'**unico** modo di scartare. Allora diventa un cancello: chi non sa che esiste, chi non può trascinare con precisione, chi naviga con la tastiera o con uno screen reader, resta fuori. Un gesto invisibile e obbligatorio non è una scorciatoia: è una porta chiusa con la maniglia nascosta. La regola di questo capitolo è una sola, e la ripetiamo in ognuna delle cinque dimostrazioni: **il gesto è un acceleratore, non un cancello**. Ogni swipe ha il suo pulsante, ogni pull ha il suo "Aggiorna", ogni scorciatoia ha la sua via esplicita.
+
+E c'è un secondo impegno, più tecnico ma altrettanto di rispetto: il gesto resta a casa sua. Niente handler globali che sequestrano lo scroll dell'intera pagina perché un riquadro voleva il pull-to-refresh; niente tasto `?` che apre un overlay mentre stai leggendo dall'altra parte. Pointer capture, `overscroll-behavior: contain`, listener legati al componente e non a `window`: il contenimento è la differenza fra un gesto che aiuta e uno che si impossessa di tutto. Cinque gesti, cinque equivalenti espliciti, zero pagina dirottata.
+
+## Scartare con il dito, o con un pulsante
+
+Il primo gesto è lo swipe-to-dismiss: una card che si trascina via. Il dito la muove 1:1, con una resistenza che cresce vicino alla soglia, e lei o vola via o torna indietro. Ma accanto c'è sempre il pulsante "Scarta".
+
+<Demo title="Swipe-to-dismiss · il dito segue, ma c’è un pulsante" tag="25.a">
+  <SwipeToDismiss locale="it" />
+  <div slot="note">
+    <p>Trascina la card lateralmente: segue il dito esattamente, con una resistenza che cresce oltre la metà del tragitto — la radice quadrata dello spostamento dice «sto cedendo, ma devi insistere». Superata la soglia, esce dal lato del gesto; sotto la soglia, torna in posizione con una curva morbida. Usiamo Pointer Events con <code>setPointerCapture</code> e <code>touch-action: pan-y</code>, così il trascinamento orizzontale non ruba mai lo scroll verticale della pagina: il gesto resta dentro la card.</p>
+    <p>Qui sta l'onestà del capitolo. Lo swipe è un <strong>acceleratore</strong> per chi lo conosce — il pulsante "Scarta" fa la stessa identica cosa, raggiungibile col Tab e con Invio, e dopo lo scarto il focus si sposta su "Ripristina" così nessuno resta orfano. Se lo swipe fosse l'unico modo, sarebbe un cancello: chi naviga da tastiera non potrebbe archiviare nulla. Con reduced motion il ritorno elastico e l'uscita decorativa collassano via token: la card scompare comunque, sparisce solo il viaggio.</p>
+  </div>
+</Demo>
+
+## Tirare per aggiornare, senza rapire la pagina
+
+Il pull-to-refresh è il gesto mobile per eccellenza, e anche il più facile da sbagliare: basta un handler distratto e tutta la pagina rimbalza. Qui il gesto vive dentro un contenitore scrollabile, e ci resta.
+
+<Demo title="Pull-to-refresh · contenuto nel suo riquadro" tag="25.b">
+  <PullToRefresh locale="it" />
+  <div slot="note">
+    <p>Quando sei già in cima alla lista e tiri ancora giù, l'indicatore scende seguendo il dito con resistenza; superata la soglia, al rilascio parte l'aggiornamento. Il contenimento è tutto: <code>overscroll-behavior: contain</code> impedisce che lo scroll del riquadro trabocchi sulla pagina, e il gesto JS si arma <em>solo</em> quando <code>scrollTop</code> è 0 — appena c'è contenuto sopra, il pull torna a essere scroll normale. Nessun listener su <code>window</code>, nessun dirottamento dello scroll globale.</p>
+    <p>L'acceleratore ha sempre il suo gemello esplicito: il pulsante "Aggiorna" in alto fa la stessa cosa, da tastiera, senza dover sapere che il gesto esiste. E lo stato resta onesto — niente conteggi gonfiati al ritorno, solo «aggiornato ora», e lo spinner gira solo finché il lavoro è davvero in corso, oltre la soglia del pudore. Con reduced motion lo spinner non ruota: l'indicatore appare, lo stato cambia, ma senza il giro decorativo.</p>
+  </div>
+</Demo>
+
+## Le frecce di chi ha le dita allenate
+
+Non tutti i gesti sono del dito. La navigazione stile Vim — `j`/`k` per salire e scendere, `h`/`l` per chiudere e aprire — è un gesto della tastiera: invisibile, opzionale, fulmineo per chi lo conosce. Il rischio è che diventi un linguaggio segreto.
+
+<Demo title="Navigazione Vim · scorciatoia opzionale, mai obbligata" tag="25.c">
+  <KeyboardVimNav locale="it" />
+  <div slot="note">
+    <p>Dai il focus alla lista e <kbd>j</kbd>/<kbd>k</kbd> ti muovono fra gli item, <kbd>h</kbd>/<kbd>l</kbd> chiudono e riaprono il dettaglio. Ma è un <em>sovrappiù</em>: le frecce <kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>, il Tab e il click funzionano esattamente come sempre. La lista è un menu a roving tabindex — un solo item tabbabile per volta — quindi la tastiera standard arriva gratis e <code>j</code>/<code>k</code> si limitano ad accelerarla. Il focus è sempre visibile: l'anello <code>--halo-focus</code> più una barretta accanto all'item, perché la posizione non si legge solo dal colore.</p>
+    <p>Due dettagli di onestà. Primo: i tasti sono <strong>scoped</strong> — il <code>keydown</code> è legato alla lista, non a <code>window</code>, così la "j" non viene intercettata mentre leggi altrove nella pagina. Secondo: un hint compare al focus («Navigazione da tastiera attiva»), perché una scorciatoia che nessuno annuncia non è una scorciatoia, è un segreto. L'acceleratore deve dichiararsi, o non aiuta nessuno tranne chi già lo sapeva.</p>
+  </div>
+</Demo>
+
+## La legenda che appare solo dove sei
+
+Il tasto `?` che apre l'elenco delle scorciatoie è un classico. Quasi sempre è globale — ascolta su tutta la pagina. Qui lo rendiamo locale: la legenda si apre solo quando *questo* pannello ha il focus.
+
+<Demo title="ShortcutHint · il “?” scoped al componente" tag="25.d">
+  <ShortcutHint locale="it" />
+  <div slot="note">
+    <p>Metti a fuoco il pannello e premi <kbd>?</kbd>: si apre un <code>&lt;dialog&gt;</code> con le scorciatoie locali, chiuso da <kbd>Esc</kbd>. Diversamente dall'overlay globale del capitolo 04, qui il <code>keydown</code> è legato al componente, non a <code>document</code>: la legenda non irrompe mentre sei altrove, e più "isole" di scorciatoie possono convivere senza litigare per lo stesso tasto. Usando <code>showModal()</code>, focus trap, top-layer e restituzione del focus arrivano nativi — niente trappola scritta a mano.</p>
+    <p>L'acceleratore resta tale: c'è sempre il pulsante visibile "Scorciatoie" che apre lo stesso pannello, per chi del tasto non sa nulla. E il <code>?</code> non scatta se stai scrivendo in un campo — chi digita «perché?» vuole il punto interrogativo, non un overlay in faccia. È la stessa cortesia di sempre: il gesto rapido non deve mai rubare il gesto ovvio.</p>
+  </div>
+</Demo>
+
+## Quando un pannello è aperto, il resto è fuori gioco
+
+L'ultimo non è un gesto del dito ma il gesto *strutturale* che ogni overlay deve fare: dichiarare cosa è interagibile. Quando un pannello si apre, il fondale deve diventare `inert` — non focusabile, non cliccabile, invisibile agli screen reader.
+
+<Demo title="InertBackdrop · con e senza inert, a confronto" tag="25.e">
+  <InertBackdrop locale="it" />
+  <div slot="note">
+    <p>Apri il pannello e prova a premere <kbd>Tab</kbd> o a cliccare i bottoni del fondale. Con <code>inert</code> attivo, il fondale è davvero fuori gioco: il Tab non ci arriva, i click non passano, le tecnologie assistive lo saltano — un solo attributo toglie focus, eventi del puntatore e visibilità ARIA insieme. Togli la spunta a "Usa inert" e riprova: il Tab cade dietro al pannello e i bottoni "coperti" rispondono ancora — la prova, scritta a schermo, di perché serve.</p>
+    <p>Il <code>&lt;dialog&gt;.showModal()</code> rende il fondale inerte da solo; ma quando il pannello è in-page, come qui, tocca a noi. È l'altra faccia del capitolo: un'interfaccia che si tocca deve sapere, in ogni istante, <em>cosa</em> si può toccare. Il fondale inerte è anche visibilmente attenuato — sfocato e più spento — perché lo stato «non interagibile» non si affida al solo comportamento, ma si vede. <code>inert</code> è correttezza, non decorazione: resta identico anche con reduced motion.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque gesti, una sola disciplina: il tocco aggiunge velocità, mai requisiti. Lo swipe che scarta ha il suo pulsante, il pull che aggiorna ha il suo, la navigazione Vim ha le sue frecce, il `?` ha la sua icona, e ogni pannello dichiara con `inert` cosa resta vivo sotto di sé. Un gesto è onesto quando è un di più per chi lo conosce e un nulla di perso per chi non lo conosce — e quando resta a casa sua, senza sequestrare lo scroll, il focus o la tastiera del resto della pagina. L'interfaccia che si tocca è più viva di quella che si clicca, ma solo se nessuno, toccandola o no, resta chiuso fuori.
+
+Il prossimo capitolo chiude il cerchio, e cambia tono. Dopo aver passato venticinque capitoli a far entrare l'utente — a tenerlo, a servirlo, a non disturbarlo — l'ultima domanda è la più trascurata: come lo si lascia andare? *Il commiato* — come si congeda un utente con grazia, quando ha finito, senza trattenerlo per il braccio.

@@ -1,0 +1,420 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   BeforeUnloadConfirm — la conferma di uscita che chiede solo
+   quando c’è davvero qualcosa da perdere.
+
+   Il vero `beforeunload` del browser è onesto per natura: scatta
+   solo se la pagina lo arma. L’abuso è armarlo sempre, così che
+   ogni uscita diventi un "sei sicuro?" anche quando non c’è nulla
+   di non salvato — frizione fabbricata, il contrario del rispetto.
+
+   Qui SIMULIAMO tutto dentro un finto documento contenuto: un
+   campo con stato "modifiche non salvate", un pulsante "Esci" che
+   apre la conferma SOLO se il documento è sporco. Niente handler
+   reali su window: la pagina vera non viene mai intrappolata.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    docLabel: 'Bozza · appunti',
+    field: 'Scrivi qualcosa per sporcare la bozza…',
+    placeholder: 'Le tue note…',
+    clean: 'Tutto salvato',
+    dirty: 'Modifiche non salvate',
+    exit: 'Esci',
+    leftClean: 'Sei uscito. Niente da salvare, nessuna domanda.',
+    leftDirty: 'Sei uscito senza salvare. La bozza è stata persa.',
+    saved: 'Salvato. Ora esci senza domande.',
+    reopen: 'Riapri il documento',
+    dialogTitle: 'Hai modifiche non salvate',
+    dialogBody: 'Se esci adesso, le note di questa bozza andranno perse.',
+    stay: 'Resta e continua',
+    leave: 'Esci e perdi le note',
+    save: 'Salva la bozza',
+  },
+  en: {
+    docLabel: 'Draft · notes',
+    field: 'Type something to make the draft dirty…',
+    placeholder: 'Your notes…',
+    clean: 'All saved',
+    dirty: 'Unsaved changes',
+    exit: 'Exit',
+    leftClean: 'You left. Nothing to save, no question.',
+    leftDirty: 'You left without saving. The draft was lost.',
+    saved: 'Saved. Now you can leave without questions.',
+    reopen: 'Reopen the document',
+    dialogTitle: 'You have unsaved changes',
+    dialogBody: 'If you leave now, the notes in this draft will be lost.',
+    stay: 'Stay and keep editing',
+    leave: 'Leave and lose the notes',
+    save: 'Save the draft',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="buc" data-dirty="false">
+  <div class="buc__doc" data-view="open">
+    <div class="buc__chrome">
+      <span class="buc__doc-label">{c.docLabel}</span>
+      <span class="buc__status" data-status>
+        <span class="buc__status-dot" aria-hidden="true"></span>
+        <span class="buc__status-text" data-status-text>{c.clean}</span>
+      </span>
+    </div>
+    <textarea class="buc__field" data-field aria-label={c.field} placeholder={c.placeholder}></textarea>
+    <div class="buc__bar">
+      <button class="buc__save" type="button" data-save>{c.save}</button>
+      <button class="buc__exit" type="button" data-exit>{c.exit}</button>
+    </div>
+  </div>
+
+  <div class="buc__gone" data-view="gone" hidden>
+    <p class="buc__gone-text" data-gone-text></p>
+    <button class="buc__reopen" type="button" data-reopen>{c.reopen}</button>
+  </div>
+
+  <p class="buc__live sr-only" aria-live="polite" data-live></p>
+
+  <dialog class="buc__dialog" aria-labelledby="buc-title" aria-describedby="buc-body">
+    <div class="buc__panel">
+      <h2 id="buc-title" class="buc__title">{c.dialogTitle}</h2>
+      <p id="buc-body" class="buc__body">{c.dialogBody}</p>
+      <div class="buc__actions">
+        <button class="buc__stay" type="button" autofocus data-action="stay">{c.stay}</button>
+        <button class="buc__leave" type="button" data-action="leave">{c.leave}</button>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .buc {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .buc__doc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .buc__doc[hidden] { display: none; }
+
+  .buc__chrome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .buc__doc-label {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .buc__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+  .buc__status-dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: oklch(0.7 0.14 145);
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .buc[data-dirty='true'] .buc__status-dot { background-color: oklch(0.75 0.16 75); }
+
+  .buc__field {
+    inline-size: 100%;
+    min-block-size: 4.5rem;
+    resize: vertical;
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-sunken);
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .buc__field:focus-visible { outline: none; box-shadow: var(--halo-focus); border-color: var(--border-strong); }
+
+  .buc__bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+  }
+
+  .buc__save,
+  .buc__exit,
+  .buc__reopen {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  .buc__save {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+  }
+  .buc__save:hover { opacity: 0.92; }
+  .buc__save:active { transform: scale(0.97); }
+  .buc__save:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .buc__save:disabled { opacity: 0.4; cursor: default; }
+
+  .buc__exit {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .buc__exit:hover { border-color: var(--border-strong); }
+  .buc__exit:active { transform: scale(0.97); }
+  .buc__exit:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .buc__gone {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px dashed var(--border);
+  }
+  .buc__gone[hidden] { display: none; }
+  .buc__gone-text {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .buc__reopen {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .buc__reopen:hover { border-color: var(--border-strong); }
+  .buc__reopen:active { transform: scale(0.97); }
+  .buc__reopen:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ─── Dialog ─── */
+  .buc__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(24rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .buc__dialog:not([open]) { display: none; }
+  .buc__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  @keyframes buc-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes buc-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+
+  .buc__dialog[open] .buc__panel { animation: buc-in 220ms var(--ease-out-soft); }
+  .buc__dialog[data-closing='true'] .buc__panel { animation: buc-out 160ms var(--ease-out-soft) forwards; }
+
+  .buc__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .buc__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .buc__body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .buc__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    padding-block-start: var(--space-2xs);
+  }
+
+  .buc__stay,
+  .buc__leave {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .buc__stay {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+  }
+  .buc__stay:hover { opacity: 0.92; }
+  .buc__stay:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .buc__leave {
+    background: transparent;
+    color: oklch(0.55 0.18 22);
+    border: 1px solid var(--border);
+  }
+  .buc__leave:hover { border-color: oklch(0.55 0.18 22); background-color: color-mix(in oklab, oklch(0.55 0.18 22) 8%, transparent); }
+  .buc__leave:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .buc__leave:active { transform: scale(0.97); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .buc__dialog[open] .buc__panel,
+    .buc__dialog[data-closing='true'] .buc__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.buc').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const field = el.querySelector<HTMLTextAreaElement>('[data-field]')!;
+      const saveBtn = el.querySelector<HTMLButtonElement>('[data-save]')!;
+      const exitBtn = el.querySelector<HTMLButtonElement>('[data-exit]')!;
+      const reopenBtn = el.querySelector<HTMLButtonElement>('[data-reopen]')!;
+      const statusText = el.querySelector<HTMLElement>('[data-status-text]')!;
+      const docView = el.querySelector<HTMLElement>('[data-view="open"]')!;
+      const goneView = el.querySelector<HTMLElement>('[data-view="gone"]')!;
+      const goneText = el.querySelector<HTMLElement>('[data-gone-text]')!;
+      const live = el.querySelector<HTMLElement>('[data-live]')!;
+      const dialog = el.querySelector<HTMLDialogElement>('.buc__dialog')!;
+      const stayBtn = el.querySelector<HTMLButtonElement>('[data-action="stay"]')!;
+      const leaveBtn = el.querySelector<HTMLButtonElement>('[data-action="leave"]')!;
+
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'it';
+      const T = {
+        it: {
+          clean: 'Tutto salvato', dirty: 'Modifiche non salvate',
+          leftClean: 'Sei uscito. Niente da salvare, nessuna domanda.',
+          leftDirty: 'Sei uscito senza salvare. La bozza è stata persa.',
+          saved: 'Salvato. Ora esci senza domande.',
+        },
+        en: {
+          clean: 'All saved', dirty: 'Unsaved changes',
+          leftClean: 'You left. Nothing to save, no question.',
+          leftDirty: 'You left without saving. The draft was lost.',
+          saved: 'Saved. Now you can leave without questions.',
+        },
+      }[lang];
+
+      const setDirty = (dirty: boolean) => {
+        el.dataset.dirty = dirty ? 'true' : 'false';
+        statusText.textContent = dirty ? T.dirty : T.clean;
+        saveBtn.disabled = !dirty;
+      };
+
+      const closeDialog = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+        };
+        dialog.addEventListener('animationend', onEnd);
+        setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 220);
+      };
+
+      const leave = (wasDirty: boolean) => {
+        goneText.textContent = wasDirty ? T.leftDirty : T.leftClean;
+        live.textContent = goneText.textContent;
+        docView.hidden = true;
+        goneView.hidden = false;
+        reopenBtn.focus();
+      };
+
+      // stato iniziale
+      setDirty(false);
+
+      field.addEventListener('input', () => {
+        setDirty(field.value.trim().length > 0);
+      });
+
+      saveBtn.addEventListener('click', () => {
+        setDirty(false);
+        live.textContent = T.saved;
+      });
+
+      // l’onestà del pattern: chiediamo SOLO se c’è qualcosa da perdere
+      exitBtn.addEventListener('click', () => {
+        if (el.dataset.dirty === 'true') {
+          dialog.showModal();
+        } else {
+          leave(false);
+        }
+      });
+
+      stayBtn.addEventListener('click', closeDialog);
+      leaveBtn.addEventListener('click', () => {
+        closeDialog();
+        leave(true);
+      });
+
+      dialog.addEventListener('cancel', (e) => {
+        e.preventDefault(); // Esc = resta (default sicuro)
+        closeDialog();
+      });
+
+      reopenBtn.addEventListener('click', () => {
+        field.value = '';
+        setDirty(false);
+        goneView.hidden = true;
+        docView.hidden = false;
+        field.focus();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

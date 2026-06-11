@@ -26,6 +26,16 @@ Before shipping an interaction, ask: *does this communicate what is actually tru
 | **Parallax / scroll FX** | Spectacle that fights the gesture and turns stomachs | *"Atmosfera, non spettacolo"* — small amplitudes the eye enjoys but the stomach doesn't notice |
 | **Form validation** | Impatient errors while the user is still typing | Patient `:user-invalid` — *"non è permissiva: è solo a tempo debito"* |
 | **Live data** | Constant motion you can't escape | A steady, calm cadence with a **pause** button — *"chi vuole guardare un valore fermo ne ha diritto"* |
+| **Toggle semantics** | A switch (immediate effect) dressed as a deferred checkbox, or vice-versa | The tag matches the gesture: `role="switch"` acts now, a checkbox commits on submit |
+| **Consequential switch** | Manufactured friction "to be safe" everywhere, or in the *safe* direction | Hold-to-confirm **only** where the consequence is real and **only** in the dangerous direction |
+| **Search as-you-type** | Render whatever response returns last (out-of-order) | A monotonic token drops stale responses — the screen ends on *the last thing you typed* |
+| **Relative time** | Only "in 3 days" — precision hidden | The absolute date stays reachable (`title`/`datetime`/printed); a time without its **zone** is a lie |
+| **Smart date input** | A silent wrong guess for unparsed text | Admit it: *"non ho capito"* beats a confident mistake |
+| **Hover-only caption / tooltip** | Content that exists only on hover (lost to touch & keyboard) | Stays in the DOM; reappears on `:focus-within` + an `aria-expanded` button |
+| **Reading bookmark / progress** | A faked completion percentage | Saves *where* you stopped, offers to resume, and admits when storage is denied |
+| **Gesture** | A swipe/pull as the **only** way to act (a gate) | An accelerator with a visible button/keyboard twin; scoped, never hijacking the page |
+| **Leaving the page** | `beforeunload` that blocks every exit | Confirm **only** when there's unsaved work; logout is a warm send-off, not an error |
+| **Card image / count-up** | A photo that reflows on load; a stat rounded up to look good | Fixed `aspect-ratio` placeholder; count rises once to the *true* value, `▼` sign before colour |
 
 ## The principle behind the catalogue
 

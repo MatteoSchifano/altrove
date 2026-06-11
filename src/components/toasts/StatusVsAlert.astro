@@ -1,0 +1,230 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   StatusVsAlert — la differenza fra spiegare e urlare.
+
+   Stesso aspetto, due voci diverse per lo screen reader. È la
+   distinzione più trascurata dell’accessibilità dei toast:
+
+   - role="status" + aria-live="polite": annuncia quando l’utente
+     fa una pausa, senza interrompere ciò che sta leggendo o
+     scrivendo. È la voce per le conferme e le informazioni: spiega.
+   - role="alert" + aria-live="assertive": interrompe immediatamente
+     e annuncia subito. È la voce per ciò che richiede attenzione
+     ora — un errore che blocca, una sessione scaduta: urla.
+
+   La regola di onestà: "assertive" è un’interruzione, e
+   interrompere è un costo. Usarlo per un "salvato" è gridare al
+   nulla; non usarlo per un errore che blocca è lasciare l’utente
+   al buio. Si alza la voce solo quando vale davvero.
+
+   Visivamente i due toast differiscono comunque (colore + icona +
+   etichetta), perché la differenza non deve vivere solo nell’ARIA:
+   il canale sonoro è per chi non vede, ma il segno resta per tutti.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    politeBtn: 'Annuncia con calma',
+    assertiveBtn: 'Annuncia con urgenza',
+    politeRole: 'role="status" · aria-live="polite"',
+    assertiveRole: 'role="alert" · aria-live="assertive"',
+    politeTag: 'Info',
+    politeMsg: 'Bozza salvata automaticamente.',
+    assertiveTag: 'Attenzione',
+    assertiveMsg: 'Sessione scaduta: accedi di nuovo per non perdere il lavoro.',
+    politeWhy: 'Aspetta una pausa. Non interrompe la lettura.',
+    assertiveWhy: 'Interrompe subito. Solo per ciò che blocca.',
+  },
+  en: {
+    politeBtn: 'Announce calmly',
+    assertiveBtn: 'Announce urgently',
+    politeRole: 'role="status" · aria-live="polite"',
+    assertiveRole: 'role="alert" · aria-live="assertive"',
+    politeTag: 'Info',
+    politeMsg: 'Draft saved automatically.',
+    assertiveTag: 'Heads up',
+    assertiveMsg: 'Session expired: sign in again so you don’t lose your work.',
+    politeWhy: 'Waits for a pause. Doesn’t interrupt reading.',
+    assertiveWhy: 'Interrupts at once. Only for what blocks.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="sva">
+  <div class="sva__row">
+    <div class="sva__cell">
+      <button type="button" class="sva__btn" data-fire="polite">{c.politeBtn}</button>
+      <code class="sva__role">{c.politeRole}</code>
+      <p class="sva__why">{c.politeWhy}</p>
+    </div>
+    <div class="sva__cell">
+      <button type="button" class="sva__btn sva__btn--strong" data-fire="assertive">{c.assertiveBtn}</button>
+      <code class="sva__role">{c.assertiveRole}</code>
+      <p class="sva__why">{c.assertiveWhy}</p>
+    </div>
+  </div>
+
+  <div class="sva__stage">
+    {/* status / polite */}
+    <div class="sva__toast sva__toast--polite" role="status" aria-live="polite" data-toast="polite" data-state="hidden">
+      <span class="sva__icon" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7.5" /><path d="M10 9v4.5" /><path d="M10 6.4h.01" />
+        </svg>
+      </span>
+      <span class="sva__body">
+        <span class="sva__tag">{c.politeTag}</span>
+        <span class="sva__text" data-text>{c.politeMsg}</span>
+      </span>
+    </div>
+
+    {/* alert / assertive */}
+    <div class="sva__toast sva__toast--assertive" role="alert" aria-live="assertive" data-toast="assertive" data-state="hidden">
+      <span class="sva__icon" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2.8 18 16.5H2L10 2.8Z" /><path d="M10 8v3.4" /><path d="M10 14.1h.01" />
+        </svg>
+      </span>
+      <span class="sva__body">
+        <span class="sva__tag">{c.assertiveTag}</span>
+        <span class="sva__text" data-text>{c.assertiveMsg}</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sva {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .sva__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+  @media (max-width: 30rem) { .sva__row { grid-template-columns: 1fr; } }
+
+  .sva__cell { display: flex; flex-direction: column; gap: var(--space-2xs); align-items: flex-start; }
+
+  .sva__btn {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .sva__btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .sva__btn:active { transform: translateY(0); }
+  .sva__btn:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .sva__btn--strong { background-color: var(--accent); border-color: var(--accent); color: var(--accent-on); }
+
+  .sva__role {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+  .sva__why {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .sva__stage {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    min-block-size: 3.5rem;
+  }
+
+  .sva__toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    padding: 0.7rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--tone);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity var(--dur-normal) var(--ease-out-soft), transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .sva__toast[data-state='shown'] { opacity: 1; transform: translateY(0); }
+  .sva__toast[data-state='hidden'] { pointer-events: none; }
+
+  .sva__toast--polite    { --tone: oklch(0.62 0.13 240); }
+  .sva__toast--assertive { --tone: oklch(0.70 0.15 75); }
+
+  .sva__icon { flex-shrink: 0; color: var(--tone); inline-size: 1.15rem; block-size: 1.15rem; margin-block-start: 0.05rem; }
+  .sva__icon svg { inline-size: 100%; block-size: 100%; }
+
+  .sva__body { display: flex; flex-direction: column; gap: 0.1rem; }
+  .sva__tag {
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--tone);
+  }
+  .sva__text { font-size: var(--text-sm); color: var(--ink); line-height: var(--leading-snug); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sva__toast { transition-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sva').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const timers = new Map<string, number>();
+
+      const fire = (kind: string) => {
+        const toast = root.querySelector<HTMLElement>(`[data-toast="${kind}"]`);
+        const textEl = toast?.querySelector<HTMLElement>('[data-text]');
+        if (!toast || !textEl) return;
+
+        const prev = timers.get(kind);
+        if (prev) clearTimeout(prev);
+
+        // Per far ri-annunciare la live region anche se il testo è identico,
+        // svuotiamo e reinseriamo il contenuto: è la mutazione che lo
+        // screen reader percepisce.
+        const original = textEl.dataset.value ?? textEl.textContent ?? '';
+        textEl.dataset.value = original;
+        toast.dataset.state = 'shown';
+        textEl.textContent = '';
+        // microtask così la mutazione successiva è un cambiamento reale
+        requestAnimationFrame(() => { textEl.textContent = original; });
+
+        const t = window.setTimeout(() => { toast.dataset.state = 'hidden'; }, 4500);
+        timers.set(kind, t);
+      };
+
+      root.querySelectorAll<HTMLButtonElement>('[data-fire]').forEach((btn) => {
+        btn.addEventListener('click', () => fire(btn.dataset.fire!));
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

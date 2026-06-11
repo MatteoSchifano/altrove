@@ -1,0 +1,393 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SiteToc — l’indice del sito intero, che sa dove sei.
+
+   Un libro ha l’indice in testa: capitoli, e sotto ogni capitolo
+   le sezioni. Un sito che parla di sé non è diverso — ma ha un
+   vantaggio che la carta non ha: *sa quale pagina stai leggendo
+   adesso*. L’indice cartaceo è muto, identico per tutti; quello
+   digitale può evidenziare la riga giusta mentre scorri.
+
+   Due gesti, due responsabilità separate:
+     • espandere/comprimere un capitolo è una scelta dell’utente
+       (un <button aria-expanded> che apre la lista delle sezioni);
+     • evidenziare la sezione corrente è una conseguenza dello
+       scroll — non un click. È lo scroll-spy: un
+       IntersectionObserver guarda la colonna-demo a destra e
+       segna nell’indice la sezione con più sé sopra la riga di
+       lettura.
+
+   Onestà: la voce attiva non è "quella più in alto", è quella che
+   stai davvero leggendo. E l’evidenza non è solo colore — c’è
+   aria-current="true" sul link, che lo screen reader annuncia, più
+   un marker a sinistra. Il colore è il secondo segnale.
+
+   Reduced motion: l’apertura non anima l’altezza (durate-token →
+   1ms) e il marker non scivola: salta. Stesso stato finale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+type Chapter = { id: string; title: string; sections: { id: string; label: string }[] };
+
+const COPY = {
+  it: {
+    aria: 'Indice del sito',
+    demoAria: 'Anteprima delle sezioni del sito',
+    chapters: [
+      {
+        id: 'fondamenti',
+        title: 'I fondamenti',
+        sections: [
+          { id: 'f-pressione', label: 'La pressione del bottone' },
+          { id: 'f-attesa', label: 'L’attesa onesta' },
+          { id: 'f-vuoto', label: 'Lo stato vuoto' },
+        ],
+      },
+      {
+        id: 'componenti',
+        title: 'I componenti',
+        sections: [
+          { id: 'c-toggle', label: 'Anatomia di un toggle' },
+          { id: 'c-toast', label: 'Anatomia di un toast' },
+        ],
+      },
+      {
+        id: 'editoriale',
+        title: 'L’editoriale',
+        sections: [
+          { id: 'e-indice', label: 'L’indice del libro' },
+          { id: 'e-immagini', label: 'Le immagini in editoria' },
+        ],
+      },
+    ] as Chapter[],
+  },
+  en: {
+    aria: 'Site index',
+    demoAria: 'Preview of the site sections',
+    chapters: [
+      {
+        id: 'fondamenti',
+        title: 'The fundamentals',
+        sections: [
+          { id: 'f-pressione', label: 'The press of a button' },
+          { id: 'f-attesa', label: 'The honest wait' },
+          { id: 'f-vuoto', label: 'The empty state' },
+        ],
+      },
+      {
+        id: 'componenti',
+        title: 'The components',
+        sections: [
+          { id: 'c-toggle', label: 'The anatomy of a toggle' },
+          { id: 'c-toast', label: 'The anatomy of a toast' },
+        ],
+      },
+      {
+        id: 'editoriale',
+        title: 'The editorial',
+        sections: [
+          { id: 'e-indice', label: 'The book’s index' },
+          { id: 'e-immagini', label: 'Images in editorial' },
+        ],
+      },
+    ] as Chapter[],
+  },
+} as const;
+const c = COPY[locale];
+const allSections = c.chapters.flatMap((ch) => ch.sections);
+const firstId = allSections[0].id;
+---
+
+<div class="stoc">
+  <nav class="stoc__index" aria-label={c.aria}>
+    <ul class="stoc__chapters">
+      {c.chapters.map((ch, i) => (
+        <li class="stoc__chapter">
+          <button
+            type="button"
+            class="stoc__toggle"
+            aria-expanded={i === 0 ? 'true' : 'false'}
+            aria-controls={`stoc-sec-${ch.id}`}
+          >
+            <span class="stoc__chevron" aria-hidden="true"></span>
+            <span class="stoc__chapter-title">{ch.title}</span>
+          </button>
+          <div class="stoc__sections" id={`stoc-sec-${ch.id}`} data-open={i === 0 ? 'true' : undefined}>
+            <ul class="stoc__sections-inner">
+              {ch.sections.map((s) => (
+                <li class="stoc__section">
+                  <a
+                    class="stoc__link"
+                    href={`#${s.id}`}
+                    data-target={s.id}
+                    aria-current={s.id === firstId ? 'true' : undefined}
+                  >
+                    <span class="stoc__marker" aria-hidden="true"></span>
+                    <span class="stoc__label">{s.label}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  <div class="stoc__scroller" data-scroller tabindex="0" aria-label={c.demoAria}>
+    {allSections.map((s) => (
+      <section class="stoc__pane" id={s.id} data-section={s.id}>
+        <span class="stoc__pane-eyebrow tabular" aria-hidden="true">{s.id}</span>
+        <h3 class="stoc__pane-title">{s.label}</h3>
+      </section>
+    ))}
+  </div>
+</div>
+
+<style>
+  .stoc {
+    inline-size: min(40rem, 100%);
+    display: grid;
+    grid-template-columns: minmax(9rem, 13rem) 1fr;
+    gap: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    padding: var(--space-md);
+  }
+  @media (max-width: 30rem) {
+    .stoc { grid-template-columns: 1fr; }
+    .stoc__scroller { display: none; }
+  }
+
+  /* ── Indice ── */
+  .stoc__chapters,
+  .stoc__sections {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .stoc__chapter + .stoc__chapter { margin-block-start: 0.15rem; }
+
+  .stoc__toggle {
+    appearance: none;
+    inline-size: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.4rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    color: var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    text-align: start;
+  }
+  .stoc__toggle:hover { background-color: var(--surface-sunken); }
+  .stoc__toggle:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* Chevron: ruota a 90° quando il capitolo è aperto */
+  .stoc__chevron {
+    flex-shrink: 0;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-inline-end: 1.5px solid var(--ink-muted);
+    border-block-end: 1.5px solid var(--ink-muted);
+    transform: rotate(-45deg);
+    transition: transform var(--dur-fast) var(--ease-out-soft);
+  }
+  .stoc__toggle[aria-expanded='true'] .stoc__chevron { transform: rotate(45deg); }
+
+  /* Sezioni: chiuse per default. La tecnica grid 0fr → 1fr anima
+     l’altezza in modo fluido, ma richiede un *unico* figlio di griglia:
+     per questo il contenuto vive in .stoc__sections-inner. */
+  .stoc__sections {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-normal) var(--ease-out-soft);
+  }
+  .stoc__sections[data-open] { grid-template-rows: 1fr; }
+
+  .stoc__sections-inner {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .stoc__section { list-style: none; }
+
+  .stoc__link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0 0.3rem 1rem;
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    text-decoration: none;
+    line-height: var(--leading-snug);
+    border-inline-start: 1.5px solid var(--border);
+    margin-inline-start: 0.55rem;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .stoc__link:hover { color: var(--ink); }
+  .stoc__link:focus-visible {
+    outline: none;
+    color: var(--ink-strong);
+    box-shadow: var(--halo-focus);
+    border-radius: var(--radius-xs);
+  }
+
+  /* Marker: pallino a sinistra, secondo segnale dopo aria-current */
+  .stoc__marker {
+    inline-size: 0.3rem;
+    block-size: 0.3rem;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.35;
+    transition: opacity var(--dur-fast) var(--ease-out-soft),
+                transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  /* Sezione corrente: aria-current è il segnale primario, qui lo vestiamo */
+  .stoc__link[aria-current='true'] {
+    color: var(--accent-ink);
+    border-inline-start-color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+  .stoc__link[aria-current='true'] .stoc__marker {
+    opacity: 1;
+    color: var(--accent);
+    transform: scale(1.4);
+  }
+
+  /* ── Colonna demo ── */
+  .stoc__scroller {
+    block-size: 18rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    padding: var(--space-sm);
+  }
+  .stoc__scroller:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .stoc__pane {
+    min-block-size: 9rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    scroll-margin-block-start: var(--space-2xs);
+  }
+  .stoc__pane + .stoc__pane { border-block-start: 1px solid var(--border); }
+  .stoc__pane-eyebrow {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+  .stoc__pane-title {
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stoc__scroller { scroll-behavior: auto; }
+    .stoc__chevron,
+    .stoc__sections,
+    .stoc__marker,
+    .stoc__link { transition: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.stoc').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      // ── Espansione dei capitoli (scelta dell’utente) ──
+      const toggles = Array.from(root.querySelectorAll<HTMLButtonElement>('.stoc__toggle'));
+      toggles.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const open = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!open));
+          const id = btn.getAttribute('aria-controls');
+          const list = id ? root.querySelector<HTMLElement>(`#${id}`) : null;
+          if (!list) return;
+          if (open) delete list.dataset.open;
+          else list.dataset.open = 'true';
+        });
+      });
+
+      // ── Scroll-spy (conseguenza dello scroll, non click) ──
+      const scroller = root.querySelector<HTMLElement>('[data-scroller]');
+      if (!scroller) return;
+      const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('.stoc__link'));
+      const panes = Array.from(root.querySelectorAll<HTMLElement>('.stoc__pane'));
+
+      const setCurrent = (id: string) => {
+        links.forEach((a) => {
+          if (a.dataset.target === id) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+        // Se la sezione corrente è in un capitolo chiuso, lo apriamo:
+        // l’indice non può evidenziare una riga nascosta.
+        const active = links.find((a) => a.dataset.target === id);
+        const list = active?.closest<HTMLElement>('.stoc__sections');
+        if (list && !list.dataset.open) {
+          list.dataset.open = 'true';
+          const btn = root.querySelector<HTMLButtonElement>(`[aria-controls="${list.id}"]`);
+          btn?.setAttribute('aria-expanded', 'true');
+        }
+      };
+
+      const ratios = new Map<string, number>();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            const id = (e.target as HTMLElement).dataset.section;
+            if (id) ratios.set(id, e.isIntersecting ? e.intersectionRatio : 0);
+          });
+          let bestId: string | null = null;
+          let bestRatio = 0;
+          ratios.forEach((r, id) => {
+            if (r > bestRatio) { bestRatio = r; bestId = id; }
+          });
+          if (bestId) setCurrent(bestId);
+        },
+        { root: scroller, threshold: [0.1, 0.4, 0.7], rootMargin: '-20% 0px -55% 0px' },
+      );
+      panes.forEach((p) => observer.observe(p));
+
+      // Click su una voce → scroll smooth nel scroller (no jump di pagina)
+      links.forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = a.dataset.target;
+          const target = id ? root.querySelector<HTMLElement>(`#${id}`) : null;
+          if (!target) return;
+          scroller.scrollTo({ top: target.offsetTop - 8, behavior: 'smooth' });
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

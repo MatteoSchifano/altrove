@@ -1,0 +1,253 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   LogoutCelebrated — il logout come commiato caldo, non come
+   errore.
+
+   Quasi ovunque il logout è trattato come un fallimento: schermo
+   spoglio, "sei stato disconnesso", magari un colore d’allarme.
+   Ma uscire è un atto legittimo dell’utente, non un incidente.
+   Un commiato celebrato — un grazie, un saluto caldo, una porta
+   lasciata aperta per il ritorno — chiude la relazione con
+   dignità invece di farla sembrare un guasto.
+
+   Demo contenuta: un pulsante "Esci" rivela la schermata di
+   commiato; "Rientra" la richiude. Nessuna navigazione reale.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    signedInAs: 'Sei dentro come',
+    user: 'Giulia',
+    logout: 'Esci',
+    waving: 'Ci rivediamo',
+    thanks: 'Grazie per il tempo che hai passato qui.',
+    line: 'La porta resta aperta: quando torni, ti aspetta tutto dov’era.',
+    back: 'Rientra',
+    announce: 'Disconnesso. A presto.',
+  },
+  en: {
+    signedInAs: 'Signed in as',
+    user: 'Giulia',
+    logout: 'Sign out',
+    waving: 'See you soon',
+    thanks: 'Thank you for the time you spent here.',
+    line: 'The door stays open: when you’re back, everything waits where you left it.',
+    back: 'Come back in',
+    announce: 'Signed out. See you soon.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="lgc" data-state="in">
+  <div class="lgc__account" data-account>
+    <div class="lgc__who">
+      <span class="lgc__avatar" aria-hidden="true">{c.user.charAt(0)}</span>
+      <span class="lgc__who-text">
+        <span class="lgc__who-label">{c.signedInAs}</span>
+        <span class="lgc__who-name">{c.user}</span>
+      </span>
+    </div>
+    <button class="lgc__logout" type="button" data-logout>{c.logout}</button>
+  </div>
+
+  <div class="lgc__farewell" data-farewell hidden>
+    <span class="lgc__wave" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 21a8 8 0 0 0 8-8V7a1.5 1.5 0 0 0-3 0v3M17 10V5.5a1.5 1.5 0 0 0-3 0V10M14 10V4.5a1.5 1.5 0 0 0-3 0V10M11 10V6.5a1.5 1.5 0 0 0-3 0V13l-1.2-1.6a1.5 1.5 0 0 0-2.4 1.8L7 18"/>
+      </svg>
+    </span>
+    <h3 class="lgc__title">{c.waving}</h3>
+    <p class="lgc__thanks">{c.thanks}</p>
+    <p class="lgc__line">{c.line}</p>
+    <button class="lgc__back" type="button" data-back>{c.back}</button>
+    <p class="lgc__live sr-only" aria-live="polite" data-live></p>
+  </div>
+</div>
+
+<style>
+  .lgc {
+    inline-size: min(26rem, 100%);
+  }
+
+  /* ── account ── */
+  .lgc__account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .lgc__account[hidden] { display: none; }
+
+  .lgc__who { display: flex; align-items: center; gap: var(--space-sm); }
+  .lgc__avatar {
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .lgc__who-text { display: flex; flex-direction: column; }
+  .lgc__who-label {
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+  }
+  .lgc__who-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+
+  .lgc__logout {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .lgc__logout:hover { border-color: var(--border-strong); }
+  .lgc__logout:active { transform: scale(0.97); }
+  .lgc__logout:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* ── commiato ── */
+  .lgc__farewell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-2xs);
+    padding: var(--space-xl) var(--space-lg);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(ellipse at center top, var(--accent-soft), transparent 65%),
+      var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+  }
+  .lgc__farewell[hidden] { display: none; }
+
+  .lgc__wave {
+    display: grid;
+    place-items: center;
+    inline-size: 3rem;
+    block-size: 3rem;
+    margin-block-end: var(--space-2xs);
+    color: var(--accent-ink);
+    transform-origin: 70% 80%;
+    animation: lgc-wave 1600ms var(--ease-in-out) 1;
+  }
+  .lgc__wave svg { inline-size: 1.7rem; block-size: 1.7rem; }
+  @keyframes lgc-wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-14deg); }
+    55% { transform: rotate(10deg); }
+    80% { transform: rotate(-5deg); }
+  }
+
+  .lgc__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .lgc__thanks {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+  .lgc__line {
+    margin: 0 0 var(--space-xs);
+    max-inline-size: 24ch;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    text-wrap: balance;
+  }
+
+  .lgc__back {
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug), opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .lgc__back:hover { opacity: 0.92; }
+  .lgc__back:active { transform: scale(0.97); }
+  .lgc__back:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lgc__wave { animation: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.lgc').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const account = el.querySelector<HTMLElement>('[data-account]')!;
+      const farewell = el.querySelector<HTMLElement>('[data-farewell]')!;
+      const wave = el.querySelector<HTMLElement>('.lgc__wave')!;
+      const logoutBtn = el.querySelector<HTMLButtonElement>('[data-logout]')!;
+      const backBtn = el.querySelector<HTMLButtonElement>('[data-back]')!;
+      const live = el.querySelector<HTMLElement>('[data-live]')!;
+
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'it';
+      const announce = lang === 'en' ? 'Signed out. See you soon.' : 'Disconnesso. A presto.';
+
+      logoutBtn.addEventListener('click', () => {
+        el.dataset.state = 'out';
+        account.hidden = true;
+        farewell.hidden = false;
+        // ri-arma l’animazione del saluto a ogni ingresso
+        wave.style.animation = 'none';
+        void wave.offsetHeight;
+        wave.style.animation = '';
+        live.textContent = announce;
+        backBtn.focus();
+      });
+
+      backBtn.addEventListener('click', () => {
+        el.dataset.state = 'in';
+        farewell.hidden = true;
+        account.hidden = false;
+        logoutBtn.focus();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

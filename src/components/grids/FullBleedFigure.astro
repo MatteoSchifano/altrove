@@ -1,0 +1,123 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   FullBleedFigure — la figura a tutta pagina, e il rientro del testo.
+
+   Il full-bleed è un gesto di respiro: un’immagine che tocca i due
+   bordi, esce dalla colonna di lettura e dà aria alla pagina. Ma il
+   suo valore non sta solo nell’uscire — sta nel *rientrare* subito
+   dopo. La figura allarga; il testo torna alla sua misura di lettura.
+   Quel "fuori e poi dentro" è il ritmo editoriale che rende elegante
+   una pagina: la prosa non si stira mai a tutta larghezza, perché una
+   riga troppo lunga è faticosa da leggere.
+
+   La griglia ha una colonna di contenuto centrale e due margini; la
+   figura si appoggia alla linea [full] e li scavalca, il testo resta
+   in [content]. Stessa griglia del capitolo, due ampiezze.
+
+   NESSUN file immagine: il "media" è un gradiente CSS con
+   aspect-ratio fisso, così la figura ha già una forma e non c’è
+   reflow all’arrivo di un asset. È il placeholder onesto — occupa
+   esattamente lo spazio che occuperebbe la foto vera.
+
+   Accessibilità: il blocco è una <figure> con <figcaption> reale;
+   il riquadro-gradiente è decorazione (aria-hidden, role grafico
+   nullo). La didascalia è testo vero, nel flusso. Il colore non è
+   l’unico canale: la figura è delimitata anche dal bordo e dalla
+   forma, non solo dalla tinta.
+
+   Motion: nessuna. Una figura non ha bisogno di entrare in scena;
+   ha bisogno di stare ferma e occupare il suo spazio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    p1: 'Il testo scorre nella sua colonna di lettura, stretta abbastanza perché l’occhio non si perda alla fine di ogni riga. Poi arriva una figura.',
+    caption: 'Fig. 1 — Un placeholder a gradiente: nessun file, ma già una forma e un’aspect-ratio fissa.',
+    p2: 'E il testo rientra. La figura ha respirato a tutta pagina, la prosa è tornata alla sua misura: il ritmo "fuori e dentro" è ciò che fa sembrare composta una pagina, prima ancora che bella.',
+  },
+  en: {
+    p1: 'The text flows in its reading column, narrow enough that the eye doesn’t get lost at the end of each line. Then a figure arrives.',
+    caption: 'Fig. 1 — A gradient placeholder: no file, but already a shape and a fixed aspect ratio.',
+    p2: 'And the text returns. The figure breathed at full width, the prose came back to its measure: the "out and in" rhythm is what makes a page feel composed, before it’s even beautiful.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<article class="bleed">
+  <p class="bleed__body">{c.p1}</p>
+
+  <figure class="bleed__figure">
+    <div class="bleed__media" aria-hidden="true"></div>
+    <figcaption class="bleed__caption">{c.caption}</figcaption>
+  </figure>
+
+  <p class="bleed__body">{c.p2}</p>
+</article>
+
+<style>
+  .bleed {
+    inline-size: min(46rem, 100%);
+    display: grid;
+    grid-template-columns:
+      [full-start] minmax(var(--space-md), 1fr)
+      [content-start] minmax(0, var(--measure))
+      [content-end] minmax(var(--space-md), 1fr)
+      [full-end];
+    row-gap: var(--space-md);
+    padding-block: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  .bleed__body {
+    grid-column: content;
+    margin: 0;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink);
+  }
+
+  /* La figura sconfina a tutta pagina */
+  .bleed__figure {
+    grid-column: full;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  /* Placeholder onesto: gradiente CSS con aspect-ratio fissa — niente
+     file, nessun reflow. La forma c’è già. */
+  .bleed__media {
+    aspect-ratio: 16 / 7;
+    inline-size: 100%;
+    border-block: 1px solid var(--border);
+    background:
+      radial-gradient(
+        ellipse at 22% 30%,
+        color-mix(in oklab, var(--accent) 32%, transparent),
+        transparent 58%
+      ),
+      linear-gradient(
+        120deg,
+        var(--surface-raised),
+        color-mix(in oklab, var(--accent) 10%, var(--surface-sunken))
+      );
+  }
+
+  /* La didascalia rientra alla larghezza di lettura, allineata al testo */
+  .bleed__caption {
+    align-self: center;
+    inline-size: min(var(--measure), 100% - var(--space-lg));
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+</style>

@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-23"
+number: "23"
+title: "The calendar"
+excerpt: "Asking for a date is one of the easiest ways to make someone hate a form: three dropdowns, an unspoken time zone, a “in 3 days” that never says which one. Five ways to ask for it with respect — keyboard-first, explicit zones, honest natural language."
+date: "September 11, 2026"
+releaseDate: "2026-09-11"
+readMinutes: 12
+tags: ["components", "dates", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import KeyboardCalendar from '../../../components/calendar/KeyboardCalendar.astro';
+import DateRangePicker from '../../../components/calendar/DateRangePicker.astro';
+import RelativeDuration from '../../../components/calendar/RelativeDuration.astro';
+import ExplicitTimezone from '../../../components/calendar/ExplicitTimezone.astro';
+import SmartDateInput from '../../../components/calendar/SmartDateInput.astro';
+
+There's a question every interface eventually asks, and almost always asks badly: “on what date?”. It sounds trivial, yet it's one of the places where frustration concentrates most. Three day/month/year dropdowns nobody actually thinks in. A calendar you can only drive with the mouse, out of reach from the keyboard. A time shown without its zone — a lie dressed up as precision. A “expires in 3 days” that never says *which* day. A date is awkward data because it's at once a number, a name, a position on a grid, and an absolute point in time — and every form picks which of these truths to ignore.
+
+The theme of this chapter is respect for the way people think about time. Nobody reasons in `2026-09-14T16:00:00Z`; they reason in “Friday afternoon”, “in two weeks”, “the same day as the call”. A good date interface doesn't force the user to translate their thought into the machine's format: it does the opposite, translating the machine into theirs. And it does so without heavy libraries — the browser already has `Intl.DateTimeFormat` and `Intl.RelativeTimeFormat`, which know the month names in every language, the right order of the parts, the time zones, the “yesterday/tomorrow” forms. Our job is to stitch the keyboard and the honesty around them.
+
+Five demos, one per typical wound of “ask for a date”. The calendar you can use without a mouse; the range that tells you which of the two gestures you're in; the relative duration that never hides the absolute; the time that always carries its zone; the field that understands “tomorrow” but is honest when it doesn't. Five ways to ask for a date without making someone hate the browser.
+
+## The calendar you can use without a mouse
+
+A calendar is a grid, and a grid has a precise keyboard. The first mistake is forgetting it: many date pickers can only be driven with the pointer, and for keyboard users they become walls. Here we start from the opposite — `role="grid"` and a keyboard you move through like a sheet of graph paper.
+
+<Demo title="Keyboard-first calendar · role=grid, arrows and PageUp/PageDown" tag="23.a">
+  <KeyboardCalendar locale="en" />
+  <div slot="note">
+    <p>Focus a day and move: the arrows shift by one day, <kbd>PageUp</kbd>/<kbd>PageDown</kbd> by one month, <kbd>Home</kbd>/<kbd>End</kbd> to the start and end of the week, <kbd>Enter</kbd> selects. It's the keyboard the user already knows from Excel and Google Calendar: we don't invent it, we respect it. The technical secret is the <em>roving tabindex</em> — only one cell is tabbable at a time, so <kbd>Tab</kbd> enters and leaves the grid in one step, and inside you navigate with the arrows. The selected day is announced in a live region; “today” carries <code>aria-current="date"</code>.</p>
+    <p>All the names — months, weekdays — come from <code>Intl.DateTimeFormat</code>, never from hand-written arrays: so the week starts on Monday in Italian and on Sunday in English without a single hard-wired `if`, and “September” is “September” in the right language. Colour isn't the only signal: “today” is a ring, the selected day is a full fill, and the complete truth is in the announced label anyway (“Wednesday, September 16, 2026”). The month change is no spectacle: the grid just redraws, because a calendar doing acrobatics on every month tires you by the third navigation.</p>
+  </div>
+</Demo>
+
+## The range that tells you where you are
+
+Selecting “from the 12th to the 19th” isn't one gesture, it's two — and the most common mistake is not telling the user which of the two they're in. A range has a start and an end, and between them there's an intermediate state that must be made visible, not left to guesswork.
+
+<Demo title="Range selection · entry, exit and a range preview" tag="23.b">
+  <DateRangePicker locale="en" />
+  <div slot="note">
+    <p>The first click sets the start; from there, as the pointer moves, the range <em>previews</em> under the cursor — you see what you're about to choose before confirming it with the second click. The state is always explicit below the grid: “pick the start”, then “pick the end”, then the summary with the nights counted. If the second click lands before the first, nothing breaks: the range normalizes itself, the start is always the earlier date. A third click starts over, no traps.</p>
+    <p>The two endpoints are marked on <strong>two channels</strong>, never colour alone: a full fill <em>and</em> a crisp pill shape, while the body is a soft continuous bar. Someone who can't tell the colours apart still reads “start” and “end” from the text summary and from each cell's accessible label. It's the same discipline as the rest of the playground carried onto dates: colour decorates, but is never the only voice. And the range bar isn't animated on every mouse move — it repaints, because it's a state indicator, not an effect.</p>
+  </div>
+</Demo>
+
+## The duration that doesn't hide the date
+
+“Published on 2026-09-11T07:30:00Z” is precise and cold: to grasp “how long ago” the brain has to subtract on its own. “An hour and a half ago” it reads at a glance. But the relative alone is a half-truth — which is why the absolute never disappears.
+
+<Demo title="Relative duration · Intl.RelativeTimeFormat with the absolute always reachable" tag="23.c">
+  <RelativeDuration locale="en" />
+  <div slot="note">
+    <p><code>Intl.RelativeTimeFormat</code> produces “in 3 days”, “2 hours ago”, “yesterday” — in the right language and with the correct forms (with <code>numeric: "auto"</code> it says “yesterday”, not “1 day ago”). The code picks the most readable unit for each distance: minutes while they count, then hours, then days — never “2880 minutes ago”. It's the shortcut for the eyes, the one that lets you answer “do I need to act now?” immediately.</p>
+    <p>But “in 3 days” doesn't say <em>which</em> day, and at midnight it changes meaning: the relative, alone, lies by omission. That's why the absolute date stays <strong>always</strong> reachable — in the <code>title</code> (tooltip on hover), in the <code>datetime</code> attribute of the <code>&lt;time&gt;</code> element (the form machines and screen readers read), and printed small underneath. The relative is the friendly voice; the absolute is the source of truth, and it's never thrown away in the name of readability.</p>
+  </div>
+</Demo>
+
+## The time that carries its zone
+
+“The call is at 6:00 PM” is an incomplete sentence: 6:00 PM *where*? A time without a zone forces every reader to guess, and whoever guesses wrong misses the meeting. The rule isn't negotiable: every time that crosses zones carries its zone, explicit, next to the number.
+
+<Demo title="Time with an explicit zone · because a time without a zone is a lie" tag="23.d">
+  <ExplicitTimezone locale="en" />
+  <div slot="note">
+    <p>The very same instant — an absolute point in time — projected into different zones shows different numbers: in Rome it's 6:00 PM, in New York noon, in Tokyo 1:00 AM the next day. Without the zone label they'd be indistinguishable and misleading. <code>Intl.DateTimeFormat</code> does it all: given the instant and a <code>timeZone</code>, it projects it into that zone's local time and, with <code>timeZoneName</code>, attaches the label. We use <code>formatToParts</code> to isolate the zone name and give it prominence: it's not a muted detail, it's what makes the time true.</p>
+    <p>The lesson is a single one, and it holds even when you show a single time: the zone is not optional. An event, a deadline, a “see you at” that crosses a geographic border always carries its zone — otherwise the number's apparent precision is exactly what deceives. It's the temporal version of the honesty that runs through the whole playground: better a longer, true datum than a shorter, ambiguous one. A time without a zone isn't concise, it's incomplete.</p>
+  </div>
+</Demo>
+
+## The field that understands “tomorrow”
+
+Asking for a date with three dropdowns is technically correct and humanly hostile: nobody thinks “15 / September / 2026”, they think “next Friday”. The last piece accepts basic natural language — but its real lesson isn't understanding: it's being honest when it *doesn't* understand.
+
+<Demo title="Smart input · understands “tomorrow”, honest when it doesn't" tag="23.e">
+  <SmartDateInput locale="en" />
+  <div slot="note">
+    <p>Type “tomorrow”, “next friday”, “+3 days”, “in 2 weeks”, and the interpreted date appears right below, weekday included (because “ah, it's a Friday” is half the value). No parsing libraries: a handful of explicit rules, each one recognizable, with the day names taken from <code>Intl</code> so “venerdì” and “friday” both work in their language. The instant echo is the key — the user confirms the date with their eyes before submitting it, and doesn't discover the mistake only afterwards.</p>
+    <p>The hard part isn't understanding, it's <strong>admitting you don't understand</strong>. A parser that guesses at random (“I'll interpret something, default to today”) is worse than one that says “I didn't get that”: the silent wrong date is a trap that detonates later. Here, if the input matches no known pattern, we say so clearly and suggest what to try — no invented fallback. The three states (waiting, understood, not understood) are distinguished by sign + text + colour, never colour alone. Trust in a smart field is built precisely on its declared limits: it understands little, but it never lies.</p>
+  </div>
+</Demo>
+
+---
+
+Five ways to ask for a date, one discipline: translate the machine into human thought, not the other way around. The calendar you drive with the arrows because the keyboard isn't an afterthought; the range that always tells you which of the two gestures you're in; the relative that simplifies without ever erasing the absolute underneath; the time that carries its zone because a number without context deceives; the field that understands “tomorrow” but confesses when it doesn't. A date is awkward precisely because it's four things at once — a number, a name, a position, an instant — and asking for it well means honouring all four, without choosing which truth to sacrifice to save a step.
+
+The next chapter stays in time but changes form: from the date as data to the *timeline* as a visual object. *Time as a visual object, not as a table* — how to draw a sequence of events so it reads like a story, and not like a spreadsheet with dates in a column.

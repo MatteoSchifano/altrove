@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-19"
+number: "19"
+title: "The book’s index"
+excerpt: "A site that talks about itself has to find its way around inside: indexes that expand, breadcrumbs that drop the useless levels, miniatures made of typography and not screenshots. Editorial navigation is first of all a question of telling the truth about where you are."
+date: "August 14, 2026"
+releaseDate: "2026-08-14"
+readMinutes: 11
+tags: ["navigation", "editorial", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SiteToc from '../../../components/bookindex/SiteToc.astro';
+import SmartBreadcrumb from '../../../components/bookindex/SmartBreadcrumb.astro';
+import ChapterMiniature from '../../../components/bookindex/ChapterMiniature.astro';
+import TagIndex from '../../../components/bookindex/TagIndex.astro';
+import YouAreHere from '../../../components/bookindex/YouAreHere.astro';
+
+This playground spent eighteen chapters looking at components one at a time: the button, the toast, the toggle, the numbers. This chapter steps back and looks at the whole — the site as a *book*. And a book, to be navigable, needs an apparatus that isn’t the content: the index up front, the analytic index in the back, the breadcrumbs that say which chapter you’re in, the “you are here” of the map. There’s a single question: a site that talks about itself, how does it find its way around inside?
+
+The temptation here is to treat navigation as decoration — a pretty menu, an animated thread. But orientation is the most serious of UX responsibilities, because a disoriented user doesn’t complain: they leave. And disorientation doesn’t come from a lack of links, it comes from links that *lie* — a breadcrumb that unrolls and hides exactly the two items that matter, a preview that’s a photo three redesigns old, an index that highlights a section you aren’t reading.
+
+Five tools of orientation, one underlying rule, the same as always: tell the truth about where you are. The index must know which section you’re *actually* reading; the breadcrumb must show the root and the leaf, not the soft belly in between; the miniature must be the content, not a photo of it that ages. And every “you are here” must be announced with `aria-current`, not just painted, because finding your way is a right for the one who can’t see the screen as much as for the one who can.
+
+## The index that knows where you are
+
+The first tool is the general index: chapters, and under each chapter the sections, expandable. But paper has a limit here that digital overcomes: a book’s index is mute, identical for everyone. A site’s can highlight the line you’re reading *right now*.
+
+<Demo title="Site index · expandable, with scroll-spy" tag="19.a">
+  <SiteToc locale="en" />
+  <div slot="note">
+    <p>Two gestures kept separate, because they’re two different responsibilities. Expanding a chapter is <em>your choice</em>: a <code>&lt;button aria-expanded&gt;</code> opens its list of sections. Highlighting the current section is instead a <em>consequence of scrolling</em>, not a click: an <code>IntersectionObserver</code> watches the column on the right and marks in the index the section actually under your eyes — not “the topmost one”, but the one with most of itself above the reading line. If the active section sits in a closed chapter, the index opens it on its own: it can’t highlight a hidden line.</p>
+    <p>The current section’s prominence isn’t colour only. There’s <code>aria-current="true"</code> on the link — which a screen reader announces as “current page” — plus a marker on the left and a shift in weight. Three channels for one thing, so someone who can’t tell the accent apart still reads where they are. And the opening doesn’t animate height in jerks: it uses a grid that goes from <code>0fr</code> to <code>1fr</code>, fluid; under <code>prefers-reduced-motion</code> it jumps to the open state without the journey. Same outcome, no unroll.</p>
+  </div>
+</Demo>
+
+## The breadcrumb that doesn’t unroll fully
+
+The breadcrumb is Ariadne’s thread: “you are here, and here’s the way back”. Honest while it’s short. But on a deep site it becomes a snake that wraps onto a new line and hides the two items that truly count — the root you started from and the leaf where you are now.
+
+<Demo title="Smart breadcrumb · drops the middle, expandable" tag="19.b">
+  <SmartBreadcrumb locale="en" />
+  <div slot="note">
+    <p>The fix is the one newspapers use in print: when the trail is long, keep the first and the last and put a “…” in between. Here that “…” isn’t mute: it’s a <code>&lt;button aria-expanded&gt;</code> with a speaking label — “Show N hidden levels” — that, when pressed, unrolls the intermediate levels and then announces “hide”. The breadcrumb stays short and readable by default, but the full depth is one click away, not amputated.</p>
+    <p>No accessibility traded for aesthetics. It’s a <code>&lt;nav&gt;</code> with an <code>&lt;ol&gt;</code>, because a breadcrumb <em>is</em> an ordered list: the order is information, it’s the parent→child hierarchy. The current page is the last item, marked <code>aria-current="page"</code> and not turned into a link, because you don’t navigate to where you already are. And the hidden levels stay in the DOM with <code>hidden</code> — out of the flow and out of the screen reader while closed, but present: the document’s structure doesn’t lie about the path’s real depth.</p>
+  </div>
+</Demo>
+
+## The miniature made of words
+
+How do you give a preview of a chapter in an index? The easy reflex is the screenshot: a photo of the page shrunk down. But at that scale the text is a grey smear, and the photo ages with every redesign. The honest miniature of a text is the text itself, small but true.
+
+<Demo title="Chapter miniature · typography, not screenshot" tag="19.c">
+  <ChapterMiniature locale="en" />
+  <div slot="note">
+    <p>Each miniature is a tiny layout: eyebrow, title, lede, at reduced typographic scale. It’s readable — at least the title is — it’s always up to date because it <em>is</em> the content, not a baked PNG, and it respects the light/dark theme because it uses the tokens, not an image stuck at yesterday. A screenshot lies twice: it fakes content where there’s only grey, and shows a layout that might not exist any more. The words don’t.</p>
+    <p>There’s a hidden typographic rule in shrinking: you don’t scale everything uniformly. The title, in miniature, wants a touch less weight and tracking so it doesn’t clog up; the lede wants a short line — <code>measure-tight</code> — and a clamp to a few lines, because it’s breathing room, not the whole body. Hierarchy is preserved by <em>ratios</em>, not by a blind zoom. The whole card is an <code>&lt;a&gt;</code> with an <code>aria-label</code> that sums up what it opens: a screen-reader user doesn’t “see” the miniature, they must hear its sense in one sentence.</p>
+  </div>
+</Demo>
+
+## The analytic index of tags
+
+In the back of an essay there’s the analytic index: each entry, the pages that treat it. It’s the other half of the general index. The one up front says “what it’s about, in order”; this one in the back says “where *this* is discussed”, skipping the order. Here the entries are the tags.
+
+<Demo title="Tag index · local-state filter" tag="19.d">
+  <TagIndex locale="en" />
+  <div slot="note">
+    <p>All of the site’s tags, ordered by frequency — the most load-bearing first — and below them the list of chapters. Click a tag and the chapters that don’t carry it drop out; click the same tag again and the filter clears, all return. It’s a purely <em>local</em> state: no navigation, no query to the content collection, just an attribute that decides who stays. The tags are <code>&lt;button aria-pressed&gt;</code> in a <code>toolbar</code>, because they’re filter switches, not links to pages.</p>
+    <p>Honesty is in the numbers and in how you remove. Beside each tag the chapter count, in <code>tabular-nums</code> so it doesn’t flinch going from 1 to 2 digits; and when a filter is active, a line “N of M chapters” that <em>reports</em>, instead of emptying the list in silence and leaving you fearing a bug. The excluded chapters aren’t just dimmed: they’re <code>hidden</code>, out of the tab order and out of the screen reader, because a filter must actually filter even for someone who can’t see the opacity. The chip that caused the match lights up: it says <em>why</em> that chapter stayed.</p>
+  </div>
+</Demo>
+
+## The map with the red dot
+
+“You are here” is the oldest pattern of orientation: a map with a dot that says where you stand. On a site it’s a mini-ToC that doesn’t only serve to navigate, but to *place* — before you move, knowing where your step is in the path.
+
+<Demo title="You are here · current position with aria-current" tag="19.e">
+  <YouAreHere locale="en" />
+  <div slot="note">
+    <p>The difference from a plain index is all in the current item. Here it isn’t merely “highlighted”: it’s the only one that’s <em>not</em> a link — you don’t navigate to where you already are — it’s marked <code>aria-current="true"</code> and carries a readable “you are here” label, not just a colour change. Three channels — text, position on the path, colour — to say one thing, because someone who can’t tell the accent apart must still understand where they are. The past and future steps separate beyond colour too: a check for “read”, a small circle for “to read”.</p>
+    <p>The current dot breathes faintly, a slow pulse that draws the eye without fidgeting — and it’s pure accent, so it disappears entirely under <code>prefers-reduced-motion</code>: the position stays marked by everything else, which doesn’t depend on the animation. It’s the acid test of honest orientation: the information about “where you are” must never live inside a movement alone. Remove the movement and if you no longer know where you are, the movement was doing a job that wasn’t its to do.</p>
+  </div>
+</Demo>
+
+---
+
+Five tools, one shared insight: orientation isn’t decoration, it’s telling the truth about where you are. The index that highlights the section you’re actually reading, the breadcrumb that shows root and leaf and keeps the rest within reach but not in your face, the miniature that is content and not a stale photo of it, the tag index that reports how many chapters remain, the “you are here” that doesn’t entrust the position to a pulse. A site that talks about itself finds its way well when its navigation apparatus is as honest as its content — and when, like a good tool, you notice it only the moment you look for it.
+
+The next chapter stays in editorial but moves from words to figures. *Images in editorial* — when an image is information, and must be handled with the rigour of a datum, and when instead it’s breathing room, and its only job is to give the page some air.

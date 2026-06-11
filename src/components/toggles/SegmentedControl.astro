@@ -1,0 +1,168 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SegmentedControl — il toggle che non è binario.
+
+   Lo switch ha due posizioni. Il segmented control ne ha tre, o
+   quattro: è una scelta *singola* fra poche alternative pari-grado,
+   non un acceso/spento. Confondere i due è l'errore di partenza —
+   un segmented da due segmenti che dovrebbe essere uno switch, o
+   uno switch che nasconde tre opzioni dietro un solo gesto.
+
+   Sotto la pelle "iOS" c'è il controllo più onesto del web: dei
+   normali <input type="radio"> in un <fieldset>. Da lì arriva
+   gratis tutto ciò che conta:
+     • le frecce ←/→ muovono la selezione (semantica radio nativa);
+     • un solo segmento è selezionabile, sempre — il browser lo
+       garantisce, non il nostro JS;
+     • in un form, il valore parte col name. Nessun <div role> da
+       reidratare a mano.
+
+   L'unica cosa che aggiungiamo è la "pillola" che scivola dietro
+   il segmento attivo: un indicatore di posizione, mosso via una
+   custom property --idx. I segmenti sono a larghezza uguale, così
+   l'indicatore è esattamente 100%/N e trasla di idx·100%.
+
+   Reduced motion: la pillola non scivola, appare già sotto il
+   segmento scelto (durate-token → 1ms).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Densità della lista',
+    options: ['Comoda', 'Normale', 'Compatta'],
+  },
+  en: {
+    legend: 'List density',
+    options: ['Cozy', 'Normal', 'Compact'],
+  },
+} as const;
+const c = COPY[locale];
+const name = `seg-${locale}`;
+const initial = 1; // "Normale" — un default mite, non l'estremo
+---
+
+<fieldset class="seg" style={`--count:${c.options.length}; --idx:${initial};`}>
+  <legend class="seg__legend">{c.legend}</legend>
+  <div class="seg__group">
+    <span class="seg__pill" aria-hidden="true"></span>
+    {c.options.map((opt, i) => (
+      <label class="seg__option">
+        <input
+          type="radio"
+          name={name}
+          value={opt}
+          class="seg__input"
+          data-idx={String(i)}
+          checked={i === initial}
+        />
+        <span class="seg__text">{opt}</span>
+      </label>
+    ))}
+  </div>
+</fieldset>
+
+<style>
+  .seg {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    inline-size: min(24rem, 100%);
+  }
+  .seg__legend {
+    padding: 0;
+    margin-block-end: 0.6rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .seg__group {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--count), 1fr);
+    padding: 0.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+
+  /* La pillola: larga un segmento, scivola sull'asse X. Vive sotto
+     il testo (z-index) e si muove per --idx. */
+  .seg__pill {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0.25rem;
+    inset-inline-start: 0.25rem;
+    inline-size: calc((100% - 0.5rem) / var(--count));
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(calc(var(--idx) * 100%));
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .seg__option {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+  }
+
+  /* L'input radio resta nel DOM (semantica + tastiera) ma invisibile */
+  .seg__input {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: 0;
+  }
+
+  .seg__text {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    text-align: center;
+    inline-size: 100%;
+    border-radius: var(--radius-pill);
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .seg__input:checked + .seg__text { color: var(--ink-strong); }
+  .seg__option:hover .seg__text { color: var(--ink); }
+
+  /* Focus sul segmento attivo via tastiera: l'anello va sull'etichetta */
+  .seg__input:focus-visible + .seg__text {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.seg').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const inputs = root.querySelectorAll<HTMLInputElement>('.seg__input');
+      // change copre sia il click sia la navigazione con le frecce —
+      // non serve gestire la tastiera a mano, la semantica radio la dà.
+      inputs.forEach((input) => {
+        input.addEventListener('change', () => {
+          if (!input.checked) return;
+          root.style.setProperty('--idx', input.dataset.idx ?? '0');
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

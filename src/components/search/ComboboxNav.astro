@@ -1,0 +1,418 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ComboboxNav — la ricerca che si guida da tastiera.
+
+   Tutto il capitolo converge qui: il pattern ARIA combobox completo,
+   quello che rende la ricerca usabile *senza* mouse. Non è un vezzo
+   per power-user — è ciò che permette a uno screen reader di
+   annunciare «menu aperto, 4 opzioni, opzione 1 di 4 evidenziata».
+
+   Il contratto ARIA, per intero:
+     - l’<input> è role="combobox", con aria-expanded, aria-controls
+       (punta alla listbox) e aria-autocomplete="list";
+     - la lista è role="listbox"; ogni voce è role="option" con un id;
+     - l’opzione attiva non riceve il focus del DOM (il focus resta
+       nell’input, così si continua a scrivere): la si segnala con
+       aria-activedescendant = id dell’opzione, e con uno stile visivo;
+     - il primo risultato pertinente è evidenziato di default, così
+       Invio fa la cosa giusta senza nemmeno premere ↓.
+
+   La tastiera:
+     ↓ / ↑   muovono l’evidenziazione (e fanno ciclo ai bordi)
+     Home/End saltano al primo / all’ultimo
+     Invio    seleziona l’opzione attiva
+     Esc      chiude la lista (e, se già chiusa, svuota il campo)
+
+   Reduced motion: l’apertura non scivola, compare allo stato finale.
+   Teardown: il listener su pointerdown del documento si rimuove a
+   astro:before-swap, perché le SPA ricreano il DOM.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Vai a un capitolo',
+    placeholder: 'inizia a scrivere, poi ↑ ↓ Invio…',
+    hint: 'Tastiera: ↑ ↓ per muoverti, Invio per scegliere, Esc per chiudere.',
+    empty: 'Scrivi per aprire i suggerimenti.',
+    none: 'Nessun capitolo corrisponde.',
+    chosen: 'Hai scelto',
+    countOne: 'opzione',
+    countMany: 'opzioni',
+  },
+  en: {
+    label: 'Jump to a chapter',
+    placeholder: 'start typing, then ↑ ↓ Enter…',
+    hint: 'Keyboard: ↑ ↓ to move, Enter to choose, Esc to close.',
+    empty: 'Type to open the suggestions.',
+    none: 'No chapter matches.',
+    chosen: 'You chose',
+    countOne: 'option',
+    countMany: 'options',
+  },
+} as const;
+const c = COPY[locale];
+
+const DATA = [
+  'Anatomia di un toggle',
+  'Anatomia di un toast',
+  'La ricerca as-you-type',
+  'Il calendario senza odiare il browser',
+  'Lo scroll che racconta',
+  'I numeri che non sussultano',
+  'Lo stato vuoto che accoglie',
+  'La micro-tipografia',
+];
+---
+
+<div class="cbx">
+  <label class="cbx__label" for="cbx-input">{c.label}</label>
+
+  <div class="cbx__field">
+    <input
+      id="cbx-input"
+      class="cbx__input"
+      type="text"
+      role="combobox"
+      autocomplete="off"
+      spellcheck="false"
+      aria-expanded="false"
+      aria-controls="cbx-listbox"
+      aria-autocomplete="list"
+      aria-describedby="cbx-hint"
+      placeholder={c.placeholder}
+    />
+    <ul
+      id="cbx-listbox"
+      class="cbx__listbox"
+      role="listbox"
+      aria-label={c.label}
+      hidden
+      data-none={c.none}
+      data-one={c.countOne}
+      data-many={c.countMany}
+      data-pool={JSON.stringify(DATA)}
+    >
+    </ul>
+  </div>
+
+  <p class="cbx__hint" id="cbx-hint">{c.hint}</p>
+
+  <p class="cbx__status" role="status" aria-live="polite">{c.empty}</p>
+
+  <p class="cbx__chosen" aria-live="polite" data-chosen={c.chosen}></p>
+</div>
+
+<style is:global>
+  .cbx {
+    inline-size: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cbx__label {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .cbx__field { position: relative; }
+
+  .cbx__input {
+    appearance: none;
+    inline-size: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .cbx__input::placeholder { color: var(--ink-subtle); opacity: 1; }
+  .cbx__input:hover { border-color: var(--border-strong); }
+  .cbx__input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--halo-focus);
+  }
+
+  .cbx__listbox {
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem;
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: calc(100% + 0.35rem);
+    z-index: var(--z-raised);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-block-size: 16rem;
+    overflow-y: auto;
+    /* apertura ~220ms, out-soft: si posa */
+    animation: cbx-open var(--dur-normal) var(--ease-out-soft) both;
+  }
+  @keyframes cbx-open {
+    from { opacity: 0; transform: translateY(-0.3rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .cbx__option {
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  /* L’opzione attiva: evidenziata da activedescendant, non dal focus.
+     Lo sfondo è il secondo canale; il segno tipografico (peso) è il
+     primo, così non dipende solo dal colore. */
+  .cbx__option[data-active='true'] {
+    background-color: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+  .cbx__option :global(mark) {
+    background-color: transparent;
+    color: inherit;
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.15em;
+  }
+
+  .cbx__hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: var(--leading-snug);
+  }
+
+  .cbx__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .cbx__chosen {
+    margin: 0.1rem 0 0;
+    min-block-size: 1.2em;
+    font-size: var(--text-xs);
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cbx__listbox { animation: none; }
+  }
+</style>
+
+<script>
+  type Pool = string[];
+
+  const fold = (s: string) =>
+    s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.cbx').forEach((root, rootIdx) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('.cbx__input');
+      const box = root.querySelector<HTMLUListElement>('.cbx__listbox');
+      const status = root.querySelector<HTMLElement>('.cbx__status');
+      const chosen = root.querySelector<HTMLElement>('.cbx__chosen');
+      if (!input || !box || !status || !chosen) return;
+
+      let pool: Pool = [];
+      try { pool = JSON.parse(box.dataset.pool ?? '[]'); } catch { pool = []; }
+
+      const tNone = box.dataset.none ?? '';
+      const tOne = box.dataset.one ?? '';
+      const tMany = box.dataset.many ?? '';
+      const tChosen = chosen.dataset.chosen ?? '';
+
+      // Prefisso d’id univoco per istanze multiple sulla stessa pagina.
+      const prefix = `cbx-${rootIdx}-opt-`;
+
+      let current: string[] = []; // testo delle opzioni correnti
+      let active = -1;            // indice dell’opzione evidenziata
+
+      const isOpen = () => input.getAttribute('aria-expanded') === 'true';
+
+      const optionId = (i: number) => `${prefix}${i}`;
+
+      const setActive = (i: number) => {
+        active = i;
+        const opts = box.querySelectorAll<HTMLLIElement>('.cbx__option');
+        opts.forEach((el, idx) => {
+          const on = idx === i;
+          el.dataset.active = String(on);
+          el.setAttribute('aria-selected', String(on));
+          if (on) el.scrollIntoView({ block: 'nearest' });
+        });
+        // activedescendant: il focus resta nell’input, l’evidenziazione
+        // viaggia via attributo. È il cuore del pattern combobox.
+        if (i >= 0) input.setAttribute('aria-activedescendant', optionId(i));
+        else input.removeAttribute('aria-activedescendant');
+      };
+
+      const buildOption = (text: string, i: number, needle: string): HTMLLIElement => {
+        const li = document.createElement('li');
+        li.className = 'cbx__option';
+        li.id = optionId(i);
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', 'false');
+
+        // Evidenzia la corrispondenza nel testo, lavorando sui nodi
+        // (mai concatenando HTML): la query non diventa mai markup.
+        const folded = fold(text);
+        const idx = folded.indexOf(needle);
+        if (needle && idx !== -1) {
+          if (idx > 0) li.appendChild(document.createTextNode(text.slice(0, idx)));
+          const mark = document.createElement('mark');
+          mark.textContent = text.slice(idx, idx + needle.length);
+          li.appendChild(mark);
+          if (idx + needle.length < text.length) {
+            li.appendChild(document.createTextNode(text.slice(idx + needle.length)));
+          }
+        } else {
+          li.textContent = text;
+        }
+
+        // Il puntatore evidenzia (hover) e seleziona (click).
+        li.addEventListener('pointermove', () => setActive(i));
+        li.addEventListener('click', () => choose(i));
+        return li;
+      };
+
+      const open = () => {
+        if (current.length === 0) return;
+        box.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+      };
+
+      const close = () => {
+        box.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        active = -1;
+      };
+
+      const choose = (i: number) => {
+        if (i < 0 || i >= current.length) return;
+        const value = current[i];
+        input.value = value;
+        chosen.textContent = `${tChosen}: ${value}`;
+        close();
+        // Riallinea il listino al testo scelto, ma lascialo chiuso.
+        current = [value];
+        input.focus();
+      };
+
+      const render = () => {
+        const q = input.value.trim();
+        const needle = fold(q);
+        box.replaceChildren();
+
+        if (q === '') {
+          current = [];
+          status.textContent = '';
+          close();
+          return;
+        }
+
+        current = pool.filter((x) => fold(x).includes(needle));
+
+        if (current.length === 0) {
+          status.textContent = tNone;
+          close();
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        current.forEach((text, i) => frag.appendChild(buildOption(text, i, needle)));
+        box.appendChild(frag);
+
+        const noun = current.length === 1 ? tOne : tMany;
+        status.textContent = `${current.length} ${noun}`;
+
+        open();
+        // Il primo risultato pertinente è attivo di default: Invio
+        // sceglie subito la cosa più probabile, senza premere ↓.
+        setActive(0);
+      };
+
+      const move = (delta: number) => {
+        if (!isOpen()) { open(); if (active < 0) setActive(0); return; }
+        const n = current.length;
+        if (n === 0) return;
+        const next = (active + delta + n) % n; // ciclo ai bordi
+        setActive(next);
+      };
+
+      input.addEventListener('input', () => {
+        chosen.textContent = '';
+        render();
+      });
+
+      input.addEventListener('keydown', (e) => {
+        switch (e.key) {
+          case 'ArrowDown': e.preventDefault(); move(1); break;
+          case 'ArrowUp':   e.preventDefault(); move(-1); break;
+          case 'Home':
+            if (isOpen()) { e.preventDefault(); setActive(0); }
+            break;
+          case 'End':
+            if (isOpen()) { e.preventDefault(); setActive(current.length - 1); }
+            break;
+          case 'Enter':
+            if (isOpen() && active >= 0) { e.preventDefault(); choose(active); }
+            break;
+          case 'Escape':
+            // Esc chiude la lista; se è già chiusa, svuota il campo.
+            if (isOpen()) { e.preventDefault(); close(); }
+            else if (input.value !== '') { input.value = ''; render(); }
+            break;
+        }
+      });
+
+      // Riapre se torno a fuocare un campo con testo e opzioni.
+      input.addEventListener('focus', () => {
+        if (input.value.trim() !== '' && current.length > 0) render();
+      });
+
+      // Click fuori → chiudi. Il listener è sul documento, quindi va
+      // rimosso al teardown (le SPA ricreano il DOM).
+      const onDocPointer = (e: PointerEvent) => {
+        if (!root.contains(e.target as Node)) close();
+      };
+      document.addEventListener('pointerdown', onDocPointer);
+
+      const teardown = () => {
+        document.removeEventListener('pointerdown', onDocPointer);
+        document.removeEventListener('astro:before-swap', teardown);
+      };
+      document.addEventListener('astro:before-swap', teardown);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

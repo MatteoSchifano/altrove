@@ -1,0 +1,204 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   RelativeDuration — "fra 3 giorni", non "2026-09-14T09:00".
+
+   La data assoluta è precisa ma fredda: per capire "quanto manca"
+   il cervello deve fare la sottrazione da solo. La durata relativa
+   ("fra 3 giorni", "2 ore fa") la fa al posto suo, e si legge a
+   colpo d’occhio. Intl.RelativeTimeFormat la genera nella lingua
+   giusta, con le forme corrette ("ieri", non "1 giorno fa").
+
+   Ma il relativo da solo è una mezza verità: "fra 3 giorni" non
+   dice *quale* giorno, e a mezzanotte cambia significato. Per
+   questo la data assoluta resta SEMPRE raggiungibile — nel title
+   (tooltip al passaggio) e nell’attributo datetime di <time>, che
+   è la forma che le macchine leggono. Il relativo è la scorciatoia
+   per gli occhi; l’assoluto è la fonte di verità sotto.
+
+   IMPORTANTE: nessun new Date() nel frontmatter. "Adesso" è una
+   data di riferimento fissa, passata al client; la scelta
+   dell’unità (giorni? ore? minuti?) avviene nel <script>.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    title: 'Quando',
+    nowLabel: 'Adesso è',
+    rows: [
+      { label: 'Pubblicato', offset: -90 * 60 },
+      { label: 'Ultimo accesso', offset: -26 * 3600 },
+      { label: 'Scadenza', offset: 3 * 86_400 },
+      { label: 'Rinnovo', offset: 47 * 86_400 },
+    ],
+  },
+  en: {
+    title: 'When',
+    nowLabel: 'Now is',
+    rows: [
+      { label: 'Published', offset: -90 * 60 },
+      { label: 'Last seen', offset: -26 * 3600 },
+      { label: 'Expires', offset: 3 * 86_400 },
+      { label: 'Renews', offset: 47 * 86_400 },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const bcp = locale === 'it' ? 'it-IT' : 'en-US';
+
+// Riferimento FISSO (no new Date() server): 11 settembre 2026, 09:00 UTC.
+const NOW_ISO = '2026-09-11T09:00:00Z';
+---
+
+<div class="rel" data-locale={bcp} data-now={NOW_ISO}>
+  <div class="rel__head">
+    <h4 class="rel__title">{c.title}</h4>
+    <span class="rel__now tabular" data-rel-now>&nbsp;</span>
+  </div>
+
+  <dl class="rel__list">
+    {c.rows.map((r) => (
+      <div class="rel__row" data-offset={String(r.offset)}>
+        <dt class="rel__label">{r.label}</dt>
+        <dd class="rel__val">
+          <time class="rel__rel tabular" data-rel-text>&nbsp;</time>
+          <span class="rel__abs tabular" data-rel-abs>&nbsp;</span>
+        </dd>
+      </div>
+    ))}
+  </dl>
+</div>
+
+<style>
+  .rel {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .rel__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-2xs);
+    border-block-end: 1px solid var(--border);
+  }
+  .rel__title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .rel__now {
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .rel__list { margin: 0; display: flex; flex-direction: column; }
+  .rel__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-2xs);
+    border-block-end: 1px dashed var(--border);
+  }
+  .rel__row:last-child { border-block-end: 0; }
+
+  .rel__label {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+  .rel__val {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+  }
+  /* Il relativo è il primo segnale: grande, leggibile. */
+  .rel__rel {
+    font-size: var(--text-base);
+    color: var(--ink-strong);
+    font-variant-numeric: tabular-nums;
+    /* il tooltip nativo vive sul title; il cursore lo segnala */
+    cursor: help;
+    text-decoration: underline dotted color-mix(in oklab, var(--ink) 30%, transparent);
+    text-underline-offset: 0.2em;
+  }
+  /* L’assoluto è la verità sotto: sempre visibile, in sordina. */
+  .rel__abs {
+    font-size: var(--text-2xs);
+    font-family: var(--font-mono);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+
+<script>
+  type Unit = Intl.RelativeTimeFormatUnit;
+
+  // Sceglie l’unità più "grossa" leggibile per un delta in secondi.
+  // È la stessa logica di un "time ago": minuti finché contano, poi
+  // ore, poi giorni — mai "2880 minuti fa".
+  function pickUnit(deltaSec: number): { value: number; unit: Unit } {
+    const abs = Math.abs(deltaSec);
+    const sign = Math.sign(deltaSec);
+    const day = 86_400;
+    if (abs < 60) return { value: 0, unit: 'second' };
+    if (abs < 3600) return { value: sign * Math.round(abs / 60), unit: 'minute' };
+    if (abs < day) return { value: sign * Math.round(abs / 3600), unit: 'hour' };
+    if (abs < 30 * day) return { value: sign * Math.round(abs / day), unit: 'day' };
+    if (abs < 365 * day) return { value: sign * Math.round(abs / (30 * day)), unit: 'month' };
+    return { value: sign * Math.round(abs / (365 * day)), unit: 'year' };
+  }
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.rel').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const bcp = root.dataset.locale ?? 'it-IT';
+      const now = new Date(root.dataset.now ?? '2026-09-11T09:00:00Z');
+      const nowEl = root.querySelector<HTMLElement>('[data-rel-now]')!;
+
+      const rtf = new Intl.RelativeTimeFormat(bcp, { numeric: 'auto' });
+      const absFmt = new Intl.DateTimeFormat(bcp, { dateStyle: 'medium', timeStyle: 'short' });
+      const isoLabel = bcp === 'it-IT' ? 'Adesso è' : 'Now is';
+
+      nowEl.textContent = `${isoLabel} ${absFmt.format(now)}`;
+
+      root.querySelectorAll<HTMLElement>('.rel__row').forEach((row) => {
+        const offset = Number(row.dataset.offset ?? 0);
+        const when = new Date(now.getTime() + offset * 1000);
+        const { value, unit } = pickUnit(offset);
+
+        const relEl = row.querySelector<HTMLTimeElement>('[data-rel-text]')!;
+        const absEl = row.querySelector<HTMLElement>('[data-rel-abs]')!;
+
+        relEl.textContent = rtf.format(value, unit);
+        // La verità precisa è sempre a portata: tooltip + datetime macchina.
+        const absText = absFmt.format(when);
+        relEl.title = absText;
+        relEl.dateTime = when.toISOString();
+        absEl.textContent = absText;
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,284 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   UndoToast — "Annulla" invece di "Sei sicuro?".
+
+   Il pattern più onesto per le azioni reversibili: non chiedere
+   conferma prima (un dialog che interrompe), ma agire subito e
+   offrire una finestra per tornare indietro. L’azione si compie,
+   il toast appare con un countdown visivo, e finché la barra non
+   si svuota basta un clic per annullare.
+
+   Perché ~5 secondi: è una "finestra di intenzione" leggibile.
+   Meno di 3s e chi legge piano non fa in tempo; più di 8s e il
+   toast diventa rumore che non se ne va. Il countdown è onesto:
+   mostra esattamente quanto tempo resta, non finge urgenza.
+
+   - role="status" + aria-live="polite": annuncia l’azione e
+     l’opzione di annullare senza strappare il focus.
+   - La barra è progresso reale: anche con reduced motion resta,
+     ma salta a step invece di scorrere — dice "quanto manca".
+   - Esc annulla finché la finestra è aperta.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    archiveLabel: 'Conversazione con Anna',
+    archive: 'Archivia',
+    archived: 'Conversazione archiviata',
+    undo: 'Annulla',
+    restored: 'Ripristinata — niente è andato perso.',
+  },
+  en: {
+    archiveLabel: 'Conversation with Anna',
+    archive: 'Archive',
+    archived: 'Conversation archived',
+    undo: 'Undo',
+    restored: 'Restored — nothing was lost.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="undo">
+  <div class="undo__card" data-card>
+    <span class="undo__card-text">{c.archiveLabel}</span>
+    <button type="button" class="undo__archive" data-archive>{c.archive}</button>
+  </div>
+
+  <div class="undo__toast" role="status" aria-live="polite" data-toast data-state="hidden">
+    <span class="undo__msg" data-msg>{c.archived}</span>
+    <button type="button" class="undo__undo" data-undo>{c.undo}</button>
+    <span class="undo__track" aria-hidden="true"><span class="undo__fill" data-fill></span></span>
+  </div>
+</div>
+
+<style>
+  .undo {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .undo__card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: 0.7rem var(--space-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-soft);
+  }
+  .undo__card[data-gone='true'] {
+    opacity: 0;
+    transform: translateX(-8px);
+    pointer-events: none;
+  }
+  .undo__card-text {
+    font-size: var(--text-sm);
+    color: var(--ink);
+  }
+
+  .undo__archive {
+    flex-shrink: 0;
+    padding: 0.4rem 0.9rem;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .undo__archive:hover { color: var(--ink-strong); border-color: var(--border-strong); }
+  .undo__archive:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .undo__toast {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 0.7rem var(--space-sm) 0.85rem;
+    border-radius: var(--radius-md);
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity var(--dur-normal) var(--ease-out-soft),
+      transform var(--dur-normal) var(--ease-out-snug);
+  }
+  .undo__toast[data-state='shown'] { opacity: 1; transform: translateY(0); }
+  .undo__toast[data-state='hidden'] { pointer-events: none; }
+
+  .undo__msg {
+    flex: 1;
+    font-size: var(--text-sm);
+  }
+
+  .undo__undo {
+    flex-shrink: 0;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 0;
+    color: var(--bg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-snug);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    transition: opacity var(--dur-fast) var(--ease-out-soft);
+  }
+  .undo__undo:hover { opacity: 0.8; }
+  .undo__undo:focus-visible { outline: none; box-shadow: var(--halo-focus); border-radius: var(--radius-sm); }
+
+  /* Barra di countdown: progresso che si svuota nel tempo */
+  .undo__track {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    block-size: 3px;
+    background-color: color-mix(in oklab, var(--bg) 22%, transparent);
+  }
+  .undo__fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    transform-origin: inline-start;
+    background-color: var(--accent);
+  }
+  /* shrink: l’animazione di svuotamento, durata impostata via JS */
+  .undo__fill[data-run='true'] {
+    animation: undo-shrink linear forwards;
+  }
+
+  @keyframes undo-shrink {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+
+  /* Stato "ripristinato": il toast cambia voce e si chiude da solo */
+  .undo__toast[data-tone='restored'] { background-color: var(--surface-raised); color: var(--ink-strong); }
+  .undo__toast[data-tone='restored'] .undo__undo { display: none; }
+  .undo__toast[data-tone='restored'] .undo__track { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .undo__card,
+    .undo__toast { transition-duration: 1ms; }
+    /* La barra resta significativa: niente scorrimento continuo, salta
+       per step (JS imposta lo scaleX a tappe). */
+    .undo__fill[data-run='true'] { animation: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.undo').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const card = root.querySelector<HTMLElement>('[data-card]')!;
+      const archiveBtn = root.querySelector<HTMLButtonElement>('[data-archive]')!;
+      const toast = root.querySelector<HTMLElement>('[data-toast]')!;
+      const msg = root.querySelector<HTMLElement>('[data-msg]')!;
+      const undoBtn = root.querySelector<HTMLButtonElement>('[data-undo]')!;
+      const fill = root.querySelector<HTMLElement>('[data-fill]')!;
+
+      const WINDOW = 5000;
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      let timer: number | null = null;
+      let stepper: number | null = null;
+      let escHandler: ((e: KeyboardEvent) => void) | null = null;
+      const archivedMsg = msg.textContent ?? '';
+      const restoredMsg = root.dataset.restored ?? '';
+
+      const teardown = () => {
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (stepper) { clearInterval(stepper); stepper = null; }
+        if (escHandler) { document.removeEventListener('keydown', escHandler); escHandler = null; }
+      };
+
+      const hideToast = () => {
+        teardown();
+        toast.dataset.state = 'hidden';
+        toast.removeAttribute('data-tone');
+        fill.removeAttribute('data-run');
+        fill.style.removeProperty('animation-duration');
+        fill.style.removeProperty('transform');
+      };
+
+      const commit = () => {
+        hideToast();
+        // L’azione era reale e la finestra è scaduta: resta archiviata.
+      };
+
+      const undo = () => {
+        teardown();
+        card.removeAttribute('data-gone');
+        msg.textContent = restoredMsg;
+        toast.dataset.tone = 'restored';
+        timer = window.setTimeout(hideToast, 1600);
+      };
+
+      const startCountdown = () => {
+        fill.style.removeProperty('transform');
+        if (reduce) {
+          // Niente scorrimento: la barra salta per step leggibili.
+          fill.removeAttribute('data-run');
+          let elapsed = 0;
+          const stepMs = 1000;
+          fill.style.transform = 'scaleX(1)';
+          stepper = window.setInterval(() => {
+            elapsed += stepMs;
+            fill.style.transform = `scaleX(${Math.max(0, 1 - elapsed / WINDOW)})`;
+          }, stepMs);
+        } else {
+          fill.style.animationDuration = `${WINDOW}ms`;
+          // Riavvia la keyframe pulendo e forzando un reflow.
+          fill.removeAttribute('data-run');
+          void fill.offsetWidth;
+          fill.setAttribute('data-run', 'true');
+        }
+        timer = window.setTimeout(commit, WINDOW);
+      };
+
+      archiveBtn.addEventListener('click', () => {
+        teardown();
+        card.dataset.gone = 'true';
+        msg.textContent = archivedMsg;
+        toast.removeAttribute('data-tone');
+        toast.dataset.state = 'shown';
+        startCountdown();
+
+        escHandler = (e: KeyboardEvent) => {
+          if (e.key === 'Escape' && toast.dataset.tone !== 'restored') {
+            e.preventDefault();
+            undo();
+          }
+        };
+        document.addEventListener('keydown', escHandler);
+      });
+
+      undoBtn.addEventListener('click', undo);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

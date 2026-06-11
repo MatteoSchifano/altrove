@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-16"
+number: "16"
+title: "The editorial grid"
+excerpt: "A page looks elegant before it's beautiful, and almost always for one reason: every block rests on the same line. Five ways to build and break the grid with CSS — named lines, subgrid, full-bleed, container queries — without a single image file."
+date: "July 24, 2026"
+releaseDate: "2026-07-24"
+readMinutes: 12
+tags: ["editorial", "layout", "css-grid"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import TwelveColumnGrid from '../../../components/grids/TwelveColumnGrid.astro';
+import SidenotePattern from '../../../components/grids/SidenotePattern.astro';
+import PullQuoteGrid from '../../../components/grids/PullQuoteGrid.astro';
+import FullBleedFigure from '../../../components/grids/FullBleedFigure.astro';
+import ContainerRecompose from '../../../components/grids/ContainerRecompose.astro';
+
+There's a question that comes before all the others when you look at a page: what makes it elegant *before* it's beautiful? Not the font, not the colour — those come later, and on their own they're not enough. What the eye registers first, without knowing how to name it, is alignment: the fact that the margins line up, that the blocks begin on the same line, that nothing wobbles. A page with a single typeface and an honest grid always beats a page rich in fonts but built by eye. The grid is the silence on which, afterwards, beauty can speak.
+
+The editorial grid is an inheritance from print: a cage that held text, images and captions together across pages without anything shifting by a millimetre. On the web we inherited the cage but not always the discipline, and two misaligned margins are enough to make a layout look improvised. The good news is that CSS Grid today already knows everything you need — named lines, subgrid, container queries — and almost always the work is just to *name* the right lines and let the blocks rest on them.
+
+Five demos, one per gesture: build the grid, align the notes to it, break it with a quote, let it breathe at full width, and make it listen to its container instead of the window. And as always no libraries and — here it's a precise promise — no image files: every "media" is a CSS gradient with a shape already of its own.
+
+## The twelve-column grid
+
+The first gesture is building the cage. Twelve fluid columns are the editorial standard because they divide well — into 2, 3, 4, 6 — and because they give lines dense enough for any block to rest on without inventing measures.
+
+<Demo title="Twelve fluid columns · named lines + overlay" tag="16.a">
+  <TwelveColumnGrid locale="en" />
+  <div slot="note">
+    <p>The blocks don't count the columns, they <em>name</em> them: the title runs from <code>[col-1]</code> to <code>[col-9]</code>, the meta from <code>[col-9]</code> to <code>[col-13]</code>. That's the difference between «from the fourth to the seventh» (fragile: add a column and it all jumps) and a line that has a name. The layout becomes a readable language, and when you reread it in six months you immediately understand what each thing rests on.</p>
+    <p>The overlay that reveals the columns is pure scaffolding: it's for whoever <em>designs</em>, not whoever reads. That's why it's <code>aria-hidden</code> — diagnostic decoration — and the real blocks stay in the flow, legible even with the overlay off. A native switch turns it on (<code>button role="switch"</code>): keyboard and announced state come for free. And on a narrow screen, where twelve tiny columns would be illegible, the blocks collapse to full width in reading order — the grid serves the reading, not the other way round.</p>
+  </div>
+</Demo>
+
+## The sidenote
+
+With the cage built, two columns rest on it that must stay aligned row by row: the text and its notes. It's the case where manual alignment always breaks, and it's exactly what `subgrid` was made for.
+
+<Demo title="Sidenote · aligned with subgrid" tag="16.b">
+  <SidenotePattern locale="en" />
+  <div slot="note">
+    <p>The note must begin <em>exactly</em> at the height of the paragraph it comments on, not float at random. With <code>subgrid</code> the main column and the subsidiary one share the parent grid's rows: each paragraph and its note rest on the same horizontal line, with no hand-calculated margins that break at the first change in text length. It's the oldest pattern in publishing — the comment <em>beside</em> the text, never at the foot of the page — finally easy to do well.</p>
+    <p>The note is an <code>&lt;aside&gt;</code> and stays <em>after</em> its paragraph in DOM order, so a screen reader reads it at the right point in the argument: the two-column layout is purely visual. On a narrow container the columns collapse and the note slides <em>under</em> the paragraph, indented and with an accent rule — it stays recognisable as a note, not confused with the body. Colour isn't the only signal: there's the indent and the little number too. No animation: it's a change of structure, not an effect to sell.</p>
+  </div>
+</Demo>
+
+## The quote that breaks the grid
+
+A clear grid is also needed in order to break it well. The pull quote exists to break the rhythm — but a break is elegant only if the rule it violates is sharp.
+
+<Demo title="Pull quote · breaks out into the full-bleed column" tag="16.c">
+  <PullQuoteGrid locale="en" />
+  <div slot="note">
+    <p>The text lives in a narrow reading column; the pull quote breaks out into the wide column, from <code>[full-start]</code> to <code>[full-end]</code>, spilling into the margins the body doesn't touch. It doesn't float at random: it <em>occupies a precise line</em> of the same grid, and that's exactly why the offset reads as intention, not as a layout mistake. It's the same cage as before, used at two different widths — and it's that controlled contrast that gives the emphasis.</p>
+    <p>Here honesty is semantic. This pull quote is a <em>visual</em> duplicate of a sentence already present in the body, so it's <code>aria-hidden</code>: we don't want the screen reader to read it twice. It's editorial decoration, not new content. If instead it quoted an external source it would be a real <code>&lt;blockquote&gt;</code> in the flow, with its attribution. The form — large, centred, accented — is the same in both cases; what changes is the truth it tells the screen reader.</p>
+  </div>
+</Demo>
+
+## The full-bleed figure
+
+Full-bleed is the gesture of breathing: an image that touches both edges and gives the page air. But its value isn't only in breaking out — it's in coming back in right after.
+
+<Demo title="Full-bleed figure · gradient, then the text returns" tag="16.d">
+  <FullBleedFigure locale="en" />
+  <div slot="note">
+    <p>The figure rests on the <code>[full]</code> line and overrides the margins; right after, the text returns to its reading measure. That «out and then in» is the editorial rhythm that makes a page feel composed: the prose never stretches to full width, because a line that's too long is tiring — the eye struggles to find the start of the next one. The figure widens, the text comes back in, and the page breathes without losing legibility.</p>
+    <p>No image file: the «media» is a CSS gradient with a fixed <code>aspect-ratio</code>, so the figure already has a shape and there's no reflow when an asset arrives — it's the <em>honest</em> placeholder, occupying exactly the space the real photo would. The block is a <code>&lt;figure&gt;</code> with a real <code>&lt;figcaption&gt;</code>, text in the flow; the gradient panel is decoration (<code>aria-hidden</code>). The caption returns to the reading width, aligned with the text: even when the image shouts, the words come back composed.</p>
+  </div>
+</Demo>
+
+## The card that listens to its container
+
+The last demo overturns the opening question. For years we decided the layout by watching the *window*. But a component doesn't live in the window: it lives in a slot, and the same component can be wide in one spot and narrow in another on the same page.
+
+<Demo title="Container query · recomposes on the container's width" tag="16.e">
+  <ContainerRecompose locale="en" />
+  <div slot="note">
+    <p>The media query asks «how wide is the page?». The container query overturns it and asks «how much room do <em>I</em> have?». The card recomposes based on the width of its container — from horizontal (media on the left, text on the right) to vertical (media on top, text below) — <strong>independently of the window</strong>. It's the end of an era of components that guessed their space: now they measure it.</p>
+    <p>To demonstrate it without resizing the browser, a native <code>&lt;input type="range"&gt;</code> narrows the container: keyboard, dragging and value come for free, and <code>aria-valuetext</code> states the value in words («wide»/«narrow»), not just as an abstract number — two channels, not one. The card inside knows nothing of the slider: it reacts only to the width left to it, and that's exactly the point. The reflow is a change of <em>structure</em>, not an animation: the width transitions while you drag, but under <code>prefers-reduced-motion</code> it collapses to the final state without the slide.</p>
+  </div>
+</Demo>
+
+---
+
+Five gestures, one shared insight: a page's elegance isn't what you add, it's the fact that everything rests on the same line. Building the twelve-column cage, aligning the notes to it with subgrid, breaking it with a quote that knows where it spills, letting it breathe at full width and then return, making it listen to the container instead of the window — each move is the same grid read a different way. And none of them needs a library or an image: just lines with a name, and the discipline to honour them. Beauty comes after. First comes alignment, which is the quietest form of respect for the reader.
+
+The next chapter stays in editorial territory but tightens the focus onto a single element: the quote. *The quotation* — when you give the floor to someone else, how do you present it? Where does our text end and theirs begin, and how do you make that threshold visible without making it loud.

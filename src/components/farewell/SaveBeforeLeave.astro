@@ -1,0 +1,362 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SaveBeforeLeave — il bivio "vuoi salvare prima di uscire?"
+   con il default messo dalla parte giusta.
+
+   Tre strade non sono uguali: salvare è la sicura, uscire senza
+   salvare è quella che brucia il lavoro. Il modo onesto di offrirle
+   è dare il focus iniziale a "Salva", far confermare Invio quella,
+   e tenere "Esci senza salvare" defilata (terziaria, tono di
+   pericolo). Esc = annulla, non = esci: l’uscita distruttiva non
+   deve mai essere la risposta riflessa.
+
+   Tutto SIMULATO in un finto documento contenuto: nessun handler
+   reale di navigazione, la pagina vera non viene mai catturata.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    docLabel: 'Documento · senza titolo',
+    body: 'Hai scritto qualche riga e non l’hai ancora salvata. Prova a chiudere.',
+    close: 'Chiudi il documento',
+    dialogTitle: 'Vuoi salvare prima di uscire?',
+    dialogBody: 'Ci sono modifiche non salvate in questo documento.',
+    save: 'Salva ed esci',
+    cancel: 'Annulla',
+    discard: 'Esci senza salvare',
+    savedAndLeft: 'Salvato. Documento chiuso.',
+    canceled: 'Sei rimasto nel documento.',
+    discarded: 'Uscito senza salvare. Le modifiche sono perse.',
+    reopen: 'Riapri il documento',
+  },
+  en: {
+    docLabel: 'Document · untitled',
+    body: 'You wrote a few lines and haven’t saved them yet. Try to close it.',
+    close: 'Close the document',
+    dialogTitle: 'Save before you leave?',
+    dialogBody: 'There are unsaved changes in this document.',
+    save: 'Save and leave',
+    cancel: 'Cancel',
+    discard: 'Leave without saving',
+    savedAndLeft: 'Saved. Document closed.',
+    canceled: 'You stayed in the document.',
+    discarded: 'Left without saving. The changes are lost.',
+    reopen: 'Reopen the document',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="sbl">
+  <div class="sbl__doc" data-view="open">
+    <div class="sbl__chrome">
+      <span class="sbl__doc-label">{c.docLabel}</span>
+      <span class="sbl__dot" aria-hidden="true"></span>
+    </div>
+    <p class="sbl__doc-body">{c.body}</p>
+    <button class="sbl__close" type="button" data-close>{c.close}</button>
+  </div>
+
+  <div class="sbl__gone" data-view="gone" hidden>
+    <p class="sbl__gone-text" data-gone-text></p>
+    <button class="sbl__reopen" type="button" data-reopen>{c.reopen}</button>
+  </div>
+
+  <p class="sbl__live sr-only" aria-live="polite" data-live></p>
+
+  <dialog class="sbl__dialog" aria-labelledby="sbl-title" aria-describedby="sbl-body">
+    <div class="sbl__panel">
+      <h2 id="sbl-title" class="sbl__title">{c.dialogTitle}</h2>
+      <p id="sbl-body" class="sbl__body">{c.dialogBody}</p>
+      <div class="sbl__actions">
+        <button class="sbl__discard" type="button" data-action="discard">{c.discard}</button>
+        <span class="sbl__spacer"></span>
+        <button class="sbl__cancel" type="button" data-action="cancel">{c.cancel}</button>
+        <button class="sbl__save" type="button" autofocus data-action="save">{c.save}</button>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  .sbl {
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .sbl__doc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .sbl__doc[hidden] { display: none; }
+
+  .sbl__chrome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+  .sbl__doc-label {
+    color: var(--ink-subtle);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+  .sbl__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: oklch(0.75 0.16 75);
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(0.75 0.16 75) 18%, transparent);
+  }
+
+  .sbl__doc-body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .sbl__close,
+  .sbl__reopen {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    transition: transform var(--dur-fast) var(--ease-out-snug), border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .sbl__close:hover,
+  .sbl__reopen:hover { border-color: var(--border-strong); }
+  .sbl__close:active,
+  .sbl__reopen:active { transform: scale(0.97); }
+  .sbl__close:focus-visible,
+  .sbl__reopen:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  .sbl__gone {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px dashed var(--border);
+  }
+  .sbl__gone[hidden] { display: none; }
+  .sbl__gone-text {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  /* ─── Dialog ─── */
+  .sbl__dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-inline-size: min(27rem, calc(100% - 2rem));
+    inline-size: 100%;
+  }
+  .sbl__dialog:not([open]) { display: none; }
+  .sbl__dialog::backdrop {
+    background-color: oklch(0 0 0 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  @keyframes sbl-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes sbl-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+
+  .sbl__dialog[open] .sbl__panel { animation: sbl-in 220ms var(--ease-out-soft); }
+  .sbl__dialog[data-closing='true'] .sbl__panel { animation: sbl-out 160ms var(--ease-out-soft) forwards; }
+
+  .sbl__panel {
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .sbl__title {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .sbl__body {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .sbl__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding-block-start: var(--space-2xs);
+    flex-wrap: wrap;
+  }
+  .sbl__spacer { flex: 1; }
+
+  .sbl__cancel,
+  .sbl__save,
+  .sbl__discard {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out-snug);
+  }
+
+  /* azione primaria e sicura: il fuoco parte qui */
+  .sbl__save {
+    background-color: var(--ink-strong);
+    color: var(--bg);
+    border: 1px solid var(--ink-strong);
+  }
+  .sbl__save:hover { opacity: 0.92; }
+  .sbl__save:active { transform: scale(0.97); }
+  .sbl__save:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* secondaria, neutra */
+  .sbl__cancel {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .sbl__cancel:hover { border-color: var(--border-strong); }
+  .sbl__cancel:active { transform: scale(0.97); }
+  .sbl__cancel:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+
+  /* terziaria, distruttiva, defilata: solo testo, tono di pericolo */
+  .sbl__discard {
+    background: transparent;
+    color: oklch(0.55 0.18 22);
+    border: 1px solid transparent;
+    padding-inline: 0.5rem;
+  }
+  .sbl__discard:hover { text-decoration: underline; }
+  .sbl__discard:active { transform: scale(0.97); }
+  .sbl__discard:focus-visible { outline: none; box-shadow: var(--halo-focus); border-radius: var(--radius-sm); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sbl__dialog[open] .sbl__panel,
+    .sbl__dialog[data-closing='true'] .sbl__panel { animation-duration: 1ms; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.sbl').forEach((el) => {
+      if (el.dataset.bound === 'true') return;
+      el.dataset.bound = 'true';
+
+      const closeBtn = el.querySelector<HTMLButtonElement>('[data-close]')!;
+      const reopenBtn = el.querySelector<HTMLButtonElement>('[data-reopen]')!;
+      const docView = el.querySelector<HTMLElement>('[data-view="open"]')!;
+      const goneView = el.querySelector<HTMLElement>('[data-view="gone"]')!;
+      const goneText = el.querySelector<HTMLElement>('[data-gone-text]')!;
+      const live = el.querySelector<HTMLElement>('[data-live]')!;
+      const dialog = el.querySelector<HTMLDialogElement>('.sbl__dialog')!;
+      const saveBtn = el.querySelector<HTMLButtonElement>('[data-action="save"]')!;
+      const cancelBtn = el.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+      const discardBtn = el.querySelector<HTMLButtonElement>('[data-action="discard"]')!;
+
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'it';
+      const T = {
+        it: {
+          savedAndLeft: 'Salvato. Documento chiuso.',
+          canceled: 'Sei rimasto nel documento.',
+          discarded: 'Uscito senza salvare. Le modifiche sono perse.',
+        },
+        en: {
+          savedAndLeft: 'Saved. Document closed.',
+          canceled: 'You stayed in the document.',
+          discarded: 'Left without saving. The changes are lost.',
+        },
+      }[lang];
+
+      const closeDialog = () => {
+        if (!dialog.open) return;
+        dialog.dataset.closing = 'true';
+        const onEnd = () => {
+          dialog.removeEventListener('animationend', onEnd);
+          dialog.close();
+          delete dialog.dataset.closing;
+        };
+        dialog.addEventListener('animationend', onEnd);
+        setTimeout(() => { if (dialog.dataset.closing) onEnd(); }, 220);
+      };
+
+      const leave = (message: string) => {
+        goneText.textContent = message;
+        live.textContent = message;
+        docView.hidden = true;
+        goneView.hidden = false;
+        reopenBtn.focus();
+      };
+
+      closeBtn.addEventListener('click', () => dialog.showModal());
+
+      saveBtn.addEventListener('click', () => {
+        closeDialog();
+        leave(T.savedAndLeft);
+      });
+      cancelBtn.addEventListener('click', () => {
+        live.textContent = T.canceled;
+        closeDialog();
+      });
+      discardBtn.addEventListener('click', () => {
+        closeDialog();
+        leave(T.discarded);
+      });
+
+      dialog.addEventListener('cancel', (e) => {
+        e.preventDefault(); // Esc = annulla, mai "esci senza salvare"
+        live.textContent = T.canceled;
+        closeDialog();
+      });
+
+      reopenBtn.addEventListener('click', () => {
+        goneView.hidden = true;
+        docView.hidden = false;
+        closeBtn.focus();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

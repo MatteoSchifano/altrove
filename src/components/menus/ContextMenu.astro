@@ -1,0 +1,260 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ContextMenu — il menu del tasto destro che non scappa mai fuori.
+
+   Un menu contestuale nasce dove clicchi: deve apparire al
+   puntatore, non in un angolo fisso. Ma il puntatore può essere a
+   filo del bordo — e un menu che esce dal viewport è un menu che
+   non si può usare. La regola onesta: il menu *non lascia mai* la
+   finestra. Se non ci sta sotto-a-destra del click, si ribalta a
+   sinistra e/o verso l’alto, di nuovo verso il puntatore.
+
+   Niente <div> riempito a mano di tastiera: usiamo role="menu" coi
+   suoi role="menuitem" e gestiamo le frecce, ma il cuore è il
+   riposizionamento clamp-nel-viewport, calcolato dopo aver reso il
+   pannello (ne serve la misura reale).
+
+   - contextmenu: previene il menu nativo, apre il nostro al punto.
+   - Tastiera: anche il tasto "menu"/ Shift+F10 (contextmenu da
+     tastiera) apre il pannello, centrato sulla stage.
+   - Esc chiude, focus restore allo stage.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    surface: 'Clic destro qui dentro',
+    sub: 'O premi il tasto menu / Shift+F10',
+    items: [
+      { id: 'rename', label: 'Rinomina' },
+      { id: 'duplicate', label: 'Duplica' },
+      { id: 'move', label: 'Sposta in…' },
+      { id: 'delete', label: 'Elimina', danger: true },
+    ],
+  },
+  en: {
+    surface: 'Right-click in here',
+    sub: 'Or press the menu key / Shift+F10',
+    items: [
+      { id: 'rename', label: 'Rename' },
+      { id: 'duplicate', label: 'Duplicate' },
+      { id: 'move', label: 'Move to…' },
+      { id: 'delete', label: 'Delete', danger: true },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="ctx">
+  <div class="ctx__surface" tabindex="0" role="application" aria-label={c.surface}>
+    <span class="ctx__cue">{c.surface}</span>
+    <span class="ctx__sub">{c.sub}</span>
+  </div>
+
+  <div class="ctx__menu" role="menu" aria-label={c.surface} data-state="closed">
+    {c.items.map((it) => (
+      <button
+        class:list={['ctx__item', { 'ctx__item--danger': 'danger' in it && it.danger }]}
+        type="button"
+        role="menuitem"
+        data-label={it.label}
+      >
+        {it.label}
+      </button>
+    ))}
+  </div>
+
+  <p class="ctx__live sr-only" aria-live="polite"></p>
+</div>
+
+<style>
+  .ctx {
+    inline-size: min(26rem, 100%);
+    position: relative;
+  }
+
+  .ctx__surface {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-block-size: 9rem;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-sunken);
+    border: 1px dashed var(--border-strong);
+    color: var(--ink-muted);
+    cursor: context-menu;
+    user-select: none;
+  }
+  .ctx__surface:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  .ctx__cue { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--ink); }
+  .ctx__sub { font-size: var(--text-2xs); color: var(--ink-subtle); letter-spacing: var(--tracking-wide); }
+
+  /* Il menu vive in position:fixed (coordinate viewport): così il
+     clamp nel viewport è diretto, senza compensare lo scroll del
+     wrapper. */
+  .ctx__menu {
+    position: fixed;
+    z-index: var(--z-overlay);
+    inline-size: 12rem;
+    padding: var(--space-3xs);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    opacity: 0;
+    transform: scale(0.97);
+    transform-origin: top left;
+    pointer-events: none;
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-fast) var(--ease-out-snug);
+  }
+  .ctx__menu[data-state='open'] {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .ctx__item {
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink);
+    font-size: var(--text-sm);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .ctx__item:hover { background-color: var(--surface-sunken); }
+  .ctx__item:focus-visible { outline: none; box-shadow: var(--halo-focus); }
+  /* Il danger non è SOLO colore: il testo resta leggibile e l’hover
+     lo marca con uno sfondo, non con la sola tinta. */
+  .ctx__item--danger { color: oklch(0.55 0.18 22); }
+  .ctx__item--danger:hover { background-color: color-mix(in oklab, oklch(0.55 0.18 22) 10%, transparent); }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ctx__menu { transition-duration: 1ms; transform: none; }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.ctx').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const surface = root.querySelector<HTMLElement>('.ctx__surface')!;
+      const menu = root.querySelector<HTMLElement>('.ctx__menu')!;
+      const items = Array.from(root.querySelectorAll<HTMLButtonElement>('.ctx__item'));
+      const live = root.querySelector<HTMLElement>('.ctx__live')!;
+
+      let lastFocused: HTMLElement | null = null;
+
+      // Riposiziona il menu così da restare SEMPRE nel viewport:
+      // partiamo dal punto richiesto, poi ribaltiamo se sfora.
+      const place = (x: number, y: number) => {
+        const margin = 8;
+        // misura reale: il menu deve essere già visibile/displayed
+        const r = menu.getBoundingClientRect();
+        const vw = document.documentElement.clientWidth;
+        const vh = document.documentElement.clientHeight;
+        let left = x;
+        let top = y;
+        if (left + r.width + margin > vw) left = Math.max(margin, x - r.width);
+        if (top + r.height + margin > vh) top = Math.max(margin, y - r.height);
+        // ultima rete: clamp ai bordi
+        left = Math.min(Math.max(margin, left), vw - r.width - margin);
+        top = Math.min(Math.max(margin, top), vh - r.height - margin);
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+      };
+
+      const open = (x: number, y: number) => {
+        lastFocused = document.activeElement as HTMLElement | null;
+        menu.dataset.state = 'open';
+        // posiziona dopo il display (misura affidabile)
+        place(x, y);
+        requestAnimationFrame(() => items[0]?.focus());
+      };
+
+      const close = (restore = true) => {
+        if (menu.dataset.state !== 'open') return;
+        menu.dataset.state = 'closed';
+        if (restore) (lastFocused ?? surface).focus();
+      };
+
+      // Tasto destro dentro la superficie
+      surface.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        open(e.clientX, e.clientY);
+      });
+
+      // Apertura da tastiera: il browser manda comunque `contextmenu`
+      // per Shift+F10 / tasto menu — se clientX è 0 (tastiera),
+      // centriamo sulla superficie.
+      surface.addEventListener('keydown', (e) => {
+        if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+          e.preventDefault();
+          const r = surface.getBoundingClientRect();
+          open(r.left + r.width / 2, r.top + r.height / 2);
+        }
+      });
+
+      // Navigazione nel menu
+      menu.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        const idx = items.indexOf(document.activeElement as HTMLButtonElement);
+        if (idx === -1) return;
+        let next = idx;
+        if (e.key === 'ArrowDown') next = (idx + 1) % items.length;
+        else if (e.key === 'ArrowUp') next = (idx - 1 + items.length) % items.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = items.length - 1;
+        else return;
+        e.preventDefault();
+        items[next]?.focus();
+      });
+
+      items.forEach((item) => {
+        item.addEventListener('click', () => {
+          live.textContent = item.dataset.label ?? '';
+          close();
+        });
+      });
+
+      // Click fuori → chiude (senza forzare il focus restore: l’utente
+      // sta già guardando altrove).
+      document.addEventListener('pointerdown', (e) => {
+        if (menu.dataset.state !== 'open') return;
+        if (menu.contains(e.target as Node)) return;
+        close(false);
+      });
+
+      window.addEventListener('resize', () => close(false));
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

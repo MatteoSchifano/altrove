@@ -1,0 +1,195 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HapticSwitch — la posizione che si conquista.
+
+   Uno switch fisico ha un *detent*: una molletta che resiste, poi
+   cede e fa "clac". È quel piccolo scatto a dirti, col polpastrello,
+   che la posizione è stata raggiunta — non a metà, ma fino in fondo.
+   Sullo schermo non c'è polpastrello, ma il cervello accetta un
+   surrogato visivo se è abbastanza breve: il thumb che arriva, si
+   schiaccia un istante contro il fondo corsa (squash) e si ricompone.
+
+   È la differenza, portata all'estremo, fra un bottone e uno switch.
+   Il bottone si preme e torna. Lo switch *si impegna in una
+   posizione*, e l'overshoot vende proprio quell'arrivo: l'oggetto
+   che si assesta nel suo detent.
+
+   Onestà sul movimento: l'overshoot dev'essere minuscolo e meritato
+   (feel "expressive", non un rimbalzo da cartone animato). Sotto
+   prefers-reduced-motion il thumb non si schiaccia e il rail non
+   pulsa — il thumb è semplicemente già in posizione. Stesso stato
+   finale, nessun viaggio. E dove esiste l'hardware (mobile), un
+   navigator.vibrate brevissimo aggiunge il "clac" vero.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Non disturbare',
+    on: 'Attivo',
+    off: 'Spento',
+  },
+  en: {
+    label: 'Do not disturb',
+    on: 'On',
+    off: 'Off',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<button
+  type="button"
+  class="haptic"
+  role="switch"
+  aria-checked="false"
+  data-on={c.on}
+  data-off={c.off}
+>
+  <span class="haptic__track" aria-hidden="true">
+    <span class="haptic__flash"></span>
+    <span class="haptic__thumb">
+      <span class="haptic__core"></span>
+    </span>
+  </span>
+  <span class="haptic__label">{c.label}</span>
+  <span class="haptic__state" aria-hidden="true">{c.off}</span>
+</button>
+
+<style>
+  .haptic {
+    appearance: none;
+    border: 1px solid var(--border);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: 0.5rem 0.9rem 0.5rem 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    cursor: pointer;
+  }
+  .haptic:focus-visible { outline: none; }
+  .haptic:focus-visible .haptic__track { box-shadow: var(--halo-focus); }
+
+  .haptic__track {
+    position: relative;
+    inline-size: 3rem;
+    block-size: 1.7rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--border-strong);
+    transition: background-color var(--dur-normal) var(--ease-out-soft);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  /* Lampo di tint sul rail al toggle — l'"onda" dello scatto */
+  .haptic__flash {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Wrapper esterno: porta la TRASLAZIONE (stato), con curva decisa */
+  .haptic__thumb {
+    position: absolute;
+    inset-block: 0.2rem;
+    inset-inline-start: 0.2rem;
+    inline-size: 1.3rem;
+    block-size: 1.3rem;
+    transform: translateX(0);
+    transition: transform var(--dur-normal) var(--ease-out-snappy);
+  }
+  /* Nucleo interno: porta lo SQUASH (keyframe), così non confligge
+     con la translate del wrapper (entrambi userebbero `transform`). */
+  .haptic__core {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── Acceso ── */
+  .haptic[aria-checked='true'] .haptic__track { background-color: var(--accent); }
+  .haptic[aria-checked='true'] .haptic__thumb { transform: translateX(1.3rem); }
+
+  .haptic__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+  .haptic__state {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    inline-size: 3rem;
+    text-align: start;
+    transition: color var(--dur-fast) var(--ease-out-soft);
+  }
+  .haptic[aria-checked='true'] .haptic__state { color: var(--accent-ink); }
+  .haptic[aria-checked='true'] .haptic__label { color: var(--ink-strong); }
+
+  /* ── L'aptica visiva: squash del nucleo + lampo del rail ──
+     Triggerate aggiungendo data-pulse e forzando un reflow nel JS. */
+  .haptic[data-pulse] .haptic__core {
+    animation: haptic-squash 340ms var(--ease-out-snappy);
+  }
+  .haptic[data-pulse] .haptic__flash {
+    animation: haptic-flash 420ms var(--ease-out-soft);
+  }
+
+  @keyframes haptic-squash {
+    0%   { transform: scale(1, 1); }
+    38%  { transform: scale(1.22, 0.82); } /* schiacciato contro il fondo corsa */
+    70%  { transform: scale(0.94, 1.06); } /* rimbalzo lieve, già in posizione */
+    100% { transform: scale(1, 1); }
+  }
+  @keyframes haptic-flash {
+    0%   { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .haptic[data-pulse] .haptic__core,
+    .haptic[data-pulse] .haptic__flash {
+      animation: none !important;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLButtonElement>('.haptic').forEach((sw) => {
+      if (sw.dataset.bound === 'true') return;
+      sw.dataset.bound = 'true';
+
+      const state = sw.querySelector<HTMLElement>('.haptic__state');
+      const on = sw.dataset.on ?? 'On';
+      const off = sw.dataset.off ?? 'Off';
+
+      sw.addEventListener('click', () => {
+        const next = sw.getAttribute('aria-checked') !== 'true';
+        sw.setAttribute('aria-checked', String(next));
+        if (state) state.textContent = next ? on : off;
+
+        // Ri-triggera l'animazione di squash/flash togliendo l'attributo,
+        // forzando un reflow e rimettendolo (le keyframe ripartono).
+        sw.removeAttribute('data-pulse');
+        void sw.offsetWidth; // reflow
+        sw.setAttribute('data-pulse', '');
+
+        if ('vibrate' in navigator) navigator.vibrate?.(next ? 10 : 6);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

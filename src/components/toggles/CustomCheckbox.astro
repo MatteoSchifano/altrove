@@ -1,0 +1,233 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   CustomCheckbox — la scelta differita, ridisegnata senza tradirla.
+
+   Se lo switch agisce *adesso*, la checkbox è una promessa: "questo
+   lo voglio, e lo confermerò al submit". Per questo non scivola —
+   si *spunta*. Il segno di spunta che si disegna è il gesto giusto:
+   una conferma che prende corpo, non un oggetto che cambia lato.
+
+   L'errore comune del "checkbox custom": buttare via l'<input> e
+   rifarlo con un <div role="checkbox">. Si perde la tastiera, il
+   focus, la partecipazione al form, lo stato indeterminato nativo —
+   e si finisce a reimplementare a mano, peggio, ciò che il browser
+   regalava. Qui invece l'<input type="checkbox"> reale resta: lo
+   rendiamo solo invisibile (non display:none — deve restare
+   focusabile) e gli disegniamo accanto una casella che riflette il
+   suo stato. appearance:none è sul *vestito*, mai sulla semantica.
+
+   Bonus onesto: lo stato *indeterminato*. Il "Seleziona tutto" non
+   è acceso/spento, è acceso / spento / a-metà. indeterminate è una
+   proprietà DOM vera (non un attributo HTML), e lo screen reader la
+   annuncia "parzialmente spuntata". La disegniamo come un trattino.
+
+   Reduced motion: lo spunto non si disegna, appare già completo
+   (durate-token → 1ms).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Cosa includere nell’export',
+    all: 'Seleziona tutto',
+    items: ['Capitoli pubblicati', 'Bozze', 'Commenti'],
+    hint: 'Si applica alla conferma — non subito.',
+  },
+  en: {
+    legend: 'What to include in the export',
+    all: 'Select all',
+    items: ['Published chapters', 'Drafts', 'Comments'],
+    hint: 'Applies on confirm — not right away.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<fieldset class="cbx" data-checkbox-group>
+  <legend class="cbx__legend">{c.legend}</legend>
+
+  <label class="cbx__row cbx__row--parent">
+    <input type="checkbox" class="cbx__input" data-role="parent" />
+    <span class="cbx__box" aria-hidden="true">
+      <svg class="cbx__mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+        <path class="cbx__check" d="M3.5 8.5 6.5 11.5 12.5 5" />
+        <path class="cbx__dash" d="M4.5 8h7" />
+      </svg>
+    </span>
+    <span class="cbx__text">{c.all}</span>
+  </label>
+
+  <div class="cbx__children">
+    {c.items.map((item, i) => (
+      <label class="cbx__row">
+        <input type="checkbox" class="cbx__input" data-role="child" checked={i === 0} />
+        <span class="cbx__box" aria-hidden="true">
+          <svg class="cbx__mark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+            <path class="cbx__check" d="M3.5 8.5 6.5 11.5 12.5 5" />
+          </svg>
+        </span>
+        <span class="cbx__text">{item}</span>
+      </label>
+    ))}
+  </div>
+
+  <p class="cbx__hint">{c.hint}</p>
+</fieldset>
+
+<style>
+  .cbx {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    inline-size: min(24rem, 100%);
+  }
+  .cbx__legend {
+    padding: 0;
+    margin-block-end: var(--space-xs);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .cbx__row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.4rem 0;
+    cursor: pointer;
+  }
+  .cbx__row--parent {
+    padding-block-end: 0.6rem;
+    margin-block-end: 0.3rem;
+    border-block-end: 1px solid var(--border);
+  }
+  .cbx__children {
+    display: flex;
+    flex-direction: column;
+    padding-inline-start: 1.6rem;
+  }
+
+  /* L'input reale: invisibile ma presente (focusabile, tab, form). */
+  .cbx__input {
+    position: absolute;
+    opacity: 0;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: 0;
+  }
+
+  /* La casella disegnata che riflette lo stato dell'input */
+  .cbx__box {
+    flex-shrink: 0;
+    inline-size: 1.3rem;
+    block-size: 1.3rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-strong);
+    background-color: var(--surface-raised);
+    color: var(--accent-on);
+    transition:
+      background-color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+
+  .cbx__mark {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+  }
+  /* Lo spunto "si disegna": dash-array = lunghezza del tratto, offset
+     da pieno (nascosto) a zero (disegnato). */
+  .cbx__check {
+    stroke-dasharray: 16;
+    stroke-dashoffset: 16;
+    transition: stroke-dashoffset var(--dur-normal) var(--ease-out-soft);
+  }
+  .cbx__dash {
+    stroke-dasharray: 8;
+    stroke-dashoffset: 8;
+    transition: stroke-dashoffset var(--dur-fast) var(--ease-out-soft);
+  }
+
+  /* ── Spuntata ── */
+  .cbx__input:checked + .cbx__box {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .cbx__input:checked + .cbx__box .cbx__check { stroke-dashoffset: 0; }
+
+  /* ── Indeterminata (solo il parent) ── */
+  .cbx__input:indeterminate + .cbx__box {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .cbx__input:indeterminate + .cbx__box .cbx__check { stroke-dashoffset: 16; }
+  .cbx__input:indeterminate + .cbx__box .cbx__dash { stroke-dashoffset: 0; }
+
+  /* ── Focus & hover ── */
+  .cbx__input:focus-visible + .cbx__box {
+    outline: none;
+    box-shadow: var(--halo-focus);
+    border-color: var(--accent);
+  }
+  .cbx__row:hover .cbx__box {
+    border-color: var(--accent);
+  }
+
+  .cbx__text {
+    font-size: var(--text-sm);
+    color: var(--ink);
+  }
+  .cbx__row--parent .cbx__text {
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+  }
+
+  .cbx__hint {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('[data-checkbox-group]').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const parent = root.querySelector<HTMLInputElement>('[data-role="parent"]');
+      const children = Array.from(
+        root.querySelectorAll<HTMLInputElement>('[data-role="child"]'),
+      );
+      if (!parent) return;
+
+      // Lo stato del parent è *derivato* dai figli: tutti → checked,
+      // nessuno → unchecked, alcuni → indeterminate. indeterminate non
+      // è un attributo HTML, va impostato sulla proprietà DOM.
+      const syncParent = () => {
+        const checked = children.filter((ch) => ch.checked).length;
+        parent.checked = checked === children.length;
+        parent.indeterminate = checked > 0 && checked < children.length;
+      };
+
+      // Il parent comanda i figli: spunta tutto / sgombra tutto. Da uno
+      // stato indeterminato, il primo click spunta tutto.
+      parent.addEventListener('change', () => {
+        const next = parent.indeterminate ? true : parent.checked;
+        children.forEach((ch) => (ch.checked = next));
+        syncParent();
+      });
+
+      children.forEach((ch) => ch.addEventListener('change', syncParent));
+      syncParent();
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

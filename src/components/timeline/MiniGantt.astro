@@ -1,0 +1,255 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   MiniGantt — il tempo come spazio orizzontale, senza libreria.
+
+   Un Gantt è la forma più letterale di "tempo come oggetto visuale":
+   l’asse X *è* il calendario, e una barra lunga il doppio dura il
+   doppio. Niente tabella di date da incrociare a mente — la durata
+   e la sovrapposizione si leggono con l’occhio.
+
+   Il trucco è che non serve una libreria: CSS Grid *è* già una
+   griglia temporale. Una colonna per unità di tempo (qui: una per
+   giorno), una riga per task, e ogni barra dichiara la sua campata
+   con grid-column: start / end. Lo spazio fa da matematica.
+
+   Onestà dei dati: le barre dicono la durata vera dei campioni, non
+   una lunghezza "che sta bene". I giorni del weekend sono marcati
+   ma non gonfiati. Niente new Date() nel build: la griglia di date è
+   un array fisso di campioni.
+
+   Accessibilità: ogni task è una riga di una lista; la campata è
+   descritta a parole in un <span> visivamente nascosto ma leggibile
+   ("Design: 15–17 set"), così la barra non è solo un blocco colorato
+   per chi non la vede. <time> per gli estremi.
+
+   Reduced motion: le barre non crescono da zero; sono già alla loro
+   lunghezza (durate-token → 1ms).
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+interface Day {
+  iso: string;
+  label: string; // numero del giorno
+  weekend: boolean;
+}
+
+interface Task {
+  name: string;
+  start: number; // indice colonna (1-based) di inizio
+  end: number; // indice colonna (esclusivo) di fine
+  tone: 'a' | 'b' | 'c';
+}
+
+const COPY = {
+  it: {
+    heading: 'Piano della settimana',
+    monthShort: 'set',
+    days: [
+      { iso: '2026-09-14', label: '14', weekend: false },
+      { iso: '2026-09-15', label: '15', weekend: false },
+      { iso: '2026-09-16', label: '16', weekend: false },
+      { iso: '2026-09-17', label: '17', weekend: false },
+      { iso: '2026-09-18', label: '18', weekend: false },
+      { iso: '2026-09-19', label: '19', weekend: true },
+      { iso: '2026-09-20', label: '20', weekend: true },
+    ] as Day[],
+    tasks: [
+      { name: 'Design', start: 1, end: 4, tone: 'a' },
+      { name: 'Sviluppo', start: 3, end: 6, tone: 'b' },
+      { name: 'Revisione', start: 4, end: 6, tone: 'c' },
+      { name: 'Rilascio', start: 5, end: 6, tone: 'a' },
+    ] as Task[],
+    spanLabel: (name: string, from: string, to: string) =>
+      `${name}: dal ${from} al ${to} ${COPY.it.monthShort}`,
+  },
+  en: {
+    heading: 'Week plan',
+    monthShort: 'Sep',
+    days: [
+      { iso: '2026-09-14', label: '14', weekend: false },
+      { iso: '2026-09-15', label: '15', weekend: false },
+      { iso: '2026-09-16', label: '16', weekend: false },
+      { iso: '2026-09-17', label: '17', weekend: false },
+      { iso: '2026-09-18', label: '18', weekend: false },
+      { iso: '2026-09-19', label: '19', weekend: true },
+      { iso: '2026-09-20', label: '20', weekend: true },
+    ] as Day[],
+    tasks: [
+      { name: 'Design', start: 1, end: 4, tone: 'a' },
+      { name: 'Build', start: 3, end: 6, tone: 'b' },
+      { name: 'Review', start: 4, end: 6, tone: 'c' },
+      { name: 'Release', start: 5, end: 6, tone: 'a' },
+    ] as Task[],
+    spanLabel: (name: string, from: string, to: string) =>
+      `${name}: ${COPY.en.monthShort} ${from} to ${to}`,
+  },
+} as const;
+const c = COPY[locale];
+const cols = c.days.length;
+---
+
+<section class="gt" aria-label={c.heading}>
+  <h4 class="gt__heading">{c.heading}</h4>
+
+  <div class="gt__scroll">
+    <div class="gt__grid" style={`--cols:${cols}`}>
+      {/* Intestazione: i giorni dell’asse X */}
+      <div class="gt__axis" aria-hidden="true">
+        {c.days.map((d) => (
+          <time class="gt__day tabular" datetime={d.iso} data-weekend={d.weekend ? 'true' : undefined}>
+            {d.label}
+          </time>
+        ))}
+        {/* righe-guida verticali, una per colonna */}
+        {c.days.map((d) => (
+          <span class="gt__gridline" data-weekend={d.weekend ? 'true' : undefined}></span>
+        ))}
+      </div>
+
+      <ol class="gt__rows" role="list">
+        {c.tasks.map((t) => {
+          const from = c.days[t.start - 1].label;
+          const to = c.days[t.end - 2].label;
+          return (
+            <li class="gt__row">
+              <span class="gt__name">{t.name}</span>
+              <span
+                class="gt__bar"
+                data-tone={t.tone}
+                style={`grid-column: ${t.start + 1} / ${t.end + 1};`}
+              >
+                <span class="gt__visually-hidden">
+                  {c.spanLabel(t.name, from, to)}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gt {
+    inline-size: min(34rem, 100%);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .gt__heading {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .gt__scroll { overflow-x: auto; }
+
+  .gt__grid {
+    --label-col: 5.5rem;
+    min-inline-size: 22rem;
+  }
+
+  /* Asse X: le etichette dei giorni + le righe-guida verticali.
+     Entrambe condividono la stessa griglia a N colonne, sfalsate
+     dalla colonna delle etichette dei task. */
+  .gt__axis {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--label-col) repeat(var(--cols), 1fr);
+    margin-block-end: var(--space-2xs);
+  }
+  .gt__day {
+    grid-row: 1;
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    text-align: center;
+    padding-block-end: 0.3rem;
+  }
+  .gt__day:first-of-type { grid-column: 2; }
+  .gt__day[data-weekend] { color: var(--ink-muted); opacity: 0.7; }
+
+  .gt__gridline {
+    grid-row: 2;
+    border-inline-start: 1px solid var(--border);
+    block-size: 100%;
+  }
+  /* far partire le gridline dalla seconda colonna (dopo le etichette) */
+  .gt__axis .gt__gridline:first-of-type { grid-column: 2; }
+  .gt__gridline[data-weekend] {
+    background-color: color-mix(in oklab, var(--surface-sunken) 60%, transparent);
+  }
+
+  .gt__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2xs);
+  }
+
+  /* Ogni riga: nome del task + traccia a N colonne dove vive la barra. */
+  .gt__row {
+    display: grid;
+    grid-template-columns: var(--label-col) repeat(var(--cols), 1fr);
+    align-items: center;
+    block-size: 1.6rem;
+  }
+  .gt__name {
+    font-size: var(--text-xs);
+    color: var(--ink);
+    padding-inline-end: var(--space-2xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* La barra: la sua campata è grid-column (start/end), così la
+     LUNGHEZZA è letteralmente la durata. */
+  .gt__bar {
+    position: relative;
+    grid-row: 1;
+    block-size: 0.85rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    transform-origin: left center;
+    animation: gt-grow var(--dur-slow) var(--ease-out-soft) forwards;
+  }
+
+  .gt__bar[data-tone='a'] { background-color: var(--accent); }
+  .gt__bar[data-tone='b'] { background-color: var(--accent-ink); }
+  .gt__bar[data-tone='c'] {
+    background-color: transparent;
+    border: 1.5px dashed var(--accent-ink);
+  }
+
+  @keyframes gt-grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  .gt__visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gt__bar { animation: none; transform: none; }
+  }
+</style>

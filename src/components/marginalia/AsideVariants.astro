@@ -1,0 +1,202 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   AsideVariants — quattro voci a margine, ciascuna riconoscibile
+   senza fidarsi del solo colore.
+
+   Un <aside> è "contenuto correlato ma non nel filo principale":
+   un suggerimento, un avviso, una citazione, un frammento di codice.
+   Sono toni diversi, e il lettore deve capire *al volo* quale tono
+   sta leggendo — prima ancora di leggerlo.
+
+   La tentazione è affidare tutto al colore: giallo = attenzione,
+   azzurro = info. Ma il colore è un canale fragile (daltonismo,
+   dark mode, stampa b/n). La regola del playground è ferma: il
+   colore è il *secondo* segnale, mai l’unico. Quindi ogni variante
+   porta un’icona + un’etichetta testuale + un segno di bordo. Tre
+   canali ridondanti: chi non vede il colore legge comunque "Avviso"
+   e vede il triangolo.
+
+   Semantica: ognuno è un vero <aside>, con role coerente — le note
+   info/avviso usano role="note", la citazione è un <blockquote>, il
+   codice un <pre>. Niente motion qui: una nota a margine sta ferma,
+   non saltella; appare già al suo posto.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    info: {
+      label: 'Nota',
+      text: 'Le note a margine esistono dai manoscritti medievali: i monaci le chiamavano glosse.',
+    },
+    warning: {
+      label: 'Attenzione',
+      text: 'Una nota d’avviso che si confonde con una informativa ha già fallito: il tono dev’essere leggibile a colpo d’occhio.',
+    },
+    quote: {
+      label: 'Citazione',
+      text: 'Il margine bianco non è vuoto: è la stanza in cui il lettore pensa.',
+      cite: 'Jan Tschichold (parafrasi)',
+    },
+    code: {
+      label: 'Codice',
+      text: 'aside[role="note"] { border-inline-start: 2px solid; }',
+    },
+  },
+  en: {
+    info: {
+      label: 'Note',
+      text: 'Side notes go back to medieval manuscripts: monks called them glosses.',
+    },
+    warning: {
+      label: 'Warning',
+      text: 'A warning note that reads like an informational one has already failed: the tone must be legible at a glance.',
+    },
+    quote: {
+      label: 'Quote',
+      text: 'The white margin isn’t empty: it’s the room where the reader thinks.',
+      cite: 'Jan Tschichold (paraphrased)',
+    },
+    code: {
+      label: 'Code',
+      text: 'aside[role="note"] { border-inline-start: 2px solid; }',
+    },
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="av">
+  <!-- INFO -->
+  <aside class="av__item av__item--info" role="note">
+    <span class="av__head">
+      <svg class="av__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="10" cy="10" r="7.5" />
+        <path d="M10 9v4" />
+        <path d="M10 6.5h.01" />
+      </svg>
+      <span class="av__label">{c.info.label}</span>
+    </span>
+    <p class="av__text">{c.info.text}</p>
+  </aside>
+
+  <!-- WARNING -->
+  <aside class="av__item av__item--warning" role="note">
+    <span class="av__head">
+      <svg class="av__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 2.5 18 16.5H2L10 2.5Z" />
+        <path d="M10 8v3.5" />
+        <path d="M10 14h.01" />
+      </svg>
+      <span class="av__label">{c.warning.label}</span>
+    </span>
+    <p class="av__text">{c.warning.text}</p>
+  </aside>
+
+  <!-- QUOTE -->
+  <aside class="av__item av__item--quote">
+    <span class="av__head">
+      <svg class="av__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7.5 5C5.5 6 4.5 7.8 4.5 10v5h4v-5h-2.5C6 8 6.5 7 8 6.2L7.5 5Z" />
+        <path d="M15 5c-2 1-3 2.8-3 5v5h4v-5h-2.5C13.5 8 14 7 15.5 6.2L15 5Z" />
+      </svg>
+      <span class="av__label">{c.quote.label}</span>
+    </span>
+    <blockquote class="av__quote">
+      <p class="av__text">{c.quote.text}</p>
+      <cite class="av__cite">— {c.quote.cite}</cite>
+    </blockquote>
+  </aside>
+
+  <!-- CODE -->
+  <aside class="av__item av__item--code" role="note">
+    <span class="av__head">
+      <svg class="av__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7 6 3.5 10 7 14" />
+        <path d="M13 6l3.5 4L13 14" />
+      </svg>
+      <span class="av__label">{c.code.label}</span>
+    </span>
+    <pre class="av__pre"><code>{c.code.text}</code></pre>
+  </aside>
+</div>
+
+<style>
+  .av {
+    inline-size: min(34rem, 100%);
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  .av__item {
+    --tone: var(--ink-subtle);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    /* Il bordo colorato è il TERZO canale, ridondante: mai l’unico. */
+    border-inline-start: 3px solid var(--tone);
+  }
+
+  .av__head {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    margin-block-end: var(--space-3xs);
+  }
+  .av__icon {
+    inline-size: 1.1rem;
+    block-size: 1.1rem;
+    color: var(--tone);
+    flex-shrink: 0;
+  }
+  .av__label {
+    font-size: var(--text-2xs);
+    color: var(--tone);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+  }
+
+  .av__text {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  /* ── Toni: ognuno cambia colore E icona E etichetta ── */
+  .av__item--info    { --tone: var(--accent-ink); }
+  .av__item--warning { --tone: light-dark(oklch(0.52 0.13 70), oklch(0.78 0.13 75)); }
+  .av__item--quote   { --tone: var(--ink-subtle); }
+  .av__item--code    { --tone: var(--ink-muted); }
+
+  .av__quote { margin: 0; }
+  .av__cite {
+    display: block;
+    margin-block-start: var(--space-3xs);
+    font-size: var(--text-2xs);
+    font-style: normal;
+    color: var(--ink-subtle);
+  }
+  .av__item--quote .av__text {
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  .av__pre {
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink);
+    line-height: var(--leading-normal);
+  }
+  .av__pre code { font-family: inherit; }
+</style>

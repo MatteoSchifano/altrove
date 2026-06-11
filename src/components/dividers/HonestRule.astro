@@ -1,0 +1,126 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   HonestRule — la regola orizzontale, curata ma onesta.
+
+   L'<hr> è l’unico separatore che il browser conosce di nascita:
+   è semantica vera, non decorazione. Lo screen reader lo annuncia
+   come "separatore", la tastiera lo salta, l’outline del documento
+   lo capisce. Il problema è solo estetico: il default è una linea
+   incassata, grigia, con margini casuali — un residuo degli anni '90.
+
+   La tesi: non si butta via l'<hr> per un <div> "più bello". Si
+   *veste* l'<hr> — border azzerato, un solo bordo sottile da token,
+   spazio attorno deciso — tenendo intatta la semantica. Il confronto
+   col default brutto del browser è tutta la lezione.
+
+   Niente motion: una regola non si muove, sta. Niente colore come
+   unico canale: la separazione è data dalla linea e dallo spazio,
+   non da una tinta.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    rawLabel: 'Default del browser',
+    rawNote: 'border incassato, margini casuali',
+    tunedLabel: 'Versione curata',
+    tunedNote: 'un bordo sottile da token, spazio deciso',
+    before: 'Il primo paragrafo dice una cosa.',
+    after: 'Il secondo ne dice un’altra, dopo la pausa.',
+  },
+  en: {
+    rawLabel: 'Browser default',
+    rawNote: 'inset border, arbitrary margins',
+    tunedLabel: 'Tuned version',
+    tunedNote: 'one thin token border, deliberate space',
+    before: 'The first paragraph says one thing.',
+    after: 'The second says another, after the pause.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="rule">
+  <figure class="rule__case">
+    <figcaption class="rule__cap">
+      <span class="rule__name">{c.rawLabel}</span>
+      <span class="rule__hint">{c.rawNote}</span>
+    </figcaption>
+    <p class="rule__text">{c.before}</p>
+    <hr class="rule__raw" />
+    <p class="rule__text">{c.after}</p>
+  </figure>
+
+  <figure class="rule__case">
+    <figcaption class="rule__cap">
+      <span class="rule__name">{c.tunedLabel}</span>
+      <span class="rule__hint">{c.tunedNote}</span>
+    </figcaption>
+    <p class="rule__text">{c.before}</p>
+    <hr class="rule__tuned" />
+    <p class="rule__text">{c.after}</p>
+  </figure>
+</div>
+
+<style>
+  .rule {
+    inline-size: min(34rem, 100%);
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .rule__case {
+    margin: 0;
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .rule__cap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.6rem;
+    margin-block-end: var(--space-sm);
+  }
+  .rule__name {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+  .rule__hint {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+  }
+
+  .rule__text {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+
+  /* ── Il default brutto: lasciato esattamente com’è ──
+     nessuna regola di reset lo tocca, così si vede il residuo. */
+  .rule__raw {
+    /* Lo lasciamo nudo: il browser disegna il suo border incassato.
+       L’unica concessione è un margine simmetrico per non falsare
+       il confronto col verticale. */
+    margin-block: var(--space-sm);
+  }
+
+  /* ── La versione curata ──
+     border azzerato, un solo filo sottile da token, spazio deciso. */
+  .rule__tuned {
+    border: 0;
+    block-size: 1px;
+    margin-block: var(--space-md);
+    background-color: var(--border);
+  }
+</style>

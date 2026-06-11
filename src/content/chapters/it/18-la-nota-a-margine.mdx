@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-18"
+number: "18"
+title: "La nota a margine"
+excerpt: "Una nota non deve interrompere per essere letta. Vive a margine, si ripiega quando serve, e lascia che sia il lettore a decidere quanto vuole ascoltarti — è il modo più antico, e più gentile, di parlargli senza spezzargli il filo."
+date: "7 agosto 2026"
+releaseDate: "2026-08-07"
+readMinutes: 11
+tags: ["editoriale", "layout", "accessibilità"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import SideNote from '../../../components/marginalia/SideNote.astro';
+import AsideVariants from '../../../components/marginalia/AsideVariants.astro';
+import HighlightToNote from '../../../components/marginalia/HighlightToNote.astro';
+import FootnoteVsSidenote from '../../../components/marginalia/FootnoteVsSidenote.astro';
+import DetailsMargin from '../../../components/marginalia/DetailsMargin.astro';
+
+Ogni testo, prima o poi, ha qualcosa da aggiungere a se stesso: una precisazione, una fonte, una seconda voce che commenta la prima. La domanda non è *se* dirlo, ma *dove* — perché il posto sbagliato fa più danno del silenzio. Infilare l’aggiunta in mezzo alla frase la appesantisce; metterla in un riquadro che esplode al centro dello schermo interrompe la lettura come una telefonata di notte. La tradizione editoriale ha risolto il problema secoli fa, e l’ha risolto con lo spazio bianco: la nota a margine, che vive *accanto* al testo senza mai mettersi in mezzo.
+
+È un gesto di rispetto travestito da impaginazione. La nota a margine non pretende attenzione: la offre, e lascia che sia il lettore a prenderla o lasciarla. Chi ha fretta tira dritto sul filo principale; chi vuole approfondire gira l’occhio di pochi gradi a destra. Nessuno viene fermato, nessuno viene costretto. È l’opposto del modal «Sapevi che…?» che si pianta davanti al contenuto: lì l’aggiunta è un pedaggio, qui è un dono.
+
+Cinque dimostrazioni per cinque modi di dialogare col lettore senza interromperlo. Dove va la nota quando lo spazio cambia, come si distingue una voce d’avviso da una di citazione senza fidarsi del solo colore, come si lascia che sia il lettore a scrivere le sue note, quando conviene una footnote e quando una sidenote, e come si ripiega un approfondimento perché non tutti lo vogliono adesso. E come sempre niente librerie: il margine, il `<details>`, la Selection API — il browser sa già fare quasi tutto.
+
+## La nota che sa dove vivere
+
+La prima decisione è geometrica: una nota a margine ha bisogno di un margine. E il margine non dipende da quanto è grande lo schermo, ma da quanto è larga *questa* colonna di testo. Per questo decidiamo con una container query, non con la finestra.
+
+<Demo title="SideNote · @container, non la larghezza finestra" tag="18.a">
+  <SideNote locale="it" />
+  <div slot="note">
+    <p>Il riquadro qui sopra è volutamente stretto: simula una nota dentro una colonna ridotta — una sidebar, un riquadro — dove il margine non c’è, anche su uno schermo enorme. In quel caso la nota si raccoglie in linea, come un piccolo popover che si apre solo se richiesto. Allarga il contenitore oltre la soglia e la stessa nota scivola nel margine destro, sempre visibile. La differenza non la decide il vetro, la decide il testo: ed è l’unico modo onesto di farlo, perché una `@media (min-width)` guarderebbe lo schermo e sbaglierebbe ogni volta che il componente vive dentro qualcosa di stretto.</p>
+    <p>Il richiamo nel testo è un `<button>` vero con `aria-expanded`, non una parola colorata e basta: chi naviga da tastiera lo raggiunge e lo apre, lo screen reader annuncia lo stato. E nel layout largo la nota non è mai nascosta dietro un gesto — il bottone diventa un’àncora di focus, ma l’informazione resta a margine, leggibile da chiunque. Nascondere contenuto dietro un click, quando c’è spazio per mostrarlo, sarebbe disclosure fabbricata: la riserviamo solo allo stretto, dove serve davvero.</p>
+  </div>
+</Demo>
+
+## La voce che si riconosce senza colore
+
+Un margine ospita toni diversi: un’informazione, un avviso, una citazione, un frammento di codice. Il lettore deve capire *quale tono* sta leggendo prima ancora di leggerlo — e affidare tutto al colore è il modo più rapido per escludere chi il colore non lo distingue.
+
+<Demo title="AsideVariants · icona + segno + etichetta, mai solo colore" tag="18.b">
+  <AsideVariants locale="it" />
+  <div slot="note">
+    <p>Quattro `<aside>` veri, quattro toni, e ciascuno porta tre segnali ridondanti: un’icona (il cerchio dell’info, il triangolo dell’avviso, le virgolette della citazione, le parentesi angolari del codice), un’etichetta testuale in chiaro, e un bordo colorato. Il colore è il *terzo* canale, mai il primo: togli il colore — stampa in bianco e nero, daltonismo, dark mode estrema — e la nota resta perfettamente leggibile, perché il triangolo e la parola «Attenzione» dicono già tutto. È la regola di accessibilità del playground applicata alla lettera: segno, poi etichetta, poi colore, in quest’ordine.</p>
+    <p>La semantica segue il tono: le note informative e d’avviso sono `aside[role="note"]`, la citazione è un `<blockquote>` con il suo `<cite>`, il codice un `<pre>`. Non è pedanteria: è quello che permette a un assistente vocale di annunciare «citazione» invece di leggere un muro di testo indistinto. E nessuna animazione, qui: una nota a margine sta ferma. Appare già al suo posto, perché saltellare all’ingresso la trasformerebbe da nota in notifica — il contrario di ciò che deve essere.</p>
+  </div>
+</Demo>
+
+## La penna passata al lettore
+
+Finora le note le mette l’autore. Ma il dialogo più vero comincia quando è il lettore a scegliere cosa annotare: evidenzia una frase, e nasce una nota agganciata a quel passo. È la marginalia rovesciata — non tu che parli a lui, ma lui che risponde al testo.
+
+<Demo title="HighlightToNote · Selection API, ma onesta e accessibile" tag="18.c">
+  <HighlightToNote locale="it" />
+  <div slot="note">
+    <p>Seleziona una frase col mouse e compare la sua nota a margine: la Selection API legge cosa hai evidenziato e aggancia l’ancora alla frase. Comodo — ma la trappola sarebbe fermarsi qui. Il gesto di selezione è scomodo da tastiera, impossibile senza puntatore, e invisibile finché non lo scopri per caso. Per questo la selezione è una *scorciatoia*, non l’unica via: ogni frase ha anche un pulsante «Annota» sempre presente e raggiungibile col Tab, e tutto ciò che spunta — l’ancora, il «Rimuovi» — è fatto di `<button>` veri. La gesture è il di più per chi può; la base funziona per tutti.</p>
+    <p>L’onestà sta nei dettagli che non si vedono: un `aria-live` annuncia «nota aggiunta» a chi non vede comparire l’ancora, la frase annotata prende sfondo *più* numero *più* segno di bordo (mai solo colore), e l’azione è idempotente — una nota per frase, niente doppioni se selezioni due volte. Ancoriamo la nota all’elemento di frase, non a un range di caratteri fragile, così resta valida anche se la pagina si ri-renderizza. Dare la penna al lettore è facile; darla in modo che funzioni anche senza mouse è il lavoro vero.</p>
+  </div>
+</Demo>
+
+## Due strade per la stessa precisazione
+
+Footnote e sidenote non sono la stessa cosa con due nomi: sono due risposte alla domanda «dove metto questa nota?». Una manda il lettore via, in fondo; l’altra lo tiene dov’è, accanto. Vederle sullo stesso testo è il modo più rapido per scegliere.
+
+<Demo title="FootnoteVsSidenote · quando l’una, quando l’altra" tag="18.d">
+  <FootnoteVsSidenote locale="it" />
+  <div slot="note">
+    <p>Lo stesso identico testo, due modalità commutabili con un `<fieldset>` di radio veri. In modalità *footnote*, il numerino è un link reale: porta giù alla nota a piè di pagina, separata dalla linea tipografica del «piede», con un back-link che riporta su. Vince quando la nota è lunga, densa, bibliografica — roba che a margine non ci starebbe. Il costo è il salto: l’occhio lascia la riga, scende, risale. In modalità *sidenote*, la stessa nota appare accanto, alla stessa altezza, senza far perdere il segno. Vince quando è breve e vuoi che sia letta nel flusso.</p>
+    <p>La scelta, quindi, non è di gusto ma di contenuto: lunghezza della nota e spazio disponibile. Una sidenote lunga sfonda il margine e diventa illeggibile; una footnote per una battuta di tre parole costringe a un salto che vale più della nota stessa. Il numero del richiamo resta in entrambe le modalità — è il filo che lega testo e nota, e non dipende dal colore per essere capito. La regola pratica: nota breve e margine c’è → sidenote; nota lunga o margine assente → footnote.</p>
+  </div>
+</Demo>
+
+## L’approfondimento che si offre ripiegato
+
+L’ultima nota è quella che non tutti vogliono adesso. La progressive disclosure onesta non *nasconde* per ingannare: *offre ripiegato*, lasciando il filo pulito per chi tira dritto e l’approfondimento a portata per chi lo cerca. E l’HTML ha già l’elemento giusto.
+
+<Demo title="DetailsMargin · <details> nativi, disclosure onesta" tag="18.e">
+  <DetailsMargin locale="it" />
+  <div slot="note">
+    <p>Le note a margine qui sono `<details>/<summary>` nativi, e la scelta non è pigrizia ma rispetto. Lo stato aperto/chiuso è *reale*: lo screen reader annuncia «espandi/comprimi», la tastiera funziona da sola con Invio o Spazio sul summary, il browser gestisce il focus. In più sono cercabili — «Trova nella pagina» può aprire un `<details>` che contiene il testo cercato, cosa che una finta disclosure fatta con un `<div>` e un po’ di JS si perderebbe per strada. È HTML che fa quello che promette, anche senza JavaScript.</p>
+    <p>Il nostro unico tocco di script è il marker che ruota e l’etichetta che passa da «Approfondisci» a «Chiudi»: non reinventiamo lo stato, ascoltiamo l’evento nativo `toggle` e lo *riflettiamo*. E il triangolino non è mai l’unico segnale — accanto c’è sempre la parola, perché un’icona da sola non basta. Sotto `prefers-reduced-motion` il marker non ruota animando e il testo non scivola in entrata: si trovano già in posizione, stesso stato finale, nessun viaggio. La disclosure più onesta è quella che funziona identica con o senza animazione.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque note, un’unica disciplina: aggiungere senza interrompere. La nota che sa dove vivere a seconda dello spazio reale, la voce che si riconosce senza fidarsi del colore, la penna passata al lettore in modo che funzioni anche senza mouse, le due strade — vicino o in fondo — scelte in base al contenuto, e l’approfondimento offerto ripiegato a chi lo vuole. Sotto sta sempre lo stesso rispetto: l’aggiunta è un dono, non un pedaggio. Il margine bianco non è spazio sprecato — è la stanza in cui il lettore, se vuole, ti risponde.
+
+Il prossimo capitolo allarga lo sguardo dalla singola nota all’intera opera. *L’indice del libro* — un sito che parla di sé, come si orienta al suo interno? Come si dà al lettore una mappa che lo aiuti a muoversi senza trasformarsi in un menu che grida.

@@ -1,0 +1,242 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   ViewTransitionTabs — il cambio di pannello affidato alla
+   View Transitions API.
+
+   Le tab precedenti tenevano la continuità con l’indicatore: una
+   barra o una pillola che scivola, mentre i pannelli si scambiano
+   di colpo. Qui il movimento è sul *pannello* stesso: il vecchio
+   esce, il nuovo entra, e il browser fa il cross-fade per noi con
+   document.startViewTransition. Niente keyframe scritti a mano per
+   coordinare l’uscita di uno con l’entrata dell’altro: la API
+   cattura il "prima" e il "dopo" e interpola da sola.
+
+   Il punto delicato è che una View Transition è un *miglioramento
+   progressivo*, non un requisito. Dove l’API non c’è (o reduced
+   motion la rende inutile), il cambio dev’essere identico nel
+   risultato — solo senza la dissolvenza. Per questo lo scambio di
+   stato (hidden, aria-selected) sta in una funzione a parte, e la
+   transizione è solo la confezione attorno: se startViewTransition
+   non esiste, si chiama la funzione e basta. Stesso stato finale,
+   con o senza viaggio.
+
+   Onestà sul tempo: l’uscita è più rapida dell’entrata (le cose
+   se ne vanno più in fretta di quanto entrino). Lo esprimiamo con
+   ::view-transition-old più corto di ::view-transition-new.
+
+   Resta il pattern ARIA tabs: tablist/tab/tabpanel, aria-selected,
+   frecce ←/→ + Home/End, roving tabindex.
+
+   Reduced motion: le @keyframes della transizione sono disattivate
+   esplicitamente; lo scambio di stato avviene comunque, istantaneo.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Profilo',
+    tabs: [
+      { id: 'bio', tab: 'Biografia', body: 'Chi sei in poche righe, come ti presenti al primo sguardo. È il pannello che apre il profilo: il contesto più ampio, prima dei dettagli.' },
+      { id: 'works', tab: 'Lavori', body: 'I progetti recenti, in griglia. Passando da qui, il vecchio pannello sfuma via mentre questo entra: il browser orchestra il cross-fade, noi non scriviamo un keyframe.' },
+      { id: 'contact', tab: 'Contatti', body: 'I modi per scriverti. La View Transition è una confezione, non la sostanza: dove non c’è, lo scambio avviene comunque — stesso risultato, senza la dissolvenza.' },
+    ],
+  },
+  en: {
+    label: 'Profile',
+    tabs: [
+      { id: 'bio', tab: 'Biography', body: 'Who you are in a few lines, how you introduce yourself at first glance. It’s the panel that opens the profile: the widest context, before the details.' },
+      { id: 'works', tab: 'Works', body: 'Recent projects, in a grid. Coming through here, the old panel fades out while this one enters: the browser orchestrates the cross-fade, we write no keyframe.' },
+      { id: 'contact', tab: 'Contact', body: 'The ways to reach you. The View Transition is packaging, not substance: where it’s missing, the swap happens anyway — same result, without the dissolve.' },
+    ],
+  },
+} as const;
+const c = COPY[locale];
+const initial = 0;
+const uid = `vtt-${locale}`;
+---
+
+<div class="vtt" data-initial={String(initial)}>
+  <span class="vtt__heading">{c.label}</span>
+  <div class="vtt__list" role="tablist" aria-label={c.label}>
+    {c.tabs.map((t, i) => (
+      <button
+        type="button"
+        class="vtt__tab"
+        role="tab"
+        id={`${uid}-tab-${t.id}`}
+        aria-controls={`${uid}-panel-${t.id}`}
+        aria-selected={i === initial ? 'true' : 'false'}
+        tabindex={i === initial ? '0' : '-1'}
+        data-idx={String(i)}
+      >
+        {t.tab}
+      </button>
+    ))}
+  </div>
+  <div class="vtt__viewport">
+    {c.tabs.map((t, i) => (
+      <div
+        class="vtt__panel"
+        role="tabpanel"
+        id={`${uid}-panel-${t.id}`}
+        aria-labelledby={`${uid}-tab-${t.id}`}
+        tabindex="0"
+        hidden={i !== initial}
+      >
+        <p>{t.body}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .vtt {
+    inline-size: min(32rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .vtt__heading {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-strong);
+    letter-spacing: var(--tracking-snug);
+  }
+
+  .vtt__list {
+    display: flex;
+    gap: 0.25rem;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .vtt__tab {
+    appearance: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    background: transparent;
+    padding: 0.55rem 0.85rem;
+    margin-block-end: -1px;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .vtt__tab:hover { color: var(--ink); }
+  .vtt__tab[aria-selected='true'] {
+    color: var(--accent-ink);
+    border-block-end-color: var(--accent);
+  }
+  .vtt__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  /* Il viewport è il named element della transizione: il browser
+     cattura il suo "prima" e "dopo" e interpola fra i due. */
+  .vtt__viewport {
+    view-transition-name: vtt-panel;
+    min-block-size: 5.5rem;
+  }
+  .vtt__panel {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    border-radius: var(--radius-sm);
+  }
+  .vtt__panel[hidden] { display: none; }
+  .vtt__panel:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+  .vtt__panel p { margin: 0; }
+
+  /* Le cose escono più in fretta di quanto entrino: old più corto
+     di new. Curve nominate, niente bezier inline. */
+  @keyframes vtt-fade-out {
+    to { opacity: 0; }
+  }
+  @keyframes vtt-fade-in {
+    from { opacity: 0; }
+  }
+  :global(::view-transition-old(vtt-panel)) {
+    animation: vtt-fade-out var(--dur-fast) var(--ease-in) both;
+  }
+  :global(::view-transition-new(vtt-panel)) {
+    animation: vtt-fade-in var(--dur-normal) var(--ease-out-soft) both;
+  }
+
+  /* Reduced motion: la transizione è solo confezione. Disattiva le
+     animazioni esplicitamente — lo scambio di stato resta. */
+  @media (prefers-reduced-motion: reduce) {
+    :global(::view-transition-old(vtt-panel)),
+    :global(::view-transition-new(vtt-panel)) {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.vtt').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.vtt__tab'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('.vtt__panel'));
+      if (!tabs.length) return;
+
+      let current = Number(root.dataset.initial ?? '0');
+
+      // La sostanza: scambia lo stato. Vive da sola, senza animazione.
+      const swap = (idx: number, focus: boolean) => {
+        current = idx;
+        tabs.forEach((tab, i) => {
+          const selected = i === idx;
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+          tab.tabIndex = selected ? 0 : -1;
+          if (panels[i]) panels[i].hidden = !selected;
+        });
+        if (focus) tabs[idx]?.focus();
+      };
+
+      // La confezione: avvolge swap in una View Transition se c’è.
+      // Se non c’è (o non è il caso), chiama swap e basta — stesso esito.
+      const set = (idx: number, focus: boolean) => {
+        if (idx === current) return;
+        const start = (document as Document & {
+          startViewTransition?: (cb: () => void) => unknown;
+        }).startViewTransition;
+        if (typeof start === 'function') {
+          start.call(document, () => swap(idx, focus));
+        } else {
+          swap(idx, focus);
+        }
+      };
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => set(i, false));
+        tab.addEventListener('keydown', (e: KeyboardEvent) => {
+          let next: number | null = null;
+          if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next === null) return;
+          e.preventDefault();
+          set(next, true);
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

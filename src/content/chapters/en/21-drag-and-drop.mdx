@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-21"
+number: "21"
+title: "Drag and drop"
+excerpt: "Dragging is the most direct gesture and the most excluding: born for the mouse, it leaves out anyone on a keyboard. This chapter builds five drag-and-drops and stitches a keyboard twin onto each, with spoken announcements — because an object in flight must be catchable without a hand too."
+date: "August 28, 2026"
+releaseDate: "2026-08-28"
+readMinutes: 12
+tags: ["components", "interaction", "accessibility"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import ReorderList from '../../../components/dragdrop/ReorderList.astro';
+import DragToAction from '../../../components/dragdrop/DragToAction.astro';
+import GhostElement from '../../../components/dragdrop/GhostElement.astro';
+import KeyboardReorder from '../../../components/dragdrop/KeyboardReorder.astro';
+import KanbanLite from '../../../components/dragdrop/KanbanLite.astro';
+
+There's a question drag-and-drop has always carried: how do you hold an object in flight? On screen there's no weight, no friction, no hand closing around something. And yet the gesture works, because the browser and a little code rebuild the illusion: an element detaches, follows the pointer, leaves an empty spot, and settles elsewhere. It's one of the few moments where an interface really fakes physics — and exactly for that reason it's easy to fall in love with it and forget half the people.
+
+Because dragging is, at once, the most direct gesture and the most excluding we have. Direct because there's nothing to explain: you pick up and move, like in the world. Excluding because it's born for the mouse, and if you stop there, anyone navigating by keyboard, anyone using a screen reader, anyone with a tremor or reduced motor control is simply left out. A mouse-only kanban column isn't "hard" for them to use: it's impossible. It's the most common accessibility chasm on the web, and it almost always opens out of carelessness, not malice.
+
+The thesis of this chapter is that it isn't fate. Every single interaction here has a complete keyboard twin — not a fallback, a real alternative — and an `aria-live` region that announces pick-up, move, and drop, because someone who can't see the object fly must be able to *hear* it. Five demos, and no libraries: just Pointer Events for the hand and key handling for the keyboard, with the usual rule — colour is never the only signal, and motion is removed when someone asks for less of it.
+
+## The list that reorders
+
+The first case is reordering: five rows, and the user decides the sequence. The part worth watching isn't the row that lifts, but the *drop indicator* — the thread that appears between two items to say where the one you're holding will land.
+
+<Demo title="Reorder with drop indicator · the line that says “here”" tag="21.a">
+  <ReorderList locale="en" />
+  <div slot="note">
+    <p>Press the handle and the row detaches from the flow, following your finger; meanwhile a thin line slides through the *gaps* between the other rows, always where the item will settle. It's a choice of model, not graphics: the line says “between these two”, where a highlight would say “on this one”. For a reorder the truth is the first — you're not setting the object *on top of* another, you're slotting it *between* two positions. The drop indicator is honest because it shows the interval, not the target.</p>
+    <p>And here's the keyboard twin, doing the same work without the gesture: focus a handle and press <kbd>↑</kbd>/<kbd>↓</kbd>; the row moves up or down one position and a voice announces “moved to position 2 of 5”. No pointer, same result, same feedback. The list re-settling uses FLIP — we measure where each row was, perform the move, and let the difference animate; but it's guarded by <code>matchMedia</code>, so under <code>prefers-reduced-motion</code> the rows are simply already in place, no slide. The final state is identical for everyone; the journey is an extra you can remove.</p>
+  </div>
+</Demo>
+
+## The drag that performs an action
+
+Let's move from reordering to action. Sometimes you don't drag to change order, but to *do* something: archive a message, delete it. The gesture becomes a command, and the "drop zone" is the button that fakes the physics.
+
+<Demo title="Drag to an action · with the buttons beside it" tag="21.b">
+  <DragToAction locale="en" />
+  <div slot="note">
+    <p>Pick up the message and carry it onto one of the two zones — <em>Archive</em> or <em>Delete</em> — which light up as you hover. The zones aren't told apart by colour alone: they have a written label and an icon (the down arrow archives, the cross deletes), so someone who can't tell green from red still reads word and symbol. Colour is the third signal, never the first: it's the playground's rule applied to a case where getting it wrong costs — deleting isn't an action you want to hang on hue alone.</p>
+    <p>But the real point is the two buttons underneath, always present. The drag is a <em>shortcut</em>; the button is the <em>road</em>. A drag with no clickable, tabbable alternative is a trap: someone who can't drag has no way to archive. By putting the buttons right there — not hidden behind a menu, not “discoverable”, plainly in view — the action stays reachable for everyone, and the drag becomes what it should always be: an extra for those who like it, not the only door. When it's done, an <code>aria-live</code> region announces “message archived”, so the outcome is clear without looking.</p>
+  </div>
+</Demo>
+
+## The object in flight
+
+Back to the guiding question, taken literally: how do you hold an object in flight? The most expressive answer is to separate what flies from what stays — a *ghost* under the finger, and a placeholder where the object was.
+
+<Demo title="Ghost element · the copy that flies, the original that stays" tag="21.c">
+  <GhostElement locale="en" />
+  <div slot="note">
+    <p>While you drag, the original element doesn't move: you lift a <em>ghost</em> of it, a copy that follows the pointer with a touch of <code>scale</code> and <code>opacity</code>, as if it were mid-air. The original, meanwhile, fades and becomes a placeholder: “my spot is still here, I'm just flying”. These are two pieces of information the mind keeps apart — <em>what</em> I'm moving and <em>where</em> I took it from — and showing both avoids the disorientation of making the original vanish, which makes the object look teleported rather than carried.</p>
+    <p>This is the chapter's most honest demo in the negative too: it isolates a single phenomenon — the flight — and has no spatial outcome, there's no “where” to choose. So here the keyboard would have nothing to navigate, and saying so is more correct than inventing a fake alternative: real reordering and moving, 100% by keyboard, live in the other demos. It's still right to announce pick-up and drop via <code>aria-live</code>, so even someone using the pointer with a screen reader knows what's happening. And under <code>prefers-reduced-motion</code> the ghost doesn't “grow”: it appears already in its form and follows the pointer crisply, no fades.</p>
+  </div>
+</Demo>
+
+## Reordering without a mouse
+
+Now the acid test. Let's remove the pointer entirely and keep only the keyboard twin, to see it bare: can you reorder a list 100% by keyboard, with a complete experience?
+
+<Demo title="Keyboard-only reorder · proof that DnD can have no mouse" tag="21.d">
+  <KeyboardReorder locale="en" />
+  <div slot="note">
+    <p>The model is the <em>explicit grab</em>, the same one serious accessible reorders use. <kbd>Tab</kbd> brings focus to a stop; <kbd>Space</kbd> <em>grabs</em> it and enters move mode; <kbd>↑</kbd>/<kbd>↓</kbd> move it one position; <kbd>Space</kbd> drops it, <kbd>Esc</kbd> cancels and returns it where it was. The mode matters: it tells the screen reader and the user <em>when</em> the arrows move instead of navigate. Without that “grabbed moment”, the arrows would be ambiguous — am I scrolling the list or dragging the item?</p>
+    <p>Every step has its voice: “Lisbon grabbed, position 1 of 5”, “moved to position 2 of 5”, “dropped at position 2 of 5”. And the “moving” state isn't left to colour alone — there's <code>aria-grabbed</code>, a visible label and a solid border, three channels for the same information. It's the explicit proof that drag-and-drop doesn't <em>require</em> the drag: it requires a model of grab, move and drop, and that model expresses itself just as well with five keys. The mouse is an option, not a prerequisite.</p>
+  </div>
+</Demo>
+
+## The kanban that re-settles with FLIP
+
+Let's close with the case that gave drag-and-drop its terrible accessibility reputation: the kanban board. We keep the minimal version — two columns — but with both roads complete, and with the re-settling animated properly.
+
+<Demo title="Kanban across two columns · move with the mouse or ←/→" tag="21.e">
+  <KanbanLite locale="en" />
+  <div slot="note">
+    <p>A card moves between “To do” and “Done” by dragging it — the target column lights up — or by focusing it and pressing <kbd>←</kbd>/<kbd>→</kbd>. The columns have a title and a count that updates, not just a tint: when one becomes the target it shows a solid border, because colour alone isn't enough to say “here”. And every move is announced: “Review PR #42, moved to Done”. The inaccessible kanban isn't inaccessible by nature — it becomes so when it leaves the keyboard out, and that's a choice, not a constraint.</p>
+    <p>The re-settling is where the board breathes. When a card leaves a column, the tail below closes up; when it enters the other, its siblings make room. We do it with FLIP: we measure the geometry of every card <em>before</em> the DOM move, measure it again <em>after</em>, and animate only the difference — a real, coherent motion, not four elements jumping. But it's guarded by <code>matchMedia</code>: under <code>prefers-reduced-motion</code> the card is simply already in the new column, no journey. The rule never changes — you don't slow an animation down, you remove it, leaving the final state untouched.</p>
+  </div>
+</Demo>
+
+---
+
+Five drags, one discipline: the drag is a shortcut, never the only door. The line that says “here”, the zones with the buttons beside them, the ghost that flies leaving a placeholder, the reorder that lives entirely inside five keys, the kanban that re-settles with FLIP — each shows the same object in flight from a different angle, but all answer the same hidden question: and the person without a hand on the mouse? The answer isn't “let's add an alternative, if there's time left”. It's building the keyboard twin <em>together with</em> the gesture, announcing aloud what's seen at a glance, and removing the motion for whoever asks. An object in flight is held in two ways, and neither one is optional.
+
+The next chapter leaves the objects that move and returns to the text you search. *Search* — what happens between every keystroke, how to answer before the user finishes typing, and how to say “there's nothing” without making it look like an error.

@@ -1,0 +1,191 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   StatCard — la card statistica, e l’onestà del numero.
+
+   Una card può anche *riferire* un dato. Quando lo fa, il numero è
+   il protagonista: il count-up esiste per dargli un attimo di scena,
+   non per gonfiarlo. Due regole che il capitolo eredita dai numeri:
+
+   1. Il conteggio sale UNA volta, quando la card entra nel viewport,
+      con easing OUT (~900ms): parte veloce, arriva calmo. Mai in-out,
+      che sembra esitante; mai ri-animare se l’utente torna.
+   2. tabular-nums: le cifre non sussultano mentre salgono, perché
+      hanno tutte la stessa larghezza. Una colonna che balla è rumore.
+
+   E i dati dicono la verità: 84% è 84%, non 99 «per fare scena». Il
+   delta sotto può essere negativo — un calo si riferisce, non si
+   nasconde, e si segna col segno prima che col colore.
+
+   Reduced motion: il numero appare GIÀ finale. Nessun conteggio,
+   stesso valore. Lo decide un guard in JS su matchMedia, perché la
+   durata-token a 1ms non basterebbe a fermare un loop rAF.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    label: 'Adesioni · 30 giorni',
+    deltaUp: '+312 vs mese scorso',
+    label2: 'Tasso di completamento',
+    deltaFlat: '84 su 100 arrivano in fondo',
+    label3: 'Recensioni · media',
+    deltaDown: '−0,1 vs trimestre',
+  },
+  en: {
+    label: 'Sign-ups · 30 days',
+    deltaUp: '+312 vs last month',
+    label2: 'Completion rate',
+    deltaFlat: '84 of 100 reach the end',
+    label3: 'Reviews · average',
+    deltaDown: '−0.1 vs quarter',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<div class="stat" data-locale={locale}>
+  <article class="stat__card">
+    <span class="stat__label">{c.label}</span>
+    <span class="stat__num tabular" data-target="2480" data-format="int">0</span>
+    <span class="stat__delta stat__delta--up">
+      <span class="stat__sign" aria-hidden="true">▲</span>{c.deltaUp}
+    </span>
+  </article>
+
+  <article class="stat__card">
+    <span class="stat__label">{c.label2}</span>
+    <span class="stat__num tabular" data-target="84" data-format="pct">0%</span>
+    <span class="stat__delta stat__delta--flat">{c.deltaFlat}</span>
+  </article>
+
+  <article class="stat__card">
+    <span class="stat__label">{c.label3}</span>
+    <span class="stat__num tabular" data-target="4.6" data-format="dec">0,0</span>
+    <span class="stat__delta stat__delta--down">
+      <span class="stat__sign" aria-hidden="true">▼</span>{c.deltaDown}
+    </span>
+  </article>
+</div>
+
+<style>
+  .stat {
+    inline-size: min(38rem, 100%);
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+
+  .stat__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+  }
+
+  .stat__label {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .stat__num {
+    font-size: var(--text-2xl);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-tight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat__delta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+  /* Il colore è il SECONDO segnale: prima il segno (▲▼ / parola). */
+  .stat__sign { font-size: 0.7em; }
+  .stat__delta--up   { color: var(--accent-ink); }
+  .stat__delta--down { color: var(--ink); }
+  .stat__delta--flat { color: var(--ink-muted); }
+</style>
+
+<script>
+  type Fmt = 'int' | 'pct' | 'dec';
+
+  function bind() {
+    document.querySelectorAll<HTMLElement>('.stat').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const locale = root.dataset.locale === 'en' ? 'en-US' : 'it-IT';
+      const nfInt = new Intl.NumberFormat(locale);
+      const nfDec = new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      });
+
+      const format = (v: number, kind: Fmt): string => {
+        if (kind === 'int') return nfInt.format(Math.round(v));
+        if (kind === 'pct') return `${Math.round(v)}%`;
+        return nfDec.format(v); // dec
+      };
+
+      const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
+      const reduce =
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+      const nums = root.querySelectorAll<HTMLElement>('.stat__num');
+
+      const settle = (el: HTMLElement) => {
+        const target = Number(el.dataset.target ?? 0);
+        const kind = (el.dataset.format ?? 'int') as Fmt;
+        // Reduced motion: niente conteggio, valore finale subito.
+        if (reduce) {
+          el.textContent = format(target, kind);
+          return;
+        }
+        const dur = 900;
+        const start = performance.now();
+        const step = (now: number) => {
+          const p = Math.min(1, (now - start) / dur);
+          el.textContent = format(target * easeOutQuart(p), kind);
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = format(target, kind);
+        };
+        requestAnimationFrame(step);
+      };
+
+      const trigger = () => {
+        // piccolo stagger fra le card: 80ms · indice
+        nums.forEach((n, i) => setTimeout(() => settle(n), i * 80));
+      };
+
+      // Anima UNA volta sola, all’ingresso nel viewport.
+      const io = new IntersectionObserver(
+        (entries, obs) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              trigger();
+              obs.unobserve(e.target);
+            }
+          }
+        },
+        { threshold: 0.35 },
+      );
+      io.observe(root);
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

@@ -1,0 +1,167 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   CardStack — tre schede sovrapposte, e la profondità onesta.
+
+   Una pila di card promette "ce n’è dell’altro sotto". La profondità
+   la dà l’ombra, e l’ombra qui è costruita in OKLCH via color-mix
+   sull’accent: una tinta calda, percettivamente uniforme, non un
+   nero piatto. Le card dietro sono leggermente più piccole e più in
+   basso: la prospettiva dice "stanno indietro" senza nasconderle.
+
+   A riposo è una pila compatta. Al hover/focus si *ventaglia*: le
+   carte si aprono a leggio, quel poco che basta a dire "sono tre,
+   distinte" — non un mazzo di carte che esplode.
+
+   Accessibilità, il punto delicato di ogni stack: ogni card deve
+   restare RAGGIUNGIBILE. Qui ognuna è un <a> reale nel flusso, in
+   ordine di lettura; il ventaglio è solo transform (non toglie nulla
+   dal tab order), e quando una card riceve il focus la pila si apre
+   da sola — :focus-within — così la card a fuoco non resta sepolta.
+
+   Reduced motion: niente ventaglio. Le card stanno in pila ordinata
+   e ferma; il focus le evidenzia col bordo, non col movimento.
+   Stesso stato finale raggiungibile, nessun viaggio.
+   ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  locale?: 'it' | 'en';
+}
+const { locale = 'it' } = Astro.props;
+
+const COPY = {
+  it: {
+    legend: 'Playlist salvate',
+    cards: [
+      { title: 'Mattine lente', meta: '24 brani · 1 h 38 min' },
+      { title: 'Per scrivere', meta: '18 brani · 1 h 12 min' },
+      { title: 'Pioggia fuori', meta: '31 brani · 2 h 05 min' },
+    ],
+    hint: 'Passa sopra o entra col tab: la pila si apre a ventaglio.',
+  },
+  en: {
+    legend: 'Saved playlists',
+    cards: [
+      { title: 'Slow mornings', meta: '24 tracks · 1 h 38 min' },
+      { title: 'For writing', meta: '18 tracks · 1 h 12 min' },
+      { title: 'Rain outside', meta: '31 tracks · 2 h 05 min' },
+    ],
+    hint: 'Hover or tab in: the stack fans out.',
+  },
+} as const;
+const c = COPY[locale];
+---
+
+<section class="stack" aria-label={c.legend}>
+  <ul class="stack__list">
+    {c.cards.map((card, i) => (
+      <li class="stack__item" style={`--i: ${i}`}>
+        <a class="stack__card" href="#card-stack">
+          <span class="stack__title">{card.title}</span>
+          <span class="stack__meta tabular">{card.meta}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+  <p class="stack__hint">{c.hint}</p>
+</section>
+
+<style>
+  .stack {
+    inline-size: min(20rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .stack__list {
+    --rise: 0.65rem;   /* quanto ogni card dietro scende, a riposo */
+    --shrink: 0.045;   /* quanto rimpicciolisce, a riposo */
+    --fan: 0.6rem;     /* apertura del ventaglio, al hover/focus */
+    --tilt: 1.4deg;    /* leggera inclinazione a leggio */
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* riserva l’altezza della pila aperta, così non sobbalza */
+    block-size: 9.5rem;
+  }
+
+  .stack__item {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    /* le card più in basso nell’ordine (i più alto) stanno DIETRO */
+    z-index: calc(10 - var(--i));
+    transform:
+      translateY(calc(var(--i) * var(--rise)))
+      scale(calc(1 - var(--i) * var(--shrink)));
+    transition: transform var(--dur-normal) var(--ease-out-snug);
+  }
+
+  .stack__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    /* Ombra di profondità in OKLCH via color-mix sull’accent:
+       calda, percettivamente uniforme, non un nero piatto. */
+    box-shadow:
+      0 6px 16px -6px color-mix(in oklch, var(--accent) 30%, transparent),
+      0 2px 6px -2px color-mix(in oklch, var(--accent) 18%, transparent);
+    transition:
+      border-color var(--dur-fast) var(--ease-out-soft),
+      box-shadow var(--dur-fast) var(--ease-out-soft);
+  }
+  .stack__card:focus-visible {
+    outline: none;
+    border-color: var(--border-strong);
+    box-shadow: var(--halo-focus);
+  }
+  .stack__card:hover {
+    border-color: var(--border-strong);
+  }
+
+  .stack__title {
+    font-size: var(--text-base);
+    color: var(--ink-strong);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+  }
+  .stack__meta {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  /* ── Ventaglio: al hover sulla pila o focus su una card ──
+     Ogni card si apre a leggio, quel poco che basta a distinguerle. */
+  .stack__list:hover .stack__item,
+  .stack__list:focus-within .stack__item {
+    transform:
+      translateY(calc(var(--i) * (var(--rise) + var(--fan))))
+      scale(1)
+      rotate(calc(var(--i) * var(--tilt)));
+  }
+
+  .stack__hint {
+    font-size: var(--text-2xs);
+    color: var(--ink-subtle);
+    margin: 0;
+    max-inline-size: none;
+  }
+
+  /* Reduced motion: niente ventaglio, pila ferma e ordinata.
+     Il focus evidenzia col bordo (sopra), non col movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    .stack__item { transition: none; }
+    .stack__list:hover .stack__item,
+    .stack__list:focus-within .stack__item {
+      transform:
+        translateY(calc(var(--i) * var(--rise)))
+        scale(calc(1 - var(--i) * var(--shrink)));
+    }
+  }
+</style>

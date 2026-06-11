@@ -1,0 +1,90 @@
+---
+lang: "it"
+translationKey: "chapter-12"
+number: "12"
+title: "Anatomia di una tab"
+excerpt: "Una tab non sceglie un valore: cambia il contesto sotto i piedi. Il problema vero non è dove mettere l'indicatore, ma come spostare l'utente in un altro pannello senza fargli perdere il filo di dov'era."
+date: "26 giugno 2026"
+releaseDate: "2026-06-26"
+readMinutes: 11
+tags: ["componenti", "motion", "tastiera"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import UnderlineTabs from '../../../components/tabs/UnderlineTabs.astro';
+import PillTabs from '../../../components/tabs/PillTabs.astro';
+import CountTabs from '../../../components/tabs/CountTabs.astro';
+import ScrollSnapTabs from '../../../components/tabs/ScrollSnapTabs.astro';
+import ViewTransitionTabs from '../../../components/tabs/ViewTransitionTabs.astro';
+
+Il capitolo sul toggle finiva con una distinzione netta: lo switch sceglie *fra due posizioni*, il controllo segmentato *fra poche alternative pari-grado*. Sembrava di aver chiuso il discorso, e invece la tab — che a uno sguardo distratto somiglia tantissimo a un segmented control — apre un capitolo diverso. La differenza non è grafica, è di funzione. Un segmented control sceglie un *valore* e quel valore resta lì, sotto lo stesso contenuto: la densità di una lista, l'unità di misura di un grafico. Una tab cambia il *contesto*: sotto ognuna c'è un pannello di contenuto diverso, e premerla significa «portami altrove».
+
+È questa la domanda di tutto il capitolo: come si cambia contesto senza disorientare? Perché spostare qualcuno in un altro pannello è facilissimo — basta nasconderne uno e mostrarne un altro. La parte difficile è farlo in modo che l'utente sappia, in ogni istante, dov'è, dove può andare e dov'era prima. Una tab fatta male non è brutta: è *spaesante*. Mostra il pannello giusto ma cancella il senso di posizione, e l'utente si ritrova altrove senza ricordare come c'è arrivato.
+
+La continuità si costruisce su due binari. Il primo è la semantica: non un radio group travestito, ma il pattern ARIA tabs vero — `role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, le frecce ←/→ con Home/End, il roving tabindex che tiene una sola tab nel Tab order. Il secondo è il movimento: un indicatore che *scivola* fra le posizioni invece di lampeggiare, così l'occhio segue una cosa sola che si sposta e non perde il punto. Cinque dimostrazioni, cinque modi di tenere insieme questi due binari — dalla barra che fluisce al pannello che si dissolve con la View Transitions API.
+
+## L'indicatore che fluisce
+
+La prima tab è anche la più comune: etichette in fila, una barra underline sotto quella attiva. Il punto non è la barra in sé, ma *come* si sposta quando cambi tab.
+
+<Demo title="Underline che fluisce · ARIA tabs completo" tag="12.a">
+  <UnderlineTabs locale="it" />
+  <div slot="note">
+    <p>Clicca una tab, o dai il focus e usa <kbd>←</kbd>/<kbd>→</kbd>, <kbd>Home</kbd>, <kbd>Fine</kbd>: l'underline non *appare* sotto la nuova etichetta, ci *scorre*. Sotto c'è una tecnica in stile FLIP — misuriamo posizione e larghezza della tab attiva e le scriviamo in due custom property (<code>--ind-x</code>, <code>--ind-w</code>), poi una transizione CSS di <code>transform</code> e <code>inline-size</code> fa il resto. Una barra sola che si sposta, non quattro che lampeggiano: è un indicatore di posizione, e gli indicatori scivolano. Questo è ciò che distingue una tab da un segmented control: qui sotto ogni etichetta c'è un <code>tabpanel</code> diverso, non un valore — per questo la semantica è il pattern ARIA tabs, con <code>aria-controls</code> dalla tab al suo pannello.</p>
+    <p>La continuità è tutta in quel movimento: l'occhio segue l'underline che viaggia e capisce *da dove a dove* si è spostato, senza riorientarsi da capo. Ma il pannello stesso non si ri-anima: il contenuto già visto si scambia di colpo, perché ri-animare ciò che hai già letto è nervosismo, non eleganza. La regola del playground — animare una volta, mai ri-animare — vale anche qui: l'underline porta la transizione, il testo resta fermo. E con <code>prefers-reduced-motion</code> l'underline non viaggia: si trova già sotto la tab scelta. Stesso stato finale, nessun viaggio.</p>
+  </div>
+</Demo>
+
+## La pillola, riusata per cambiare contesto
+
+La seconda tab prende in prestito una meccanica già vista — la pillola che scivola del controllo segmentato — e la mette al servizio di un compito diverso. È un esercizio utile proprio perché la forma è quasi identica e il significato no.
+
+<Demo title="Pill tabs · la lezione del segmented, contratto diverso" tag="12.b">
+  <PillTabs locale="it" />
+  <div slot="note">
+    <p>La pillola scivola <em>dietro</em> la tab attiva, esattamente come nel segmented control del capitolo 09: stesso trucco, una custom property <code>--idx</code> che trasla un elemento di sfondo a larghezza fissa (100%/N), nessuna misura in JS. Ma il contratto è cambiato sotto la pelle. Lì erano <code>&lt;input type="radio"&gt;</code> che sceglievano un valore; qui sono <code>role="tab"</code> che aprono pannelli. Confondere i due è l'errore che disorienta: una pillola che sembra scegliere «giorno / settimana / mese» come fosse un filtro, mentre in realtà ricarica un intero contesto — o viceversa. La forma densa e compatta sta dove la barra underline sarebbe troppo ariosa, ma la promessa dev'essere onesta su cosa succede quando la premi.</p>
+    <p>La tastiera è la stessa di ogni tab di questo capitolo: <kbd>←</kbd>/<kbd>→</kbd> ciclano la selezione, <kbd>Home</kbd> e <kbd>Fine</kbd> saltano agli estremi, e il roving tabindex tiene una sola tab raggiungibile con <kbd>Tab</kbd> — le altre escono dall'ordine e si raggiungono con le frecce, come vuole il pattern ARIA tabs. Cambiando periodo, il pannello non si ri-anima: la pillola porta la continuità, il contenuto si scambia netto. E con <code>prefers-reduced-motion</code> la pillola non scivola, è già dietro la tab scelta: lo stato finale è identico, sparisce solo il viaggio.</p>
+  </div>
+</Demo>
+
+## Il numero che non balla
+
+La terza tab aggiunge un'informazione di servizio: un conteggio accanto all'etichetta, tipo «Posta in arrivo 24». Dice quanto c'è dietro la tab prima ancora di aprirla — ma un numero che cambia mette alla prova un dettaglio tipografico.
+
+<Demo title="Count tabs · tabular-nums perché il numero non balli" tag="12.c">
+  <CountTabs locale="it" />
+  <div slot="note">
+    <p>Il conteggio è il vero richiamo della tab: dice «qui c'è qualcosa che ti aspetta» senza che tu debba aprire per scoprirlo. Ma se le cifre non sono a passo fisso, una riga che passa da <code>9</code> a <code>10</code> — o due tab con <code>3</code> e <code>24</code> — si sposta di un soffio, e quel sobbalzo è rumore. Da qui la regola del capitolo 06: <code>tabular-nums</code> ovunque un numero cambi o vada confrontato in colonna, «così quando passa da 9 a 10 non sussulta». La cifra varia, la larghezza no. Il numero è anche dentro l'<code>aria-label</code>, così lo screen reader annuncia «Posta in arrivo, 24 elementi», non l'etichetta e il numero appiccicati.</p>
+    <p>L'onestà è nello zero. La tab «Archivio» è a <code>0</code>, e non finge un badge rosso su niente: il conteggio è spento, scritto in grigio sottile, perché lo zero è una verità tranquilla, non un allarme. E il colore non è mai l'unico canale — resta la cifra <code>0</code> a dirlo, leggibile anche per chi non distingue il grigio dall'accento. Qui non c'è movimento da disabilitare: nessuna animazione, quindi <code>prefers-reduced-motion</code> non ha nulla da togliere. Va bene così — non tutto deve muoversi, e una tab che si limita a informare con precisione è già rispetto.</p>
+  </div>
+</Demo>
+
+## Quando le tab sono troppe
+
+La quarta tab affronta il caso scomodo: le etichette sono più di quante ne stiano in una riga. Il riflesso sbagliato è rimpicciolire il testo o mandarle a capo; la risposta onesta è lasciarle scorrere — ma *dichiarando* che c'è altro.
+
+<Demo title="Scroll-snap tabs · indicatori di overflow ai bordi" tag="12.d">
+  <ScrollSnapTabs locale="it" />
+  <div slot="note">
+    <p>Trascina la fila orizzontalmente, o naviga con <kbd>←</kbd>/<kbd>→</kbd>: le tab scorrono e ognuna si «incastra» gentilmente al bordo (<code>scroll-snap-type: x proximity</code>), così non resti mai con un'etichetta tagliata a metà. Il bug di usabilità più comune di una barra scrollabile è il <em>silenzio</em>: niente dice che a destra continua, e metà delle tab non viene mai trovata. Qui una sfumatura su ciascun lato si accende <em>solo</em> quando da quel lato c'è davvero altro da scorrere — è un segnale di affordance guidato dallo scroll reale (<code>scrollLeft</code> vs <code>scrollWidth</code>), non una decorazione fissa.</p>
+    <p>Navigando con le frecce, la tab attiva viene riportata in vista da sola con <code>scrollIntoView</code>: non scompare mai fuori campo, anche se è l'ultima della fila. Ed è qui che <code>prefers-reduced-motion</code> incontra lo scroll: lo scorrimento verso la tab usa <code>behavior: 'smooth'</code> solo quando il movimento è gradito; con reduced motion diventa un salto secco (<code>'auto'</code>), stessa destinazione senza il viaggio fluido. Le sfumature restano — non sono motion, sono informazione: dicono «c'è dell'altro», e quell'informazione serve a tutti, fermi o in movimento.</p>
+  </div>
+</Demo>
+
+## Il pannello che si dissolve
+
+L'ultima tab sposta il movimento dall'indicatore al *pannello*. Finora la barra o la pillola portavano la continuità mentre i contenuti si scambiavano di colpo; qui è il pannello stesso a uscire ed entrare, con la View Transitions API a orchestrare il passaggio.
+
+<Demo title="View Transition tabs · document.startViewTransition + fallback" tag="12.e">
+  <ViewTransitionTabs locale="it" />
+  <div slot="note">
+    <p>Cambia tab: il vecchio pannello sfuma via mentre il nuovo entra, e il cross-fade non l'abbiamo scritto noi. <code>document.startViewTransition</code> cattura il «prima» e il «dopo» del pannello e interpola da sola — niente keyframe a mano per coordinare l'uscita di uno con l'entrata dell'altro. Restiamo fedeli alla legge del tempo del playground: le cose se ne vanno più in fretta di quanto entrino, e infatti <code>::view-transition-old</code> dura meno di <code>::view-transition-new</code>. Il pannello porta il movimento, ma l'indicatore underline resta a dire dove sei: le due cose non si pestano i piedi.</p>
+    <p>Il punto delicato è che una View Transition è un <em>miglioramento progressivo</em>, mai un requisito. Lo scambio di stato — <code>hidden</code>, <code>aria-selected</code>, roving tabindex — vive in una funzione a parte; la transizione è solo la confezione attorno. Dove l'API non esiste, si chiama quella funzione e basta: stesso pannello, stesso stato finale, solo senza la dissolvenza. E con <code>prefers-reduced-motion</code> le <code>@keyframes</code> della transizione sono disattivate esplicitamente — perché collassare le durate a 1ms non sempre basta per le animazioni con nome, vanno spente a mano. Lo scambio avviene comunque, istantaneo: il movimento è confezione, mai sostanza.</p>
+  </div>
+</Demo>
+
+---
+
+Cinque tab, una sola domanda: come si cambia contesto senza disorientare? La risposta non è mai stata «con l'animazione giusta». È stata, ogni volta, *tenere fermo ciò che orienta mentre cambia ciò che informa*. L'underline che fluisce dice da dove a dove ti sei spostato; la pillola riusa una meccanica nota senza barare sul contratto; il conteggio informa con cifre che non ballano; lo scroll-snap dichiara che c'è altro invece di nasconderlo; la View Transition confeziona il passaggio senza renderlo un requisito. E sotto tutto, immutabile, il pattern ARIA tabs: la tastiera che funziona, la posizione che si annuncia, il pannello che il browser sa collegare alla sua tab. La grafica della tab è l'ultima cosa; la prima è la promessa di non farti mai perdere dov'eri.
+
+Il prossimo capitolo resta tra i contenitori ma cambia oggetto: dalla fila di pannelli al singolo riquadro che li raccoglie. *Anatomia di una scheda* — la card è solo un rettangolo con un bordo, o c'è una grammatica di gerarchia, affordance e zone cliccabili che decide se inviti a entrare o respingi?

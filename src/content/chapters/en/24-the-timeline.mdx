@@ -1,0 +1,90 @@
+---
+lang: "en"
+translationKey: "chapter-24"
+number: "24"
+title: "The timeline"
+excerpt: "A table of dates is read one row at a time; a timeline is read with the eye. Turning time into a visual object — a line, a path, a bar, a tape to rewind — isn't decoration: it gives the flow a shape the brain grasps before it reads."
+date: "September 18, 2026"
+releaseDate: "2026-09-18"
+readMinutes: 11
+tags: ["components", "dataviz", "motion"]
+---
+
+import Demo from '../../../components/Demo.astro';
+import EventTimeline from '../../../components/timeline/EventTimeline.astro';
+import ProgressTimeline from '../../../components/timeline/ProgressTimeline.astro';
+import MiniGantt from '../../../components/timeline/MiniGantt.astro';
+import BreathingTimeline from '../../../components/timeline/BreathingTimeline.astro';
+import ReplayScrubber from '../../../components/timeline/ReplayScrubber.astro';
+
+The last chapter was about a single control; this one widens the view to a whole data structure — time — and to the question that governs it: how do you show a sequence of events? The lazy answer is a table: a "date" column, a "what" column, one row per event. It works, and it reads one row at a time, with the effort of holding the order in your head. But time isn't a column of cells: it's a *flow*, a direction, a distance between before and after. A timeline is the attempt to give that shape back — to make time a visual object, not a field to cross-reference in your mind.
+
+"Visual" doesn't mean "decorated". It means the shape does part of the work that reading would otherwise have to do. A vertical line says "sequence" before you read the dates. A bar twice as long says "lasts twice as long" without your subtracting two numbers. A pulsing node says "this is still warm" without a badge shouting "NEW". When it works, you read *less* and understand *sooner*: it's invisible UX applied to time.
+
+Five demos, five ways to give the flow a shape — the line that descends, the path of stops, the bar on the axis, the breath of the recent, the tape to rewind. And as always, no libraries: `<ol>` to say "there's an order", `<time datetime>` for machine-readable dates, CSS Grid as a ready-made temporal grid. Time is already semantic in HTML; our job is only to give it an honest shape.
+
+## The line that descends
+
+The first is the timeline in its purest form: a register of events that descends, commit-log style. A vertical spine connects the nodes, and each node carries a date and a line of what happened.
+
+<Demo title="Event history · node, line, ⟨time⟩, description" tag="24.a">
+  <EventTimeline locale="en" />
+  <div slot="note">
+    <p>The vertical line does work no "date" column would: it says, before you even read, that the events are in sequence and that above comes before below. It's an <code>&lt;ol&gt;</code>, not a stack of <code>&lt;div&gt;</code> — so a screen reader counts "item 1 of 5" and the order becomes semantics, not just graphics. The dates are <code>&lt;time datetime&gt;</code>: machine-readable, with no ambiguity of timezone or language. The deploy has the node filled with accent, the others are empty circles: shape plus colour, never colour alone.</p>
+    <p>The relative label — "2 days ago" — isn't written in the markup: a small script computes it after mount. It's a choice of technical honesty: no <code>new Date()</code> in the build, because a "now" frozen at compile time would age in silence and lie tomorrow. The script anchors the "relative" to an instant coherent with the chapter, so the samples stay true. And the nodes' entrance rises once only, in a short 60ms cascade: under <code>prefers-reduced-motion</code> they're already in place, identical final state, no journey.</p>
+  </div>
+</Demo>
+
+## The path of stops
+
+Move the register onto a horizontal axis and change the meaning: no longer "what happened" but "how far along we are". The status of a shipment, an onboarding, a return — a path with completed stops, a current stop, stops still to come.
+
+<Demo title="Progress timeline · done / current / pending" tag="24.b">
+  <ProgressTimeline locale="en" />
+  <div slot="note">
+    <p>"You're at 60%" says nothing; "shipped, in transit, out for delivery" says everything. A percentage is an abstract number, a stop is a *place* — and the brain orients better in places than in numbers. That's why the current state isn't a bar that fills, it's a node with a ring: the "you are here" of a map. The three states read without colour: done carries a check <code>✓</code> inside the node, current has the ring and a bold label marked "· in progress", pending is an empty, dimmed circle. Colour is the third signal, never the first.</p>
+    <p>The current stop has <code>aria-current="step"</code> — the attribute exists for exactly this: "the current step in a set of steps". Without it, a screen reader would read five identical-sounding entries and the user would have to guess where they are; with it, they hear "current step" and the ambiguity is gone. On a narrow screen the horizontal row rotates into a readable column instead of squeezing into illegibility: the shape adapts, the semantics stay identical.</p>
+  </div>
+</Demo>
+
+## The bar on the axis
+
+Third shape, the most literal: the Gantt. Here the horizontal axis *is* the calendar, and a bar doesn't describe duration — it *measures* it. A bar twice as long lasts twice as long, and you read it with the eye, without subtracting dates in your head.
+
+<Demo title="Mini-Gantt · CSS Grid as a temporal grid" tag="24.c">
+  <MiniGantt locale="en" />
+  <div slot="note">
+    <p>The trick is that you don't need a library: CSS Grid <em>already is</em> a temporal grid. One column per day, one row per task, and each bar declares its span with <code>grid-column: start / end</code>. Space does the maths — the bar's length is literally the duration, and the overlap between tasks shows because two bars sit on the same columns. No SVG to compute, no <code>new Date()</code>: the grid of dates is a fixed array of samples, and the bars tell the true duration, not a length that "looks nice".</p>
+    <p>A coloured bar on its own is mute for someone who can't see it: that's why each task carries a visually hidden <code>&lt;span&gt;</code> describing the span in words — "Design: Sep 14 to 16". The painted bar is the visual channel, the sentence is the screen-reader channel, and the endpoints are <code>&lt;time&gt;</code>. The tasks are told apart by tint and by stroke (solid, dark, dashed), not by colour alone. Under reduced motion the bars don't grow from zero: they're already at their length, because the length <em>is</em> the data, not an effect.</p>
+  </div>
+</Demo>
+
+## The breath of the recent
+
+Fourth shape, and the register shifts: from showing the past to signalling the present. In a feed that updates, the newest events aren't just "at the top" — they're *alive*. The question is how to say it without shouting.
+
+<Demo title="Breathing timeline · the pulse of the recent, removed under reduced motion" tag="24.d">
+  <BreathingTimeline locale="en" />
+  <div slot="note">
+    <p>A very gentle pulse on the newest node is the most honest way to say "this is still warm": not a badge shouting "NEW", but a slow beat, like something that hasn't cooled yet. The threshold is all in the dosage. The halo grows and fades on a cycle of ≈ 2.4s — a <em>breath</em>, not a blink — and it applies only to the very few events marked "recent", never to the whole list. Blinking would be noise; breathing is presence. A feed that pulses entirely is a feed that shouts, and has already lost.</p>
+    <p>Here is the acid test of motion honesty. Under <code>prefers-reduced-motion</code> the breath disappears <em>entirely</em>: not slowed, removed. But the information "this is recent" can't vanish with the animation — that would be hiding a state. That's why beneath the pulse a static sign always lives: a dot <code>•</code> and the word "recent", readable by someone who sees neither colour nor motion. The beat is a finish for those who can receive it; the sign is the truth for everyone. Never entrust information to motion alone.</p>
+  </div>
+</Demo>
+
+## The tape to rewind
+
+The last shape flips the verb: the timeline isn't watched, it's *operated*. A slider for temporal "scrubbing" — you drag the cursor and review the system's state at that instant. Time becomes a dimension you hold in your hand.
+
+<Demo title="Replay scrubber · ⟨input type=range⟩ with readable aria-valuetext" tag="24.e">
+  <ReplayScrubber locale="en" />
+  <div slot="note">
+    <p>It's the difference between reading a log and rewinding a tape. The heart is a real <code>&lt;input type="range"&gt;</code>, not a <code>&lt;div&gt;</code> with listeners: so the <kbd>←</kbd>/<kbd>→</kbd> arrows scrub by one step, <kbd>Home</kbd>/<kbd>End</kbd> jump to the ends, and dragging, touch and focus all come free from the browser. Just declare <code>min</code>, <code>max</code>, <code>step</code> and the semantics are there. As you drag, the frame on top changes: date, outcome, a line of what was happening — a real sample state for each instant, not a filler.</p>
+    <p>But a slider that tells time has a subtle accessibility problem: without help, a screen reader reads "3 of 5", a mute number. The cure is <code>aria-valuetext</code>, updated at every step: it reads "Sep 16, build green" — the <em>meaning</em> of that moment, not its index. The outcome isn't entrusted to colour: each frame carries a glyph (<code>✓</code> / <code>✕</code> / <code>◔</code>) beside the word. And since scrubbing is user-driven, it isn't an auto-animation: there's nothing to "remove" under reduced motion, just the brief frame highlight that collapses to 1ms. The motion here is made by the finger, and the finger is always right.</p>
+  </div>
+</Demo>
+
+---
+
+Five shapes, one shared insight: time deserves better than a column of cells. The line that descends gives the sequence a direction; the path of stops turns an abstract percentage into a place; the bar on the axis lets the eye measure duration; the breath signals the living without shouting; the tape puts the past under your fingertip. Each chooses *which* property of time to make visible — order, position, duration, freshness, reversibility — and renders it with the right shape, not one more chart. Showing time, in the end, is mostly deciding what about it matters in that moment, and letting the shape say it before the words do.
+
+The next chapter leaves the eye and moves to the finger. Having given shape to what you watch, we ask what changes when the interface is *touched*, instead of clicked: *The gesture* — the grammar of the swipe, the long-press, the drag, and why an action done with the thumb isn't the same as one done with the mouse.
