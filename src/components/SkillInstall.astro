@@ -1,0 +1,320 @@
+---
+/* ─────────────────────────────────────────────────────────────
+   SkillInstall — porta il libro nel tuo agente.
+
+   Il libro non si legge soltanto: si installa. Questa sezione
+   chiude la home con il comando per portare i principi di
+   Altrove dentro Claude Code (e gli altri agenti supportati da
+   `npx skills`).
+
+   Note di UX
+   - Il terminale è scuro in entrambi i temi: è un terminale,
+     non una "sezione dark" — la convenzione vince sul tema.
+   - Copy: feedback inline (icona check per 2s), mai un toast per
+     una conferma così piccola. role=status polite per AT.
+   - Il bottone è icon-only a misura fissa: nessun layout shift
+     quando cambia stato.
+   ───────────────────────────────────────────────────────────── */
+
+import { t, type Locale } from '../lib/i18n';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+
+const COMMAND = 'npx skills add MatteoSchifano/altrove';
+const REPO_URL = 'https://github.com/MatteoSchifano/altrove';
+---
+
+<section class="skill" aria-labelledby="skill-title">
+  <div class="container skill__grid">
+    <header class="skill__copy" data-reveal>
+      <p class="eyebrow">{t('home.skillEyebrow', locale)}</p>
+      <h2 id="skill-title" class="skill__title">{t('home.skillTitle', locale)}</h2>
+      <p class="skill__lede">{t('home.skillLede', locale)}</p>
+      <a class="skill__repo" href={REPO_URL} rel="noopener">
+        <span>{t('home.skillRepo', locale)}</span>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8h10M9 4l4 4-4 4" />
+        </svg>
+      </a>
+    </header>
+
+    <div class="terminal" data-skill-terminal data-reveal>
+      <header class="terminal__bar" aria-hidden="true">
+        <span class="terminal__dot"></span>
+        <span class="terminal__dot"></span>
+        <span class="terminal__dot"></span>
+        <span class="terminal__name">skills</span>
+      </header>
+
+      <div class="terminal__body">
+        <pre class="terminal__line"><code><span class="terminal__prompt" aria-hidden="true">$ </span>{COMMAND}</code></pre>
+        <button
+          class="terminal__copy"
+          type="button"
+          data-copy={COMMAND}
+          data-done={t('home.skillCopied', locale)}
+          aria-label={t('home.skillCopy', locale)}
+        >
+          <svg class="terminal__icon terminal__icon--copy" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+            <path d="M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+          </svg>
+          <svg class="terminal__icon terminal__icon--check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 8.5l3.5 3.5L13 4.5" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="terminal__hint">{t('home.skillWorksWith', locale)}</p>
+      <span class="sr-only" role="status" data-copy-status></span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .skill {
+    position: relative;
+    /* Il bordo di separazione lo dà già lo statement qui sopra. */
+    padding-block: var(--rhythm-loose);
+    overflow: clip;
+  }
+
+  /* Alone caldo dietro il terminale — profondità, non decorazione */
+  .skill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      38rem 24rem at 22% 50%,
+      color-mix(in oklab, var(--accent) 7%, transparent),
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .skill__grid {
+    position: relative;
+    display: grid;
+    gap: var(--space-xl);
+    align-items: center;
+  }
+  @media (min-width: 56rem) {
+    /* Terminale a sinistra, copy a destra: alterna lo specimen del
+       hero (a destra) — l'occhio zigzaga lungo la pagina. */
+    .skill__grid {
+      grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+      gap: var(--space-2xl);
+    }
+    .terminal { order: 1; }
+    .skill__copy { order: 2; }
+  }
+
+  .skill__copy { display: grid; gap: var(--space-md); justify-items: start; }
+
+  .skill__title {
+    font-size: var(--text-2xl);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .skill__lede {
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+    max-inline-size: var(--measure);
+    text-wrap: pretty;
+    margin: 0;
+  }
+
+  .skill__repo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    color: var(--accent-ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    border-block-end: 1px solid transparent;
+    transition: border-color var(--dur-fast) var(--ease-out-soft);
+  }
+  .skill__repo:hover { border-block-end-color: var(--accent-ink); }
+  .skill__repo:focus-visible {
+    outline: none;
+    border-radius: var(--radius-xs);
+    box-shadow: var(--halo-focus);
+  }
+  .skill__repo svg {
+    inline-size: 0.85rem;
+    block-size: 0.85rem;
+    transition: translate var(--dur-fast) var(--ease-out-snug);
+  }
+  .skill__repo:hover svg { translate: 3px 0; }
+
+  /* ─── Il terminale — scuro in entrambi i temi, è la sua natura ─── */
+  .terminal {
+    --term-bg:     oklch(0.17 0.008 40);
+    --term-border: oklch(0.30 0.012 40);
+    --term-ink:    oklch(0.92 0.006 40);
+    --term-muted:  oklch(0.68 0.01 40);
+
+    border-radius: var(--radius-lg);
+    background-color: var(--term-bg);
+    border: 1px solid var(--term-border);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 80px -32px color-mix(in oklab, var(--accent) 45%, transparent);
+    color: var(--term-ink);
+    overflow: hidden;
+  }
+
+  .terminal__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: var(--space-xs) var(--space-sm);
+    border-block-end: 1px solid var(--term-border);
+  }
+  .terminal__dot {
+    inline-size: 0.55rem;
+    block-size: 0.55rem;
+    border-radius: 50%;
+    background-color: var(--term-border);
+  }
+  .terminal__name {
+    margin-inline-start: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--term-muted);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .terminal__body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-sm) var(--space-md) var(--space-md);
+  }
+
+  .terminal__line {
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    scrollbar-width: none; /* il comando intero è comunque nel bottone copy */
+  }
+  .terminal__line code {
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    white-space: nowrap;
+  }
+  .terminal__prompt { color: var(--accent); }
+
+  .terminal__copy {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 1px solid var(--term-border);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--term-muted);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out-soft),
+      border-color var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-instant) var(--ease-out-soft);
+  }
+  .terminal__copy:hover {
+    color: var(--term-ink);
+    border-color: oklch(0.42 0.014 40);
+  }
+  .terminal__copy:active { transform: scale(0.97); }
+  .terminal__copy:focus-visible {
+    outline: none;
+    box-shadow: var(--halo-focus);
+  }
+
+  .terminal__icon {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+  }
+  .terminal__icon--check { display: none; }
+  .terminal__copy[data-copied='true'] {
+    color: oklch(0.82 0.1 150);
+    border-color: oklch(0.45 0.06 150);
+  }
+  .terminal__copy[data-copied='true'] .terminal__icon--copy { display: none; }
+  .terminal__copy[data-copied='true'] .terminal__icon--check { display: block; }
+
+  .terminal__hint {
+    margin: 0;
+    padding: 0 var(--space-md) var(--space-md);
+    font-size: var(--text-2xs);
+    color: var(--term-muted);
+    max-inline-size: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+<script>
+  /* Copy con conferma inline: icona check per 2s, poi si torna allo
+     stato di partenza. Bind idempotente (View Transitions). */
+  function bind() {
+    document.querySelectorAll<HTMLElement>('[data-skill-terminal]').forEach((root) => {
+      if (root.dataset.bound === 'true') return;
+      root.dataset.bound = 'true';
+
+      const btn = root.querySelector<HTMLButtonElement>('.terminal__copy');
+      const status = root.querySelector<HTMLElement>('[data-copy-status]');
+      if (!btn) return;
+
+      let timer: number | undefined;
+
+      btn.addEventListener('click', async () => {
+        const text = btn.dataset.copy ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          /* Clipboard API negata (permessi/contesto): fallback execCommand */
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+
+        btn.dataset.copied = 'true';
+        if (status) status.textContent = btn.dataset.done ?? '';
+
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          delete btn.dataset.copied;
+          if (status) status.textContent = '';
+        }, 2000);
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>

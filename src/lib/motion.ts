@@ -124,6 +124,58 @@ export function lift(el: HTMLElement, opts: LiftOptions = {}): () => void {
   };
 }
 
+/* ═══════════ Reveal — apparizione allo scroll, una volta sola ═══════════ */
+
+/**
+ * Rivela gli elementi marcati [data-reveal] quando entrano in viewport.
+ *
+ * Regole (cap. 05 — lo scroll che racconta):
+ * - Anima una volta sola: dopo il reveal l'elemento non si tocca più.
+ * - Gli elementi già visibili al bind NON vengono mai nascosti — niente
+ *   blink al primo paint, e con JS spento la pagina resta intera.
+ * - Lo stagger è per batch di intersezione (--reveal-i), 60ms a passo:
+ *   dentro la finestra 40–90ms, oltre la quale diventa "celebrazione".
+ * - Con prefers-reduced-motion non si nasconde nulla: stesso stato
+ *   finale, senza il viaggio.
+ *
+ * Lo stato vive in data-reveal-state; il CSS corrispondente è in
+ * global.css (layer utilities).
+ */
+export function bindReveal(root: ParentNode = document): () => void {
+  const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+  if (els.length === 0 || prefersReducedMotion()) return () => {};
+
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const pending = els.filter((el) => {
+    if (el.dataset.revealState === 'shown') return false;
+    // Nascondi solo ciò che sta sotto la fold: ciò che è già in vista resta.
+    return el.getBoundingClientRect().top > vh * 0.92;
+  });
+  if (pending.length === 0) return () => {};
+
+  pending.forEach((el) => { el.dataset.revealState = 'hidden'; });
+
+  const obs = new IntersectionObserver(
+    (records) => {
+      const batch = records
+        .filter((r) => r.isIntersecting && r.target instanceof HTMLElement)
+        .map((r) => r.target as HTMLElement)
+        .sort((a, b) =>
+          a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+        );
+      batch.forEach((el, i) => {
+        el.style.setProperty('--reveal-i', String(i));
+        el.dataset.revealState = 'shown';
+        obs.unobserve(el);
+      });
+    },
+    { threshold: 0.15, rootMargin: '0px 0px -4% 0px' },
+  );
+
+  pending.forEach((el) => obs.observe(el));
+  return () => obs.disconnect();
+}
+
 /* ═══════════ Auto-binding via data attributes ═══════════ */
 
 /**
@@ -152,6 +204,8 @@ export function bindMotionAttributes(root: ParentNode = document): () => void {
       preset,
     }));
   });
+
+  cleanups.push(bindReveal(root));
 
   return () => cleanups.forEach((fn) => fn());
 }

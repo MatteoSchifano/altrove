@@ -72,6 +72,47 @@
     margin-inline: auto;
     max-inline-size: var(--center-width, var(--measure));
   }
+
+  /* ─── Reveal allo scroll ───
+     Lo stato è guidato da motion.ts (bindReveal): il CSS da solo non
+     nasconde mai nulla, così senza JS la pagina resta intera.
+     Stagger: 60ms a passo via --reveal-i (assegnato per batch). */
+  [data-reveal][data-reveal-state='hidden'] {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  [data-reveal][data-reveal-state='shown'] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 560ms var(--ease-out-soft) calc(var(--reveal-i, 0) * 60ms),
+      transform 600ms var(--ease-out-snug) calc(var(--reveal-i, 0) * 60ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* ─── Grain — texture che rompe la piattezza digitale ───
+     Overlay fisso, non interattivo, quasi impercettibile: si nota
+     solo la sua assenza. Da posare dentro un contenitore relative. */
+  .grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+  }
+  /* Nel dark il multiply sparisce sul fondo scuro: si passa a screen. */
+  :root[data-theme='dark'] .grain { mix-blend-mode: screen; opacity: 0.05; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .grain { mix-blend-mode: screen; opacity: 0.05; }
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────

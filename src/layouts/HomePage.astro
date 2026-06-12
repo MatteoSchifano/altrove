@@ -6,13 +6,17 @@
    wrapper di una riga su questo layout, passando solo la locale.
    Tutta la logica vive qui per evitare divergenze tra le versioni.
 
-   Architettura della pagina (sei famiglie di layout distinte):
+   Architettura della pagina (sette famiglie di layout distinte,
+   con un aggancio visivo in ogni fascia — l'occhio non riposa mai
+   su solo testo):
    1. Hero        — split asimmetrico: copy + uno specimen vivo.
    2. Statement   — pull-quote full-width, il pensiero del progetto.
-   3. Principi    — bento asimmetrico, i pochi vincoli di lavoro.
-   4. Capitoli    — griglia di ChapterCard (la signature interaction).
-   5. Roadmap     — il percorso/timeline del libro.
-   6. Colophon    — "cosa non è", in colonna singola, centrata.
+   3. Skill       — terminale a sinistra, copy a destra (alterna il hero).
+   4. Principi    — bento asimmetrico: vincoli di lavoro + demo vive
+                    dei capitoli (bottone, skeleton, toggle) annotate.
+   5. Capitoli    — griglia di ChapterCard (la signature interaction).
+   6. Roadmap     — il percorso/timeline del libro.
+   7. Colophon    — "cosa non è", in colonna singola, centrata.
 
    La scelta di NON usare fotografia stock è deliberata: l'asset
    onesto di Altrove è il suo stesso motion. Lo specimen nell'hero
@@ -24,6 +28,7 @@ import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
 import ChapterCard from '../components/ChapterCard.astro';
 import RoadmapSection from '../components/RoadmapSection.astro';
+import SkillInstall from '../components/SkillInstall.astro';
 import { getReleasedChapters } from '../lib/chapters';
 import { t, localizedPath, getOtherLocales, type Locale } from '../lib/i18n';
 import { resolveReadingTime } from '../lib/readingTime';
@@ -62,6 +67,12 @@ const notList = [
   t('home.notA3', locale),
   t('home.notA4', locale),
 ];
+
+/* Il punto finale di "Altrove." è la voce del marchio: lo isoliamo
+   per dargli il colore dell'accent (lo stesso del wordmark__dot). */
+const rawTitle = t('home.title', locale);
+const titleHasDot = rawTitle.endsWith('.');
+const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
 ---
 
 <Base
@@ -89,11 +100,14 @@ const notList = [
 
     <main>
       {/* ─── 1 · Hero: split asimmetrico copy + specimen ─── */}
-      <section class="hero">
+      <section class="hero" data-hero>
+        <div class="grain" aria-hidden="true"></div>
         <div class="container hero__grid">
           <div class="hero__copy">
             <p class="eyebrow hero__eyebrow">{t('home.eyebrow', locale)}</p>
-            <h1 class="display hero__title">{t('home.title', locale)}</h1>
+            <h1 class="display hero__title">
+              {titleText}{titleHasDot && <span class="hero__title-dot">.</span>}
+            </h1>
             <p class="hero__lede">{t('home.lede', locale)}</p>
             <p class="hero__manifesto">
               {t('home.manifestoBefore', locale)}<em>{t('home.manifestoEm', locale)}</em>{t('home.manifestoAfter', locale)}
@@ -142,38 +156,105 @@ const notList = [
         </div>
       </section>
 
+      {/* Cascata d'ingresso del hero: solo alla prima visita della
+          sessione — le pagine che ri-animano sembrano nervose; questa
+          anima una volta. Senza JS l'attributo non viene mai messo e
+          il hero è semplicemente visibile. */}
+      <script is:inline data-astro-rerun>
+        (() => {
+          try {
+            if (sessionStorage.getItem('altrove-entrance') === 'done') return;
+            sessionStorage.setItem('altrove-entrance', 'done');
+            document.querySelector('[data-hero]')?.setAttribute('data-entrance', 'play');
+          } catch (_) {
+            /* sessionStorage bloccato: meglio nessuna cascata che una a ogni nav */
+          }
+        })();
+      </script>
+
       {/* ─── 2 · Statement: pull-quote full-width ─── */}
       <section class="statement">
         <div class="container">
-          <p class="statement__text">
+          <p class="statement__text" data-reveal>
             {t('home.statementLead', locale)}<em>{t('home.statementEm', locale)}</em>{t('home.statementTail', locale)}
           </p>
         </div>
       </section>
 
-      {/* ─── 3 · Principi: bento asimmetrico ─── */}
+      {/* ─── 3 · La skill: porta il libro nel tuo agente ─── */}
+      <SkillInstall locale={locale} />
+
+      {/* ─── 4 · Principi: bento asimmetrico con demo vive ───
+          I quattro vincoli si alternano a tre vignette animate prese
+          dai capitoli: un bottone che si preme, uno skeleton che
+          attende, un toggle che scatta — annotati coi numeri veri. */}
       <section class="principles">
         <div class="container">
-          <header class="principles__head">
+          <header class="principles__head" data-reveal>
             <p class="eyebrow">{t('home.principlesEyebrow', locale)}</p>
             <h2 class="principles__title">{t('home.principlesTitle', locale)}</h2>
           </header>
           <ul role="list" class="principles__grid">
-            {principles.map((p, i) => (
-              <li class={`pcell pcell--${i + 1}`}>
-                <span class="pcell__num tabular" aria-hidden="true">{p.n}</span>
-                <h3 class="pcell__title">{p.title}</h3>
-                <p class="pcell__body">{p.body}</p>
-              </li>
-            ))}
+            <li class="pcell pcell--1" data-reveal>
+              <span class="pcell__num tabular" aria-hidden="true">{principles[0].n}</span>
+              <h3 class="pcell__title">{principles[0].title}</h3>
+              <p class="pcell__body">{principles[0].body}</p>
+            </li>
+
+            <li class="dcell" data-reveal>
+              <span class="dcell__kicker">{t('demo.cap01', locale)}</span>
+              <span class="dcell__stage">
+                <span class="demo-press">{t('demo.button', locale)}</span>
+              </span>
+              <span class="dcell__note">{t('demo.notePress', locale)}</span>
+            </li>
+
+            <li class="pcell pcell--2" data-reveal>
+              <span class="pcell__num tabular" aria-hidden="true">{principles[1].n}</span>
+              <h3 class="pcell__title">{principles[1].title}</h3>
+              <p class="pcell__body">{principles[1].body}</p>
+            </li>
+
+            <li class="dcell" data-reveal>
+              <span class="dcell__kicker">{t('demo.cap02', locale)}</span>
+              <span class="dcell__stage dcell__stage--skeleton" aria-hidden="true">
+                <span class="demo-skel demo-skel--avatar"></span>
+                <span class="demo-skel demo-skel--line demo-skel--w1"></span>
+                <span class="demo-skel demo-skel--line demo-skel--w2"></span>
+              </span>
+              <span class="dcell__note">{t('demo.noteWait', locale)}</span>
+            </li>
+
+            <li class="pcell pcell--3" data-reveal>
+              <span class="pcell__num tabular" aria-hidden="true">{principles[2].n}</span>
+              <h3 class="pcell__title">{principles[2].title}</h3>
+              <p class="pcell__body">{principles[2].body}</p>
+            </li>
+
+            <li class="dcell" data-reveal>
+              <span class="dcell__kicker">{t('demo.cap09', locale)}</span>
+              <span class="dcell__stage">
+                <span class="demo-toggle" aria-hidden="true">
+                  <span class="demo-toggle__knob"></span>
+                </span>
+                <span class="demo-toggle__label">{t('demo.toggleLabel', locale)}</span>
+              </span>
+              <span class="dcell__note">{t('demo.noteToggle', locale)}</span>
+            </li>
+
+            <li class="pcell pcell--4" data-reveal>
+              <span class="pcell__num tabular" aria-hidden="true">{principles[3].n}</span>
+              <h3 class="pcell__title">{principles[3].title}</h3>
+              <p class="pcell__body">{principles[3].body}</p>
+            </li>
           </ul>
         </div>
       </section>
 
-      {/* ─── 4 · Capitoli: la griglia signature ─── */}
+      {/* ─── 5 · Capitoli: la griglia signature ─── */}
       <section class="chapters" id="capitoli">
         <div class="container">
-          <header class="chapters__head">
+          <header class="chapters__head" data-reveal>
             <h2 class="chapters__title">{t('home.chaptersTitle', locale)}</h2>
             <p class="chapters__hint">
               <span class="chapters__count tabular">{chapters.length}</span>
@@ -186,7 +267,7 @@ const notList = [
               const slug = slugOf(c.id, locale);
               const readMinutes = resolveReadingTime(c.body, c.data.readMinutes);
               return (
-                <li>
+                <li data-reveal>
                   <ChapterCard
                     locale={locale}
                     number={c.data.number}
@@ -204,12 +285,12 @@ const notList = [
         </div>
       </section>
 
-      {/* ─── 5 · Roadmap: il percorso del libro ─── */}
+      {/* ─── 6 · Roadmap: il percorso del libro ─── */}
       <RoadmapSection locale={locale} publishedChapters={chapters} />
 
-      {/* ─── 6 · Colophon: "cosa non è", colonna singola ─── */}
+      {/* ─── 7 · Colophon: "cosa non è", colonna singola ─── */}
       <section class="colophon">
-        <div class="container colophon__inner">
+        <div class="container colophon__inner" data-reveal>
           <h2 class="colophon__title">{t('home.colophonTitle', locale)}</h2>
           <ul role="list" class="colophon__list">
             {notList.map((line) => (
@@ -359,7 +440,63 @@ const notList = [
 
   /* ─── 1 · Hero ─── */
   .hero {
+    position: relative;
     padding-block: var(--rhythm-loose) var(--rhythm);
+    overflow: clip;
+  }
+
+  /* Luce ambientale: due aloni caldi quasi impercettibili, coerenti
+     con il punto di luce dello specimen. Profondità, non gradiente. */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        42rem 30rem at 82% 10%,
+        color-mix(in oklab, var(--accent) 7%, transparent),
+        transparent 65%
+      ),
+      radial-gradient(
+        36rem 26rem at 6% 95%,
+        color-mix(in oklab, var(--accent) 4%, transparent),
+        transparent 70%
+      );
+    pointer-events: none;
+  }
+
+  .hero > .container { position: relative; }
+
+  .hero__title-dot {
+    color: var(--accent);
+  }
+
+  /* ─── Cascata d'ingresso — solo con [data-entrance='play'] ───
+     70ms a passo (dentro la finestra 40–90ms), 640ms a elemento.
+     fill backwards, non both: a fine corsa l'animazione si stacca
+     e lascia il transform allo specimen magnetic. Il default senza
+     attributo è tutto visibile: nessuna pagina vuota senza JS. */
+  @keyframes hero-rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .hero[data-entrance='play'] :is(.hero__eyebrow, .hero__title, .hero__lede, .hero__manifesto, .hero__cta) {
+    animation: hero-rise 640ms var(--ease-out-soft) backwards;
+  }
+  .hero[data-entrance='play'] .hero__title     { animation-delay: 70ms; }
+  .hero[data-entrance='play'] .hero__lede      { animation-delay: 140ms; }
+  .hero[data-entrance='play'] .hero__manifesto { animation-delay: 210ms; }
+  .hero[data-entrance='play'] .hero__cta       { animation-delay: 280ms; }
+  .hero[data-entrance='play'] .specimen {
+    animation: hero-rise 720ms var(--ease-out-soft) 220ms backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero[data-entrance='play'] :is(.hero__eyebrow, .hero__title, .hero__lede, .hero__manifesto, .hero__cta),
+    .hero[data-entrance='play'] .specimen {
+      animation: none;
+    }
   }
 
   .hero__grid {
@@ -586,19 +723,17 @@ const notList = [
     .principles__grid {
       grid-template-columns: repeat(6, 1fr);
     }
-    /* Ritmo asimmetrico: la prima cella è larga, le altre tre strette.
-       4 celle, 4 contenuti — nessuna cella vuota. */
-    .pcell--1 { grid-column: span 3; }
-    .pcell--2 { grid-column: span 3; }
-    .pcell--3 { grid-column: span 3; }
-    .pcell--4 { grid-column: span 3; }
+    /* Ritmo a coppie: ogni vincolo è affiancato da una demo viva.
+       7 celle: (p1·demo)(p2·demo)(p3·demo) + p4 a tutta riga. */
+    .pcell--1, .pcell--2, .pcell--3, .dcell { grid-column: span 3; }
+    .pcell--4 { grid-column: span 6; }
   }
 
   @media (min-width: 64rem) {
-    .pcell--1 { grid-column: span 3; grid-row: span 2; }
-    .pcell--2 { grid-column: span 3; }
-    .pcell--3 { grid-column: span 3; }
-    .pcell--4 { grid-column: span 6; }
+    /* La cella d'apertura si fa alta: l'accento pesa di più.
+       p4 torna a metà riga per chiudere il giro accanto al toggle. */
+    .pcell--1 { grid-row: span 2; }
+    .pcell--4 { grid-column: span 3; }
   }
 
   .pcell {
@@ -643,6 +778,154 @@ const notList = [
     color: var(--ink-muted);
     line-height: var(--leading-relaxed);
     max-inline-size: 42ch;
+  }
+
+  /* ─── Demo vive nel bento ───
+     Le "immagini" di Altrove: vignette animate dei capitoli, su una
+     trama punteggiata da spec sheet. Loop lunghi e silenziosi
+     (5–7s), coi numeri veri del libro nelle annotazioni. */
+  .dcell {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    justify-items: start;
+    gap: var(--space-xs);
+    padding: var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-raised);
+    overflow: clip;
+  }
+  .dcell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--ink-subtle) 30%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 18px 18px;
+    mask-image: radial-gradient(120% 90% at 50% 45%, black 30%, transparent 82%);
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 45%, black 30%, transparent 82%);
+    pointer-events: none;
+  }
+  .dcell > * { position: relative; }
+
+  .dcell__kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+  }
+
+  .dcell__stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    inline-size: 100%;
+    padding-block: var(--space-lg);
+  }
+
+  .dcell__note {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--accent-ink);
+    border-block-start: 1px dashed var(--border-strong);
+    padding-block-start: var(--space-2xs);
+    inline-size: 100%;
+  }
+
+  /* cap. 01 — il bottone si preme da solo, ogni ~5s */
+  .demo-press {
+    display: inline-grid;
+    place-items: center;
+    padding: 0.55rem 1.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-on);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-snug);
+    box-shadow: var(--shadow-sm);
+    animation: demo-press 5200ms var(--ease-out-snug) infinite;
+  }
+  @keyframes demo-press {
+    0%, 6%, 100% { transform: none; box-shadow: var(--shadow-sm); }
+    3%           { transform: scale(0.97); box-shadow: var(--shadow-pressed); }
+  }
+
+  /* cap. 02 — skeleton che attende con pudore */
+  .dcell__stage--skeleton {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-xs);
+    row-gap: var(--space-2xs);
+    align-items: center;
+    max-inline-size: 13rem;
+    margin-inline: auto;
+  }
+  .demo-skel {
+    border-radius: var(--radius-xs);
+    background: linear-gradient(
+      100deg,
+      var(--surface-sunken) 40%,
+      color-mix(in oklab, var(--surface-sunken) 55%, var(--surface-raised)) 50%,
+      var(--surface-sunken) 60%
+    );
+    background-size: 200% 100%;
+    animation: demo-shimmer 1800ms linear infinite;
+  }
+  .demo-skel--avatar {
+    grid-row: span 2;
+    inline-size: 2.1rem;
+    block-size: 2.1rem;
+    border-radius: var(--radius-sm);
+  }
+  .demo-skel--line { block-size: 0.6rem; }
+  .demo-skel--w1 { inline-size: 100%; }
+  .demo-skel--w2 { inline-size: 62%; animation-delay: 120ms; }
+  @keyframes demo-shimmer {
+    from { background-position: 120% 0; }
+    to   { background-position: -80% 0; }
+  }
+
+  /* cap. 09 — toggle che scatta: ~210ms in andata, ritorno più rapido
+     (le cose escono più in fretta di come entrano) */
+  .demo-toggle {
+    position: relative;
+    inline-size: 2.5rem;
+    block-size: 1.45rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-sunken);
+    animation: demo-track 7000ms var(--ease-in-out) infinite;
+  }
+  .demo-toggle__knob {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0.18rem;
+    inline-size: 1.05rem;
+    block-size: 1.05rem;
+    margin-block-start: -0.525rem;
+    border-radius: 50%;
+    background-color: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    animation: demo-knob 7000ms var(--ease-out-snug) infinite;
+  }
+  @keyframes demo-knob {
+    0%, 40%     { translate: 0 0; }
+    43%, 88%    { translate: 1.05rem 0; }
+    90.5%, 100% { translate: 0 0; }
+  }
+  @keyframes demo-track {
+    0%, 40%     { background-color: var(--surface-sunken); border-color: var(--border-strong); }
+    43%, 88%    { background-color: var(--accent); border-color: var(--accent); }
+    90.5%, 100% { background-color: var(--surface-sunken); border-color: var(--border-strong); }
+  }
+  .demo-toggle__label {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
   }
 
   /* ─── 4 · Capitoli ─── */
@@ -755,8 +1038,15 @@ const notList = [
     letter-spacing: var(--tracking-wider);
   }
 
-  /* ─── Reduced motion: niente lift/scale sui bottoni ─── */
+  /* ─── Reduced motion: niente lift/scale sui bottoni,
+         demo ferme allo stato finale ─── */
   @media (prefers-reduced-motion: reduce) {
+    .demo-press,
+    .demo-skel,
+    .demo-toggle,
+    .demo-toggle__knob {
+      animation: none;
+    }
     .btn,
     .soft-press {
       transition: background-color var(--dur-fast) var(--ease-out-soft),
