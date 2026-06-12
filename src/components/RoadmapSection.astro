@@ -2,25 +2,29 @@
 /* ─────────────────────────────────────────────────────────────
    RoadmapSection — il cammino del libro.
 
-   Una linea verticale centrale che cresce con lo scroll. I capitoli
-   si alternano a sinistra e a destra della linea, come fermate
-   lungo una strada dritta. I nodi (cerchi piccoli) sono posizionati
-   sulla linea, uno per capitolo. Le fasi (A · B · C · D) sono
-   "tappe" del viaggio — header full-width che spezzano il ritmo.
+   Un sentiero SVG serpentino corre al centro della timeline e
+   ondeggia verso ogni capitolo: sotto, una traccia punteggiata
+   (la strada da fare); sopra, un tratto accent che si disegna con
+   lo scroll (la strada fatta), con una punta luminosa che viaggia
+   lungo la curva. I capitoli si alternano a sinistra e a destra
+   come fermate; i nodi stanno sulle anse del sentiero. Le fasi
+   (A · B · C · D) sono "tappe" — header full-width che spezzano
+   il ritmo.
 
-   Tre meccanismi di scroll:
-   1. Crescita della linea attiva (transform: scaleY via animation-
-      timeline: view() con `entry 50% exit 50%` → sync 1:1 col centro
-      della viewport. Fallback JS in passive scroll calcola lo stesso
-      ratio.).
+   Meccanica dello scroll:
+   1. Disegno del sentiero: pathLength=1 + stroke-dashoffset 1→0
+      via animation-timeline: view() (`entry 50% exit 0%`). La
+      punta usa offset-path sulla STESSA curva, stessa timeline.
+      Fallback JS in passive scroll aggiorna il solo dashoffset
+      (la punta è progressive enhancement: senza supporto non c'è).
    2. Reveal a passo singolo di ogni capitolo (IntersectionObserver,
       unobserve dopo trigger).
-   3. Nodo che si "accende" quando entry corrispondente è rivelata
-      (CSS transition triggered dal data-revealed).
+   3. Numero che si "accende" quando il centro viewport passa
+      l'entry corrispondente (rootMargin -50%).
 
-   Su mobile (<= 39rem) il layout collassa a una colonna; la linea
-   centrale e i nodi vengono nascosti, le entries diventano lista
-   semplice con un border-left sottile come traccia visiva.
+   Su mobile (<= 39rem) il layout collassa a una colonna; sentiero
+   e nodi vengono nascosti, le entries diventano lista semplice
+   con un border-left sottile come traccia visiva.
    ───────────────────────────────────────────────────────────── */
 
 import {
@@ -43,11 +47,16 @@ const entries = mergeWithCollection(publishedChapters, locale);
 
 /* ── Geometria ────────────────────────────────────────────── */
 /* Tutte in `rem` × 16 (= px), così combaciano col CSS sotto.
-   Linea retta centrale: tutti i nodi stanno a left:50%, l'unica
-   coordinata che varia per nodo è la Y. */
+   Il sentiero oscilla di ±AMPLITUDE px attorno al centro: ogni
+   nodo sta sull'ansa rivolta verso la propria entry. Il gutter
+   centrale fra le colonne è 72px + 24px di padding numero: a 44px
+   il sentiero resta libero dal testo. */
 const REM = 16;
 const ENTRY_H = 9 * REM;   // 144 — block-size di ogni entry
 const PHASE_H = 5 * REM;   // 80  — block-size di ogni phase header
+const AMPLITUDE = 44;      // oscillazione laterale del sentiero
+const SVG_W = 120;         // larghezza del sistema di coordinate SVG
+const CX = SVG_W / 2;
 
 interface PathNode {
   globalIndex: number;
@@ -79,6 +88,31 @@ const TOTAL_H = cursorY;
 const byPhase = new Map<Phase, PathNode[]>();
 for (const ph of PHASES) byPhase.set(ph, []);
 for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
+
+/* ── Il sentiero ──────────────────────────────────────────── */
+/* Offset orizzontale di un nodo rispetto al centro. */
+const xOf = (side: 'L' | 'R'): number => (side === 'L' ? -AMPLITUDE : AMPLITUDE);
+
+/* Serpentina di cubiche con tangenti verticali: parte e finisce
+   al centro, passa esattamente per ogni nodo. Il punto di
+   controllo a metà del tratto verticale rende ogni ansa morbida,
+   senza spigoli né flessi bruschi. */
+function buildPath(): string {
+  const pts = [
+    { x: CX, y: 0 },
+    ...nodes.map((n) => ({ x: CX + xOf(n.side), y: n.y })),
+    { x: CX, y: TOTAL_H },
+  ];
+  let d = `M ${pts[0]!.x} ${pts[0]!.y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    const k = (b.y - a.y) / 2;
+    d += ` C ${a.x} ${a.y + k}, ${b.x} ${b.y - k}, ${b.x} ${b.y}`;
+  }
+  return d;
+}
+const PATH_D = buildPath();
 ---
 
 <section class="roadmap" aria-labelledby="roadmap-title">
@@ -89,18 +123,30 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     </header>
 
     <div class="roadmap__body" data-roadmap style={`--total-h: ${TOTAL_H}px;`}>
-      <!-- Linea verticale centrale (decorazione di fondo). Due div sovrapposti:
-           base sempre visibile, attiva che cresce con lo scroll. -->
-      <div class="roadmap__line roadmap__line--base" aria-hidden="true" />
-      <div class="roadmap__line roadmap__line--active" aria-hidden="true" data-line />
+      <!-- Il sentiero (decorazione di fondo): traccia punteggiata
+           sempre visibile + tratto accent che si disegna con lo
+           scroll + punta luminosa che viaggia sulla stessa curva. -->
+      <div class="roadmap__trail" aria-hidden="true">
+        <svg
+          class="roadmap__svg"
+          width={SVG_W}
+          height={TOTAL_H}
+          viewBox={`0 0 ${SVG_W} ${TOTAL_H}`}
+          fill="none"
+        >
+          <path class="roadmap__path roadmap__path--base" d={PATH_D} />
+          <path class="roadmap__path roadmap__path--active" d={PATH_D} pathLength="1" data-line />
+        </svg>
+        <div class="roadmap__tip" style={`offset-path: path('${PATH_D}')`}></div>
+      </div>
 
-      <!-- Nodi (HTML, posizionati assolutamente sulla linea centrale). -->
+      <!-- Nodi (HTML, posizionati assolutamente sulle anse del sentiero). -->
       {nodes.map((n) => (
         <span
           class={`roadmap__node roadmap__node--${n.entry.status}`}
           data-node-index={n.globalIndex}
           aria-hidden="true"
-          style={`top: ${n.y}px;`}
+          style={`top: ${n.y}px; inset-inline-start: calc(50% + ${xOf(n.side)}px);`}
         />
       ))}
 
@@ -203,51 +249,97 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     /* L'altezza è imposta dalla geometria HTML; il SVG si adatta. */
   }
 
-  /* ─── Linea centrale ────────────────────────────────────── */
-  /* Una linea verticale al centro: due div sovrapposti, animati via
-     transform: scaleY (più performante di stroke-dashoffset). */
-  .roadmap__line {
+  /* ─── Il sentiero ───────────────────────────────────────── */
+  .roadmap__trail {
     position: absolute;
-    inset-block: 0;
+    inset-block-start: 0;
     inset-inline-start: 50%;
-    inline-size: 1.75px;
-    transform: translateX(-50%);
+    translate: -50% 0;
+    inline-size: 120px; /* = SVG_W: coordinate 1:1, niente scaling */
     pointer-events: none;
     z-index: 0;
-    border-radius: 1px;
   }
-  .roadmap__line--base {
-    background-color: color-mix(in oklab, var(--border) 70%, transparent);
+
+  .roadmap__svg {
+    display: block;
   }
-  .roadmap__line--active {
+
+  .roadmap__path {
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  /* La strada da fare: traccia punteggiata, da mappa. */
+  .roadmap__path--base {
+    stroke: var(--border-strong);
+    stroke-width: 2;
+    stroke-dasharray: 0.5 8;
+    opacity: 0.7;
+  }
+
+  /* La strada fatta: si disegna con lo scroll (pathLength=1 sul
+     path ⇒ dasharray/dashoffset normalizzati 0–1, qualunque sia
+     la lunghezza reale della serpentina). */
+  .roadmap__path--active {
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    filter: drop-shadow(0 0 5px color-mix(in oklab, var(--accent) 35%, transparent));
+  }
+
+  /* La punta del cammino: viaggia sulla stessa curva via offset-path.
+     Progressive enhancement puro — appare solo dove scroll timeline
+     E motion path sono supportati; altrove non esiste. */
+  .roadmap__tip {
+    display: none;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 11px;
+    block-size: 11px;
+    border-radius: 50%;
     background-color: var(--accent);
-    inline-size: 2px;
-    transform: translateX(-50%) scaleY(0);
-    transform-origin: center top;
-    will-change: transform;
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent),
+      0 0 14px color-mix(in oklab, var(--accent) 45%, transparent);
+    offset-rotate: 0deg;
+    offset-distance: 0%;
   }
 
   @supports (animation-timeline: view()) {
     .roadmap__body { view-timeline-name: --roadmap-progress; }
-    .roadmap__line--active {
-      animation: roadmap-fill linear forwards;
+    .roadmap__path--active {
+      animation: roadmap-draw linear forwards;
       animation-timeline: --roadmap-progress;
       /* `entry 50% exit 0%` = inizia quando il top della sezione tocca
          il centro della viewport, finisce quando il bottom della sezione
          tocca il top della viewport. Più tollerante al footer corto:
-         così la linea raggiunge il 100% quando l'utente vede l'ultimo
+         così il sentiero raggiunge il 100% quando l'utente vede l'ultimo
          capitolo allineato al top, anche se sotto c'è poco contenuto. */
       animation-range: entry 50% exit 0%;
     }
-    @keyframes roadmap-fill {
-      to { transform: translateX(-50%) scaleY(1); }
+    @keyframes roadmap-draw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @supports (offset-distance: 0%) {
+      .roadmap__tip {
+        display: block;
+        animation: roadmap-travel linear forwards;
+        animation-timeline: --roadmap-progress;
+        animation-range: entry 50% exit 0%;
+      }
+      @keyframes roadmap-travel {
+        to { offset-distance: 100%; }
+      }
     }
   }
 
-  /* ─── Nodi sulla linea centrale ─────────────────────────── */
+  /* ─── Nodi sulle anse del sentiero ──────────────────────── */
   .roadmap__node {
     position: absolute;
-    inset-inline-start: 50%; /* sempre sulla linea centrale */
+    inset-inline-start: 50%; /* fallback — l'ansa vera è nello style inline */
     inline-size: 18px;
     block-size: 18px;
     border-radius: 999px;
@@ -504,9 +596,9 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
     border: 0;
   }
 
-  /* ─── Mobile fallback: una colonna, niente linea centrale ─── */
+  /* ─── Mobile fallback: una colonna, niente sentiero ─── */
   @media (max-width: 39rem) {
-    .roadmap__line,
+    .roadmap__trail,
     .roadmap__node { display: none; }
 
     .phase {
@@ -550,10 +642,11 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
       transform: none;
       transition: none;
     }
-    .roadmap__line--active {
+    .roadmap__path--active {
       animation: none !important;
-      transform: translateX(-50%) scaleY(1); /* linea piena, niente disegno */
+      stroke-dashoffset: 0; /* sentiero pieno, niente disegno */
     }
+    .roadmap__tip { display: none !important; } /* niente punta in viaggio */
     .roadmap__node--next { animation: none; box-shadow: none; }
     .roadmap__node,
     .roadmap__node[data-hover='true'] {
@@ -574,7 +667,7 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
 
      - Fallback drawing: se il browser non supporta animation-timeline: view(),
        calcoliamo il progresso dello scroll della sezione e aggiorniamo
-       stroke-dashoffset in passive scroll (1000 → 0). */
+       stroke-dashoffset in passive scroll (1 → 0, grazie a pathLength=1). */
   function bind() {
     document.querySelectorAll<HTMLElement>('.roadmap').forEach((root) => {
       if (root.dataset.bound === 'true') return;
@@ -653,17 +746,18 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
         }
       }
 
-      /* ── Fallback drawing della linea ──
-         Sync col centro della viewport, normalizzato in modo che la linea
-         raggiunga il 100% quando il bottom della sezione tocca il top
-         viewport (equivalente a `animation-range: entry 50% exit 0%`).
-         Tollerante al fondo pagina corto: l'utente non deve scrollare
-         oltre il footer per completare l'animazione. */
+      /* ── Fallback drawing del sentiero ──
+         Sync col centro della viewport, normalizzato in modo che il
+         sentiero raggiunga il 100% quando il bottom della sezione tocca
+         il top viewport (equivalente a `animation-range: entry 50% exit
+         0%`). Grazie a pathLength=1 basta aggiornare lo stroke-dashoffset
+         con 1 - ratio. La punta in viaggio resta un'esclusiva dei browser
+         con scroll timeline: qui non c'è, e va bene così. */
       const supportsTL =
         CSS.supports?.('animation-timeline: view()') ?? false;
       if (!supportsTL && !reduced) {
         const body = root.querySelector<HTMLElement>('[data-roadmap]');
-        const line = root.querySelector<HTMLElement>('[data-line]');
+        const line = root.querySelector<SVGPathElement>('[data-line]');
         if (body && line) {
           let ticking = false;
           const update = () => {
@@ -676,7 +770,7 @@ for (const n of nodes) byPhase.get(n.entry.phase)!.push(n);
             const range = Math.max(1, rect.height - vh / 2);
             const filled = Math.min(range, Math.max(0, cursorY - rect.top));
             const ratio = filled / range;
-            line.style.transform = `translateX(-50%) scaleY(${ratio})`;
+            line.style.strokeDashoffset = String(1 - ratio);
             ticking = false;
           };
           const onScroll = () => {
