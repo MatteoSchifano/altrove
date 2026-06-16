@@ -105,8 +105,16 @@ const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
         <div class="container hero__grid">
           <div class="hero__copy">
             <p class="eyebrow hero__eyebrow">{t('home.eyebrow', locale)}</p>
-            <h1 class="display hero__title">
-              {titleText}{titleHasDot && <span class="hero__title-dot">.</span>}
+            <h1
+              class="display hero__title"
+              data-motion="text"
+              data-text-unit="char"
+              data-text-preset="expressive"
+              data-text-stagger="46"
+              data-text-rise="44"
+              data-text-gate="entrance"
+            >
+              {titleText}{titleHasDot && <span class="hero__title-dot" data-tr-whole="true">.</span>}
             </h1>
             <p class="hero__lede">{t('home.lede', locale)}</p>
             <p class="hero__manifesto">
@@ -175,7 +183,14 @@ const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
       {/* ─── 2 · Statement: pull-quote full-width ─── */}
       <section class="statement">
         <div class="container">
-          <p class="statement__text" data-reveal>
+          <p
+            class="statement__text"
+            data-motion="text"
+            data-text-unit="word"
+            data-text-preset="gentle"
+            data-text-stagger="36"
+            data-text-rise="16"
+          >
             {t('home.statementLead', locale)}<em>{t('home.statementEm', locale)}</em>{t('home.statementTail', locale)}
           </p>
         </div>
@@ -481,10 +496,19 @@ const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
     to   { opacity: 1; transform: none; }
   }
 
-  .hero[data-entrance='play'] :is(.hero__eyebrow, .hero__title, .hero__lede, .hero__manifesto, .hero__cta) {
+  .hero[data-entrance='play'] :is(.hero__eyebrow, .hero__lede, .hero__manifesto, .hero__cta) {
     animation: hero-rise 640ms var(--ease-out-soft) backwards;
   }
-  .hero[data-entrance='play'] .hero__title     { animation-delay: 70ms; }
+  /* Il titolo non usa la cascata CSS: lo compone Motion lettera per
+     lettera (data-motion="text"). Qui lo teniamo solo nascosto fino
+     al primo frame di quell'animazione, per non mostrarlo intero un
+     istante prima dello split. Gated su no-preference E su
+     data-entrance (settato SOLO da JS): con JS spento o reduced-motion
+     l'attributo non c'è / la regola non si applica e il titolo è
+     subito visibile. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero[data-entrance='play'] .hero__title { opacity: 0; }
+  }
   .hero[data-entrance='play'] .hero__lede      { animation-delay: 140ms; }
   .hero[data-entrance='play'] .hero__manifesto { animation-delay: 210ms; }
   .hero[data-entrance='play'] .hero__cta       { animation-delay: 280ms; }
