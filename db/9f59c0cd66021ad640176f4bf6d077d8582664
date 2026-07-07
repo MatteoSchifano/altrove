@@ -1,0 +1,80 @@
+src/lib/chapters.ts
+  s_e4ee1991457288::t_26cecafdd0cfdd 4-22,35-94,96,114-116,126-141
+src/layouts/Chapter.astro
+  s_e4ee1991457288::t_9f0d172dc3616c 59-69
+  s_e4ee1991457288::t_2ac0d5baa8e26b 26-29,43
+src/content/chapters/it/01-anatomia-di-un-bottone.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/components/RoadmapSection.astro
+  s_e4ee1991457288::t_dd0754b7ba28b6 173-179,181-203,213-222,225
+  s_e4ee1991457288::t_8e00383d58d57b 125-131
+  s_e4ee1991457288::t_637ed223c220e0 548-555
+  s_e4ee1991457288::t_a63a7a44a53f08 716-794
+src/content/chapters/en/07-anatomy-of-an-input.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/en/02-the-art-of-waiting.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/05-lo-scroll-che-racconta.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/pages/chapters/[slug].astro
+  s_e4ee1991457288::t_741f5bea1fa0c0 70
+  s_e4ee1991457288::t_1b5c6abf0ed18b 27-31
+  s_e4ee1991457288::t_b2da754e0eb83f 7
+  s_e4ee1991457288::t_46d43ee0c67377 55-56
+src/content/chapters/en/04-the-silent-dialogue.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/04-il-dialogo-silenzioso.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/08-la-micro-tipografia.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/03-la-voce-del-vuoto.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/en/03-the-voice-of-emptiness.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/06-numeri-che-hanno-peso.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/pages/en/chapters/[slug].astro
+  s_e4ee1991457288::t_77c07f32fb3ffd 69
+  s_e4ee1991457288::t_b14ad32d7c7c98 7
+  s_e4ee1991457288::t_0e1016c2d5be75 27-30
+  s_e4ee1991457288::t_9fe982a5330fed 54-55
+src/content/chapters/en/06-numbers-that-weigh.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/en/08-micro-typography.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/it/02-l-arte-dell-attesa.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/en/01-anatomy-of-a-button.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/lib/roadmap.ts
+  s_e4ee1991457288::t_053a1c0c1089f0 399-401,404-407,412-417,420,424
+  s_e4ee1991457288::t_e4b475cf84de65 26
+  s_e4ee1991457288::t_2f22e6009e6b68 369,375-378
+.claude/launch.json
+  s_e4ee1991457288::t_8e7cf0dfa27418 9-14
+src/content/chapters/it/07-anatomia-di-un-input.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/content/chapters/en/05-the-scroll-that-tells.mdx
+  s_e4ee1991457288::t_b067b17b739dce 7-8
+src/layouts/HomePage.astro
+  s_e4ee1991457288::t_ca4d88222b0c75 32
+  s_e4ee1991457288::t_9b6683c553a5aa 273-278,282-283,287-292,307-342
+  s_e4ee1991457288::t_cf65e4e6348f7a 53-58,61-67
+  s_e4ee1991457288::t_5bb5bdbd0d5fac 68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "db9f59c0cd66021ad640176f4bf6d077d8582664",
+  "prompts": {},
+  "sessions": {
+    "s_e4ee1991457288": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3782cb2-b1ef-4116-8830-a85ac1a6f52f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "MatteoSchifano <matvinsch@gmail.com>"
+    }
+  }
+}
