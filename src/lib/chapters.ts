@@ -1,21 +1,25 @@
 /* ─────────────────────────────────────────────────────────────
    Altrove · chapters.ts — la porta di rilascio.
 
-   Un capitolo alla settimana, ogni venerdì. Ma il sito è statico
-   (Astro → Vercel): non c'è un "now" a runtime, c'è il momento del
-   build. Quindi la regola è semplice e onesta:
+   Un capitolo alla settimana, ogni venerdì alle 09:00 (Europe/Rome).
+   Il sito è statico (Astro → Vercel): non c'è un "now" a runtime nel
+   render, c'è il momento del build. Ma per non dipendere da un deploy
+   schedulato ogni venerdì, il *cancello* vive ora sul frontend:
 
-     • in DEV (dev server) si vedono TUTTI i capitoli non-bozza —
-       l'autore deve poter rileggere e testare ciò che non è ancora
-       uscito;
-     • in PRODUZIONE compare un capitolo solo se la sua releaseDate
-       è già passata al momento del build. Un capitolo senza
-       releaseDate è considerato già uscito (vale per i primi che
-       non hanno un calendario).
+     • il BUILD genera e lista TUTTI i capitoli non-bozza, e per
+       ciascuno emette il suo istante di rilascio come epoch ms
+       (`releaseEpoch`), calcolato per le 09:00 Europe/Rome;
+     • lo stato iniziale server usa il momento del build; un piccolo
+       script client sblocca in avanti ciò che è maturato. Il tempo va
+       solo avanti, quindi si passa solo da "bloccato" a "sbloccato":
+       niente flash, e i capitoli compaiono da soli al loro venerdì
+       senza ri-buildare.
 
-   Perché compaia il capitolo del venerdì, il sito va ri-buildato
-   quel giorno (un deploy schedulato/cron su Vercel). La porta qui
-   garantisce solo che, dato un build, esca esattamente ciò che deve.
+   In DEV si vede sempre tutto (l'autore deve poter rileggere il futuro).
+
+   `isReleased`/`getReleasedChapters` restano il cancello a build-time:
+   servono agli RSS, che sono file statici e non possono filtrare a
+   runtime (includervi capitoli futuri sarebbe disonesto).
    ───────────────────────────────────────────────────────────── */
 
 import { getCollection, type CollectionEntry } from 'astro:content';
@@ -28,8 +32,68 @@ function buildDay(): number {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }
 
+/** Istante del build in epoch ms — stato iniziale del cancello frontend. */
+export function buildNow(): number {
+  return Date.now();
+}
+
 /**
- * Un capitolo è "rilasciato" (visibile al lettore) se non è bozza e:
+ * Epoch ms dell'orario di parete `hh:00` nel fuso `tz` per la data data.
+ * Tecnica standard offset-diff via Intl: si formatta un istante UTC di
+ * riferimento nel fuso, si rilegge come se fosse UTC e la differenza dà
+ * l'offset del fuso (gestisce correttamente anche l'ora legale). Gira al
+ * build su Node, dove l'ICU è completo.
+ */
+export function zonedTimeToEpoch(
+  y: number,
+  m: number,
+  d: number,
+  hh: number,
+  tz: string,
+): number {
+  const utcGuess = Date.UTC(y, m - 1, d, hh, 0, 0);
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  });
+  const parts = dtf.formatToParts(new Date(utcGuess)).reduce<Record<string, number>>(
+    (acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = Number(p.value);
+      return acc;
+    },
+    {},
+  );
+  const asIfUTC = Date.UTC(
+    parts.year!,
+    parts.month! - 1,
+    parts.day!,
+    parts.hour!,
+    parts.minute!,
+    parts.second!,
+  );
+  const offset = asIfUTC - utcGuess; // ms di cui il fuso è avanti su UTC
+  return utcGuess - offset;
+}
+
+/**
+ * Istante di rilascio (epoch ms) di un capitolo: le 09:00 Europe/Rome
+ * della sua `releaseDate`. `null` se il capitolo non ha releaseDate —
+ * è sempre disponibile.
+ */
+export function releaseEpoch(releaseDate?: string): number | null {
+  if (!releaseDate) return null;
+  const [y, m, d] = releaseDate.split('-').map(Number);
+  return zonedTimeToEpoch(y!, m!, d!, 9, 'Europe/Rome');
+}
+
+/**
+ * Un capitolo è "rilasciato al build" (per gli RSS) se non è bozza e:
  *   - siamo in dev (si vede tutto), oppure
  *   - non ha releaseDate, oppure
  *   - la sua releaseDate è ≤ al giorno di build.
@@ -47,8 +111,9 @@ export function isReleased(data: ChapterData): boolean {
 }
 
 /**
- * Come getCollection('chapters') ma applica già la porta di rilascio.
- * Un filtro opzionale aggiuntivo (es. per locale) si compone in AND.
+ * Come getCollection('chapters') ma applica il cancello a build-time.
+ * Usata SOLO dagli RSS (feed statici). Un filtro opzionale aggiuntivo
+ * (es. per locale) si compone in AND.
  */
 export async function getReleasedChapters(
   extra?: (data: ChapterData) => boolean,
@@ -56,5 +121,21 @@ export async function getReleasedChapters(
   return getCollection(
     'chapters',
     ({ data }) => isReleased(data) && (extra ? extra(data) : true),
+  );
+}
+
+/**
+ * Tutti i capitoli non-bozza, SENZA filtro di data: il cancello di
+ * rilascio è applicato dal frontend (vedi `releaseEpoch`). Alimenta le
+ * rotte capitolo (getStaticPaths) e le liste della home/roadmap, così
+ * ogni capitolo esiste come pagina e compare da solo al suo venerdì.
+ * Un filtro opzionale aggiuntivo (es. per locale) si compone in AND.
+ */
+export async function getChapters(
+  extra?: (data: ChapterData) => boolean,
+): Promise<CollectionEntry<'chapters'>[]> {
+  return getCollection(
+    'chapters',
+    ({ data }) => !data.draft && (extra ? extra(data) : true),
   );
 }

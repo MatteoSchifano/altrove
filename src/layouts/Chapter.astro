@@ -23,6 +23,10 @@ interface Props {
   readMinutes?: number;
   slug: string;
   tags?: readonly string[];
+  /** Istante di rilascio (epoch ms, 09:00 Europe/Rome). Null = sempre
+      disponibile. Se il momento non è ancora arrivato, un guard client
+      reindirizza alla home prima di mostrare il capitolo. */
+  releaseAt?: number | null;
 }
 
 const {
@@ -36,6 +40,7 @@ const {
   readMinutes,
   slug,
   tags,
+  releaseAt = null,
 } = Astro.props;
 
 const homeHref = localizedPath('/', locale);
@@ -51,6 +56,17 @@ const homeHref = localizedPath('/', locale);
   alternateHref={alternateHref}
   tags={tags}
 >
+  {/* Guard di rilascio: un capitolo non ancora uscito (prima delle 09:00
+      Europe/Rome del suo venerdì) non è accessibile — si redirige alla
+      home. Inline e per primo nel body: la navigazione parte prima che
+      il capitolo si dipinga. Limite noto: sito statico, il markup resta
+      nel sorgente HTML; il redirect ne impedisce la fruizione, non è una
+      protezione server-side (impossibile senza SSR). */}
+  <script is:inline define:vars={{ releaseAt, homeHref }}>
+    if (typeof releaseAt === 'number' && Date.now() < releaseAt) {
+      location.replace(homeHref);
+    }
+  </script>
   <div class="page">
     <header class="site-header">
       <div class="container site-header__row">

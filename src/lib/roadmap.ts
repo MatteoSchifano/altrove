@@ -23,6 +23,7 @@
 
 import type { CollectionEntry } from 'astro:content';
 import { localizedPath, type Locale } from './i18n';
+import { releaseEpoch, buildNow } from './chapters';
 
 export type Phase = 'A' | 'B' | 'C' | 'D';
 export type Status = 'published' | 'next' | 'planned';
@@ -365,12 +366,16 @@ export const ROADMAP: readonly RoadmapEntry[] = [
 /* ═══════════ Helpers ═══════════ */
 
 export interface MergedRoadmapEntry extends RoadmapEntry {
-  /** Path canonico del capitolo se pubblicato, altrimenti null. */
+  /** Path canonico del capitolo se ha un MDX, altrimenti null. */
   href: string | null;
   /** Slug del capitolo (per eventuale view-transition-name lato chiamante). */
   slug: string | null;
   /** Minuti di lettura, se forniti dal frontmatter MDX. */
   readMinutes?: number;
+  /** Istante di rilascio (epoch ms, 09:00 Europe/Rome). Null = sempre
+      disponibile o MDX assente. Serve al frontend per sbloccare da sé
+      l'entry quando il suo venerdì è passato. */
+  releaseAt: number | null;
 }
 
 /**
@@ -391,27 +396,32 @@ export function mergeWithCollection(
     byKey.set(c.data.translationKey, c);
   }
 
-  const merged = ROADMAP.map((entry) => {
-    if (entry.status !== 'published') {
-      return { ...entry, href: null, slug: null };
-    }
+  const now = buildNow();
+
+  const merged: MergedRoadmapEntry[] = ROADMAP.map((entry) => {
     const found = byKey.get(entry.translationKey);
     if (!found) {
-      // Pubblicato secondo la roadmap ma l'MDX non è (ancora) visibile in
-      // questa locale. Due cause: (a) traduzione assente, oppure (b) — il
-      // caso ordinario ora — il capitolo non ha ancora passato la sua
-      // porta di rilascio in produzione. Degrada a "planned": niente link,
-      // appare come tappa futura del percorso.
-      return { ...entry, status: 'planned' as const, href: null, slug: null };
+      // MDX assente in questa locale (traduzione mancante): tappa futura
+      // senza link. Caso di bordo — normalmente tutti i capitoli esistono
+      // in entrambe le lingue.
+      return { ...entry, status: 'planned' as const, href: null, slug: null, releaseAt: null };
     }
     const slug = found.id.startsWith(`${locale}/`)
       ? found.id.slice(locale.length + 1)
       : found.id;
+    const releaseAt = releaseEpoch(found.data.releaseDate);
+    // Stato iniziale al build: rilasciato se in DEV, senza data, o se il
+    // suo istante è già passato. Le entry ancora bloccate le sblocca il
+    // frontend al loro venerdì (vedi RoadmapSection).
+    const releasedAtBuild =
+      import.meta.env.DEV || releaseAt === null || releaseAt <= now;
     return {
       ...entry,
+      status: releasedAtBuild ? ('published' as const) : ('planned' as const),
       href: localizedPath(`/chapters/${slug}`, locale),
       slug,
       readMinutes: found.data.readMinutes,
+      releaseAt,
     };
   }).sort((a, b) => Number(a.number) - Number(b.number));
 

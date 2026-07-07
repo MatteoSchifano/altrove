@@ -4,7 +4,7 @@
    ───────────────────────────────────────────────────────────── */
 
 import { getCollection, render } from 'astro:content';
-import { isReleased } from '../../../lib/chapters';
+import { releaseEpoch } from '../../../lib/chapters';
 import Chapter from '../../../layouts/Chapter.astro';
 import { localizedPath, getOtherLocales, type Locale } from '../../../lib/i18n';
 import { resolveReadingTime } from '../../../lib/readingTime';
@@ -24,7 +24,10 @@ export const getStaticPaths = (async () => {
   const stripPrefix = (id: string, lang: string) =>
     id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
 
-  const all = await getCollection('chapters', ({ data }) => isReleased(data));
+  // Generate EVERY non-draft chapter: the release gate lives on the
+  // frontend (the layout redirects if not out yet), so future pages
+  // exist and become reachable on their Friday without a rebuild.
+  const all = await getCollection('chapters', ({ data }) => !data.draft);
   const here = all.filter((e) => e.data.lang === PAGE_LOCALE);
   return here.map((entry) => {
     const slug = stripPrefix(entry.id, PAGE_LOCALE);
@@ -48,6 +51,8 @@ const alternateHref = alt
   : localizedPath('/', ALT_LOCALE);
 
 const readMinutes = resolveReadingTime(entry.body, entry.data.readMinutes);
+// In DEV: no guard, so the author can revisit future chapters.
+const releaseAt = import.meta.env.DEV ? null : releaseEpoch(entry.data.releaseDate);
 ---
 
 <Chapter
@@ -61,6 +66,7 @@ const readMinutes = resolveReadingTime(entry.body, entry.data.readMinutes);
   readMinutes={readMinutes}
   slug={slug}
   tags={entry.data.tags}
+  releaseAt={releaseAt}
 >
   <Content />
 </Chapter>

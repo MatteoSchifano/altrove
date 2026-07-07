@@ -29,7 +29,7 @@ import LanguageToggle from '../components/LanguageToggle.astro';
 import ChapterCard from '../components/ChapterCard.astro';
 import RoadmapSection from '../components/RoadmapSection.astro';
 import SkillInstall from '../components/SkillInstall.astro';
-import { getReleasedChapters } from '../lib/chapters';
+import { getChapters, releaseEpoch, buildNow } from '../lib/chapters';
 import { t, localizedPath, getOtherLocales, type Locale } from '../lib/i18n';
 import { resolveReadingTime } from '../lib/readingTime';
 
@@ -50,8 +50,21 @@ function slugOf(id: string, lang: Locale): string {
   return id.startsWith(`${lang}/`) ? id.slice(lang.length + 1) : id;
 }
 
-const chapters = (await getReleasedChapters((data) => data.lang === locale))
+/* Tutti i capitoli non-bozza: il cancello di rilascio è sul frontend.
+   Per ciascuno calcoliamo l'istante di uscita (09:00 Europe/Rome) e se
+   al momento del build è ancora "bloccato". In DEV nulla è bloccato —
+   l'autore vede il futuro. Le card bloccate partono `hidden` e uno
+   script le sblocca da sé quando il loro venerdì è passato. */
+const chapters = (await getChapters((data) => data.lang === locale))
   .sort((a, b) => Number(a.data.number) - Number(b.data.number));
+
+const now = buildNow();
+const chapterCards = chapters.map((c) => {
+  const releaseAt = releaseEpoch(c.data.releaseDate);
+  const locked = !import.meta.env.DEV && releaseAt !== null && releaseAt > now;
+  return { c, releaseAt, locked };
+});
+const visibleCount = chapterCards.filter((x) => !x.locked).length;
 
 /* I quattro principi — testo da i18n, struttura qui per il bento. */
 const principles = [
@@ -272,17 +285,26 @@ const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
           <header class="chapters__head" data-reveal>
             <h2 class="chapters__title">{t('home.chaptersTitle', locale)}</h2>
             <p class="chapters__hint">
-              <span class="chapters__count tabular">{chapters.length}</span>
-              <span>{chapters.length === 1 ? t('home.chaptersHintOne', locale) : t('home.chaptersHintMany', locale)}</span>
+              <span class="chapters__count tabular" data-chapters-count>{visibleCount}</span>
+              <span
+                data-chapters-suffix
+                data-one={t('home.chaptersHintOne', locale)}
+                data-many={t('home.chaptersHintMany', locale)}
+              >{visibleCount === 1 ? t('home.chaptersHintOne', locale) : t('home.chaptersHintMany', locale)}</span>
             </p>
           </header>
 
-          <ul role="list" class="chapters__grid">
-            {chapters.map((c) => {
+          <ul role="list" class="chapters__grid" data-chapters-grid>
+            {chapterCards.map(({ c, releaseAt, locked }) => {
               const slug = slugOf(c.id, locale);
               const readMinutes = resolveReadingTime(c.body, c.data.readMinutes);
               return (
-                <li data-reveal>
+                <li
+                  data-reveal
+                  data-release-at={releaseAt ?? undefined}
+                  data-locked={locked ? 'true' : undefined}
+                  hidden={locked}
+                >
                   <ChapterCard
                     locale={locale}
                     number={c.data.number}
@@ -297,6 +319,42 @@ const titleText = titleHasDot ? rawTitle.slice(0, -1) : rawTitle;
               );
             })}
           </ul>
+
+          {/* Cancello di rilascio lato client: sblocca da sé le card il
+              cui venerdì (09:00 Europe/Rome) è ormai passato, senza
+              bisogno di ri-buildare, e riallinea il contatore. Idempotente
+              su astro:page-load. */}
+          <script>
+            function bindChaptersGate() {
+              const grid = document.querySelector<HTMLElement>('[data-chapters-grid]');
+              if (!grid || grid.dataset.gateBound === 'true') return;
+              grid.dataset.gateBound = 'true';
+
+              const now = Date.now();
+              grid
+                .querySelectorAll<HTMLElement>('li[data-locked][data-release-at]')
+                .forEach((li) => {
+                  const at = Number(li.dataset.releaseAt);
+                  if (Number.isFinite(at) && now >= at) {
+                    li.hidden = false;
+                    delete li.dataset.locked;
+                    // Se il reveal l'aveva marcata nascosta, mostrala.
+                    if (li.dataset.revealState === 'hidden') li.dataset.revealState = 'shown';
+                  }
+                });
+
+              const countEl = document.querySelector<HTMLElement>('[data-chapters-count]');
+              const suffixEl = document.querySelector<HTMLElement>('[data-chapters-suffix]');
+              const visible = grid.querySelectorAll('li:not([hidden])').length;
+              if (countEl) countEl.textContent = String(visible);
+              if (suffixEl) {
+                suffixEl.textContent =
+                  visible === 1 ? suffixEl.dataset.one ?? '' : suffixEl.dataset.many ?? '';
+              }
+            }
+
+            document.addEventListener('astro:page-load', bindChaptersGate);
+          </script>
         </div>
       </section>
 

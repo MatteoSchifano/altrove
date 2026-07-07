@@ -122,7 +122,13 @@ const PATH_D = buildPath();
       <p class="roadmap__lede">{t('home.roadmapLede', locale)}</p>
     </header>
 
-    <div class="roadmap__body" data-roadmap style={`--total-h: ${TOTAL_H}px;`}>
+    <div
+      class="roadmap__body"
+      data-roadmap
+      data-next-label={t('roadmap.statusNext', locale)}
+      data-planned-label={t('roadmap.statusPlanned', locale)}
+      style={`--total-h: ${TOTAL_H}px;`}
+    >
       <!-- Il sentiero (decorazione di fondo): traccia punteggiata
            sempre visibile + tratto accent che si disegna con lo
            scroll + punta luminosa che viaggia sulla stessa curva. -->
@@ -164,8 +170,37 @@ const PATH_D = buildPath();
               <ul role="list" class="phase__entries">
                 {list.map((n, localI) => {
                   const e = n.entry;
-                  const isLink = e.status === 'published' && e.href;
+                  /* Ora ogni capitolo con MDX ha una rotta (generata): la
+                     renderizziamo sempre come <a>. Se non è ancora uscito
+                     (`locked`) il link è disabilitato e stilato come tappa
+                     futura; lo sblocca il frontend al suo venerdì. Solo le
+                     entry senza MDX (traduzione assente) restano un <div>. */
+                  const locked = e.status !== 'published';
+                  const linkable = !!e.href;
                   const ariaCurrent = e.status === 'next' ? 'step' : undefined;
+                  const body = (
+                    <>
+                      <h4 class="entry__title">
+                        {e.title[locale]}
+                        {e.status === 'next' && (
+                          <span class="entry__kicker" data-kicker>{t('roadmap.statusNext', locale)}</span>
+                        )}
+                      </h4>
+                      <p class="entry__question">{e.question[locale]}</p>
+                      {locked && e.effort && (
+                        <span class="entry__effort tabular" aria-hidden="true">
+                          {'·'.repeat(e.effort)}
+                        </span>
+                      )}
+                      {locked && (
+                        <span class="sr-only" data-locked-label>
+                          {e.status === 'next'
+                            ? t('roadmap.statusNext', locale)
+                            : t('roadmap.statusPlanned', locale)}
+                        </span>
+                      )}
+                    </>
+                  );
                   return (
                     <li
                       class={`entry entry--${n.side.toLowerCase()}`}
@@ -175,31 +210,19 @@ const PATH_D = buildPath();
                       aria-current={ariaCurrent}
                     >
                       <span class="entry__num tabular" aria-hidden="true">{e.number}</span>
-                      {isLink ? (
-                        <a class="entry__body" href={e.href!}>
-                          <h4 class="entry__title">{e.title[locale]}</h4>
-                          <p class="entry__question">{e.question[locale]}</p>
+                      {linkable ? (
+                        <a
+                          class="entry__body"
+                          href={e.href!}
+                          data-release-at={e.releaseAt ?? undefined}
+                          data-locked={locked ? 'true' : undefined}
+                          aria-disabled={locked ? 'true' : undefined}
+                          tabindex={locked ? -1 : undefined}
+                        >
+                          {body}
                         </a>
                       ) : (
-                        <div class="entry__body">
-                          <h4 class="entry__title">
-                            {e.title[locale]}
-                            {e.status === 'next' && (
-                              <span class="entry__kicker">{t('roadmap.statusNext', locale)}</span>
-                            )}
-                          </h4>
-                          <p class="entry__question">{e.question[locale]}</p>
-                          {e.effort && (
-                            <span class="entry__effort tabular" aria-hidden="true">
-                              {'·'.repeat(e.effort)}
-                            </span>
-                          )}
-                          <span class="sr-only">
-                            {e.status === 'planned'
-                              ? t('roadmap.statusPlanned', locale)
-                              : t('roadmap.statusNext', locale)}
-                          </span>
-                        </div>
+                        <div class="entry__body">{body}</div>
                       )}
                     </li>
                   );
@@ -522,7 +545,14 @@ const PATH_D = buildPath();
       background-color var(--dur-fast) var(--ease-out-soft);
   }
 
-  a.entry__body:hover {
+  /* Entry bloccata (capitolo non ancora uscito): sembra una tappa futura
+     e non è cliccabile finché il frontend non la sblocca al suo venerdì. */
+  a.entry__body[data-locked] {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  a.entry__body:not([data-locked]):hover {
     border-color: var(--border);
     background-color: var(--surface-raised);
   }
@@ -682,6 +712,85 @@ const PATH_D = buildPath();
         const idx = Number(n.dataset.nodeIndex);
         if (Number.isFinite(idx)) nodeByIndex.set(idx, n);
       });
+
+      /* ── Cancello di rilascio ──
+         Lo stato server è fissato al momento del build: settimane dopo,
+         senza ri-buildare, sarebbe stantìo. Qui lo riallineiamo al vero
+         "adesso": sblocchiamo le entry il cui venerdì (09:00 Europe/Rome)
+         è passato e ricalcoliamo quale capitolo è il "prossimo". Il tempo
+         va solo avanti: si passa solo da bloccato a sbloccato. */
+      (() => {
+        const body = root.querySelector<HTMLElement>('[data-roadmap]');
+        const nextLabel = body?.dataset.nextLabel ?? '';
+        const now = Date.now();
+        const list = Array.from(entries);
+
+        const setNode = (idx: number, status: 'published' | 'next' | 'planned') => {
+          const node = nodeByIndex.get(idx);
+          if (!node) return;
+          node.classList.remove(
+            'roadmap__node--published',
+            'roadmap__node--next',
+            'roadmap__node--planned',
+          );
+          node.classList.add(`roadmap__node--${status}`);
+        };
+
+        const unlock = (li: HTMLElement) => {
+          const a = li.querySelector<HTMLElement>('.entry__body');
+          li.dataset.status = 'published';
+          li.removeAttribute('aria-current');
+          if (a) {
+            delete a.dataset.locked;
+            a.removeAttribute('aria-disabled');
+            a.removeAttribute('tabindex');
+            a.querySelector('[data-kicker]')?.remove();
+            a.querySelector('[data-locked-label]')?.remove();
+            a.querySelector('.entry__effort')?.remove();
+          }
+          setNode(Number(li.dataset.index), 'published');
+        };
+
+        // 1) sblocca ciò che è maturato
+        list.forEach((li) => {
+          const a = li.querySelector<HTMLElement>('.entry__body[data-locked][data-release-at]');
+          if (!a) return;
+          const at = Number(a.dataset.releaseAt);
+          if (Number.isFinite(at) && now >= at) unlock(li);
+        });
+
+        // 2) ricalcola "next" = prima entry ancora bloccata
+        const stillLocked = list.filter((li) =>
+          li.querySelector('.entry__body[data-locked]'),
+        );
+        // azzera eventuali "next" stantii rimasti bloccati → planned
+        stillLocked.forEach((li) => {
+          if (li.dataset.status === 'next') {
+            li.dataset.status = 'planned';
+            li.removeAttribute('aria-current');
+            setNode(Number(li.dataset.index), 'planned');
+            const label = li.querySelector<HTMLElement>('[data-locked-label]');
+            if (label) label.textContent = body?.dataset.plannedLabel ?? label.textContent;
+            li.querySelector('[data-kicker]')?.remove();
+          }
+        });
+        const nextLi = stillLocked[0];
+        if (nextLi) {
+          nextLi.dataset.status = 'next';
+          nextLi.setAttribute('aria-current', 'step');
+          setNode(Number(nextLi.dataset.index), 'next');
+          const label = nextLi.querySelector<HTMLElement>('[data-locked-label]');
+          if (label) label.textContent = nextLabel;
+          const title = nextLi.querySelector('.entry__title');
+          if (title && !title.querySelector('[data-kicker]')) {
+            const span = document.createElement('span');
+            span.className = 'entry__kicker';
+            span.dataset.kicker = '';
+            span.textContent = nextLabel;
+            title.appendChild(span);
+          }
+        }
+      })();
 
       if (reduced) {
         entries.forEach((el) => {
